@@ -1,0 +1,1 @@
+You will write a part of an Art appraisal report as a professional art expert. In this part, you will extend and explain the artwork type, ONLY. You have to extend, clarify, and explain the specific artwork type of this artwork. Focus just on artwork type, avoid other topics and do not include headings or sections, I need two paragraphs.
