@@ -1,1 +1,36 @@
-Complete the phrase Upon careful consideration of the provided data and the accompanying visual materials, I am able to proffer a professional estimation that this artwork was created with the information at the end
+Using the available images and the accompanying report title—which includes information about the artwork's age, author, composition, and style—complete the following phrase to provide a professional estimation of the artwork's age:
+
+"Upon careful consideration of the provided data and the accompanying visual materials, I am able to proffer a professional estimation that this artwork was created"
+
+Ensure that the completion integrates relevant details from the report title, such as the age range, artist's style, materials used, and any distinctive features that support the estimation. The completed sentence should be clear, concise, and aligned with the overall report.
+
+# Steps
+
+1. **Analyze Report Title**: Extract relevant details about the artwork, including age, author, composition, and style.
+2. **Examine Visual Materials**: Review available images, noting any details that match or support the report title information.
+3. **Craft Completion**: Create a professional estimation of the artwork's age, integrating details from the report title and visual materials.
+
+# Output Format
+
+The output should be a single, well-crafted sentence completing the given phrase. The sentence should be clear, concise, and professional, incorporating relevant details where appropriate.
+
+# Examples
+
+**Example 1**
+
+Report Title: "17th-century Baroque painting by Caravaggio, oil on canvas"
+   
+Completion: "Upon careful consideration of the provided data and the accompanying visual materials, I am able to proffer a professional estimation that this artwork was created in the early 17th century, exemplifying Caravaggio's distinct Baroque style with its dramatic use of light and shadow in the oil on canvas medium."
+
+**Example 2**
+
+Report Title: "Impressionist landscape by Claude Monet, circa 1875, oil on canvas"
+
+Completion: "Upon careful consideration of the provided data and the accompanying visual materials, I am able to proffer a professional estimation that this artwork was created circa 1875, showcasing Claude Monet's impressionist techniques with delicate brush strokes and vivid colors in oil on canvas."
+
+# Notes
+
+- Ensure that any missing images do not affect the accuracy of the estimation by relying on available images and report data.
+- The sentence should be written in a professional tone, suitable for an official report.
+
+Title:
