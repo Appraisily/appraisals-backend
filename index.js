@@ -1,4 +1,4 @@
-// index.js.
+// index.js
 
 const express = require('express');
 const fetch = require('node-fetch');
@@ -434,8 +434,8 @@ app.post('/update-metadata', async (req, res) => {
   }
 });
 
-// **Endpoint: Process Main Image with Google Vision and Update WordPress**
-app.post('/process-google-vision', async (req, res) => {
+// **Nuevo Endpoint: Completar Informe de Tasación Completo**
+app.post('/complete-appraisal-report', async (req, res) => {
   const { postId } = req.body;
 
   if (!postId) {
@@ -443,11 +443,101 @@ app.post('/process-google-vision', async (req, res) => {
   }
 
   try {
-    const result = await processMainImageWithGoogleVision(postId);
-    res.json(result);
+    // Obtener detalles del post desde WordPress
+    const getPostEndpoint = `${WORDPRESS_API_URL}/appraisals/${postId}`;
+
+    console.log(`Obteniendo detalles del post ID: ${postId}`);
+    const postResponse = await fetch(getPostEndpoint, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      }
+    });
+
+    if (!postResponse.ok) {
+      const errorText = await postResponse.text();
+      console.error('Error obteniendo post de WordPress:', errorText);
+      return res.status(500).json({ success: false, message: 'Error obteniendo post de WordPress.' });
+    }
+
+    const postData = await postResponse.json();
+
+    const postTitle = postData.title.rendered || '';
+    const acfFields = postData.acf || {};
+
+    // Obtener la URL de la imagen principal
+    const mainImageUrl = await getImageUrl(acfFields.main);
+    if (!mainImageUrl) {
+      throw new Error('Imagen principal no encontrada en el post.');
+    }
+    console.info(`Post ID: ${postId} - Main Image URL: ${mainImageUrl}`);
+
+    // Analizar la imagen con Google Vision para obtener detecciones web
+    const detectionInfo = await analyzeImageWithGoogleVision(mainImageUrl);
+    if (
+      !detectionInfo.fullMatchingImages.length &&
+      !detectionInfo.partialMatchingImages.length &&
+      !detectionInfo.webEntities.length &&
+      !detectionInfo.bestGuessLabels.length &&
+      !detectionInfo.visuallySimilarImages.length
+    ) {
+      throw new Error('No se obtuvo información útil de Google Vision.');
+    }
+
+    // Extraer URLs de imágenes similares proporcionadas por Google Vision
+    const similarImageUrls = detectionInfo.visuallySimilarImages.map(image => image.url).filter(url => url);
+    
+    console.log('Imágenes similares obtenidas de Google Vision:', similarImageUrls);
+
+    if (similarImageUrls.length === 0) {
+      throw new Error('No se encontraron imágenes similares en las detecciones de Google Vision.');
+    }
+
+    // Subir las imágenes similares a WordPress y obtener sus IDs
+    const uploadedImageIds = [];
+    for (const url of similarImageUrls) {
+      const imageId = await uploadImageToWordPress(url);
+      if (imageId) {
+        uploadedImageIds.push(imageId);
+      }
+    }
+
+    if (uploadedImageIds.length === 0) {
+      throw new Error('No se pudieron subir imágenes similares a WordPress.');
+    }
+
+    // Actualizar el metadato 'GoogleVision' en WordPress
+    const metadataKey = 'GoogleVision'; // Asegúrate de que este es el nombre correcto del metadato
+    const metadataValue = uploadedImageIds;
+
+    await updateWordPressMetadata(postId, metadataKey, metadataValue);
+    console.info(`Metadato '${metadataKey}' actualizado exitosamente en WordPress.`);
+
+    // Listar todos los archivos .txt en la carpeta 'prompts'
+    const promptsDir = path.join(__dirname, 'prompts');
+    const files = await fs.readdir(promptsDir);
+    const txtFiles = files.filter(file => path.extname(file).toLowerCase() === '.txt');
+
+    if (txtFiles.length === 0) {
+      throw new Error('No se encontraron archivos de prompt en la carpeta.');
+    }
+
+    // Procesar cada archivo .txt
+    for (const file of txtFiles) {
+      const custom_post_type_name = path.basename(file, '.txt');
+      const prompt = await getPrompt(custom_post_type_name);
+      const generatedText = await generateTextWithOpenAI(prompt, postTitle, { main: mainImageUrl }); // Puedes ajustar los campos de imageUrls según sea necesario
+
+      // Actualizar el metadato en WordPress
+      await updateWordPressMetadata(postId, custom_post_type_name, generatedText);
+      console.info(`Metadato '${custom_post_type_name}' actualizado exitosamente en WordPress.`);
+    }
+
+    res.json({ success: true, message: 'Informe de tasación completado exitosamente.' });
   } catch (error) {
-    console.error('Error en /process-google-vision:', error);
-    res.status(500).json({ success: false, message: error.message || 'Error procesando la imagen principal.' });
+    console.error('Error en /complete-appraisal-report:', error);
+    res.status(500).json({ success: false, message: error.message || 'Error completando el informe de tasación.' });
   }
 });
 
