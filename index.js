@@ -1,4 +1,4 @@
-// index.js.
+// index.js
 
 const express = require('express');
 const fetch = require('node-fetch');
@@ -17,14 +17,17 @@ const client = new SecretManagerServiceClient();
 // Función genérica para obtener un secreto de Secret Manager
 async function getSecret(secretName) {
   try {
-    const [version] = await client.accessSecretVersion({
-      name: `projects/${process.env.GOOGLE_CLOUD_PROJECT}/secrets/${secretName}/versions/latest`,
-    });
+    // Obtener el Project ID dinámicamente
+    const [projectId] = await client.getProjectId();
+    const secretPath = `projects/${projectId}/secrets/${secretName}/versions/latest`;
+
+    const [version] = await client.accessSecretVersion({ name: secretPath });
     const payload = version.payload.data.toString('utf8');
+    console.log(`Secreto '${secretName}' obtenido exitosamente.`);
     return payload;
   } catch (error) {
-    console.error(`Error obteniendo el secreto ${secretName}:`, error);
-    throw new Error(`No se pudo obtener el secreto ${secretName}.`);
+    console.error(`Error obteniendo el secreto '${secretName}':`, error);
+    throw new Error(`No se pudo obtener el secreto '${secretName}'.`);
   }
 }
 
