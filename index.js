@@ -1,4 +1,4 @@
-// index.js...
+// index.js
 
 const express = require('express');
 const fetch = require('node-fetch');
@@ -39,7 +39,6 @@ let WORDPRESS_USERNAME;
 let WORDPRESS_APP_PASSWORD;
 let OPENAI_API_KEY;
 let GOOGLE_VISION_CREDENTIALS; // Nuevo secreto para Vision API
-let UNSPLASH_ACCESS_KEY; // Clave de API de Unsplash
 
 // Función para cargar todos los secretos al iniciar la aplicación
 async function loadSecrets() {
@@ -49,7 +48,6 @@ async function loadSecrets() {
     WORDPRESS_APP_PASSWORD = await getSecret('wp_app_password');
     OPENAI_API_KEY = await getSecret('OPENAI_API_KEY');
     GOOGLE_VISION_CREDENTIALS = await getSecret('GOOGLE_VISION_CREDENTIALS'); // Cargar las credenciales de Vision
-    UNSPLASH_ACCESS_KEY = await getSecret('UNSPLASH_ACCESS_KEY'); // Cargar la clave de Unsplash
     console.log('Todos los secretos han sido cargados exitosamente.');
   } catch (error) {
     console.error('Error cargando los secretos:', error);
@@ -242,33 +240,6 @@ const analyzeImageWithGoogleVision = async (imageUrl) => {
   }
 };
 
-// Función para buscar imágenes en Unsplash usando palabras clave
-const searchSimilarImages = async (keywords, perPage = 5) => {
-  try {
-    const query = keywords.slice(0, 5).join(' '); // Limitar a las primeras 5 palabras clave para la búsqueda
-    const response = await fetch(`https://api.unsplash.com/search/photos?query=${encodeURIComponent(query)}&per_page=${perPage}`, {
-      headers: {
-        'Authorization': `Client-ID ${UNSPLASH_ACCESS_KEY}`
-      }
-    });
-
-    if (!response.ok) {
-      const errorDetails = await response.text();
-      console.error('Error buscando imágenes en Unsplash:', errorDetails);
-      throw new Error('Error buscando imágenes en Unsplash.');
-    }
-
-    const data = await response.json();
-    const imageUrls = data.results.map(photo => photo.urls.small); // Obtener URLs de imágenes pequeñas
-    console.log('Imágenes similares encontradas en Unsplash:', imageUrls);
-
-    return imageUrls;
-  } catch (error) {
-    console.error('Error en la función searchSimilarImages:', error);
-    throw new Error('Error buscando imágenes similares.');
-  }
-};
-
 // Función para subir una imagen a WordPress
 const uploadImageToWordPress = async (imageUrl) => {
   try {
@@ -355,22 +326,13 @@ const processMainImageWithGoogleVision = async (postId) => {
       throw new Error('No se obtuvo información útil de Google Vision.');
     }
 
-    // Extraer palabras clave de web entities y best guess labels
-    const keywords = [
-      ...detectionInfo.webEntities.map(entity => entity.description),
-      ...detectionInfo.bestGuessLabels.map(label => label.label)
-    ].filter(desc => desc.length > 3); // Filtrar descripciones cortas
+    // Extraer URLs de imágenes similares proporcionadas por Google Vision
+    const similarImageUrls = detectionInfo.visuallySimilarImages.map(image => image.url).filter(url => url);
 
-    console.log('Palabras clave para búsqueda en Unsplash:', keywords);
+    console.log('Imágenes similares obtenidas de Google Vision:', similarImageUrls);
 
-    if (keywords.length === 0) {
-      throw new Error('No se obtuvieron palabras clave relevantes de Google Vision.');
-    }
-
-    // Buscar imágenes similares en Unsplash
-    const similarImageUrls = await searchSimilarImages(keywords, 5); // Obtener 5 imágenes similares
     if (similarImageUrls.length === 0) {
-      throw new Error('No se encontraron imágenes similares en Unsplash.');
+      throw new Error('No se encontraron imágenes similares en las detecciones de Google Vision.');
     }
 
     // Subir las imágenes similares a WordPress y obtener sus IDs
