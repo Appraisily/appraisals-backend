@@ -218,18 +218,24 @@ const updateWordPressMetadata = async (wpPostId, metadataKey, metadataValue) => 
   }
 };
 
-// Función para analizar la imagen con Google Vision y obtener etiquetas
+// Función para analizar la imagen con Google Vision y obtener detecciones web
 const analyzeImageWithGoogleVision = async (imageUrl) => {
   try {
-    const [result] = await visionClient.labelDetection(imageUrl);
-    const labels = result.labelAnnotations;
-    console.log('Etiquetas obtenidas de Google Vision:', labels);
+    const [result] = await visionClient.webDetection(imageUrl);
+    const webDetection = result.webDetection;
 
-    // Extraer palabras clave relevantes para buscar imágenes similares
-    const keywords = labels.map(label => label.description).filter(desc => desc.length > 3); // Filtrar descripciones cortas
-    console.log('Palabras clave para búsqueda:', keywords);
+    // Estructurar la información obtenida
+    const detectionInfo = {
+      fullMatchingImages: webDetection.fullMatchingImages || [],
+      partialMatchingImages: webDetection.partialMatchingImages || [],
+      webEntities: webDetection.webEntities || [],
+      bestGuessLabels: webDetection.bestGuessLabels || [],
+      pagesWithMatchingImages: webDetection.pagesWithMatchingImages || [],
+      visuallySimilarImages: webDetection.visuallySimilarImages || []
+    };
 
-    return keywords;
+    console.log('Información de detección web obtenida de Google Vision:', detectionInfo);
+    return detectionInfo;
   } catch (error) {
     console.error('Error analizando la imagen con Google Vision:', error);
     throw new Error('Error analizando la imagen con Google Vision.');
@@ -254,7 +260,7 @@ const searchSimilarImages = async (keywords, perPage = 5) => {
 
     const data = await response.json();
     const imageUrls = data.results.map(photo => photo.urls.small); // Obtener URLs de imágenes pequeñas
-    console.log('Imágenes similares encontradas:', imageUrls);
+    console.log('Imágenes similares encontradas en Unsplash:', imageUrls);
 
     return imageUrls;
   } catch (error) {
@@ -337,10 +343,28 @@ const processMainImageWithGoogleVision = async (postId) => {
     }
     console.info(`Post ID: ${postId} - Main Image URL: ${mainImageUrl}`);
 
-    // Analizar la imagen con Google Vision para obtener etiquetas
-    const keywords = await analyzeImageWithGoogleVision(mainImageUrl);
+    // Analizar la imagen con Google Vision para obtener detecciones web
+    const detectionInfo = await analyzeImageWithGoogleVision(mainImageUrl);
+    if (
+      !detectionInfo.fullMatchingImages.length &&
+      !detectionInfo.partialMatchingImages.length &&
+      !detectionInfo.webEntities.length &&
+      !detectionInfo.bestGuessLabels.length &&
+      !detectionInfo.visuallySimilarImages.length
+    ) {
+      throw new Error('No se obtuvo información útil de Google Vision.');
+    }
+
+    // Extraer palabras clave de web entities y best guess labels
+    const keywords = [
+      ...detectionInfo.webEntities.map(entity => entity.description),
+      ...detectionInfo.bestGuessLabels.map(label => label.label)
+    ].filter(desc => desc.length > 3); // Filtrar descripciones cortas
+
+    console.log('Palabras clave para búsqueda en Unsplash:', keywords);
+
     if (keywords.length === 0) {
-      throw new Error('No se obtuvieron etiquetas de Google Vision.');
+      throw new Error('No se obtuvieron palabras clave relevantes de Google Vision.');
     }
 
     // Buscar imágenes similares en Unsplash
@@ -372,7 +396,8 @@ const processMainImageWithGoogleVision = async (postId) => {
     return {
       success: true,
       message: `Imágenes similares obtenidas y subidas exitosamente al metadato '${metadataKey}'.`,
-      imageIds: uploadedImageIds
+      imageIds: uploadedImageIds,
+      detectionInfo // Devolver toda la información de Google Vision para decisiones futuras
     };
   } catch (error) {
     console.error(`Error procesando la imagen principal con Google Vision:`, error);
@@ -439,7 +464,7 @@ app.post('/update-metadata', async (req, res) => {
 });
 
 // **Endpoint: Process Main Image with Google Vision and Update WordPress**
-app.post('/process-main-image', async (req, res) => {
+app.post('/process-google-vision', async (req, res) => {
   const { postId } = req.body;
 
   if (!postId) {
@@ -450,7 +475,7 @@ app.post('/process-main-image', async (req, res) => {
     const result = await processMainImageWithGoogleVision(postId);
     res.json(result);
   } catch (error) {
-    console.error('Error en /process-main-image:', error);
+    console.error('Error en /process-google-vision:', error);
     res.status(500).json({ success: false, message: error.message || 'Error procesando la imagen principal.' });
   }
 });
