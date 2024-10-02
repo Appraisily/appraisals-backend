@@ -1,0 +1,1 @@
+provide the name (alone) of the artist extracted from the following information:
