@@ -108,7 +108,23 @@ const getPrompt = async (custom_post_type_name) => {
 
 // Función para generar texto con OpenAI
 const generateTextWithOpenAI = async (prompt, title, imageUrls) => {
-  const fullPrompt = `Title: ${title}\nImages: ${JSON.stringify(imageUrls)}\n\n${prompt}`;
+  // Construir el contenido del mensaje siguiendo la estructura correcta
+  const messagesWithRoles = [
+    {
+      role: "system",
+      content: "You are a professional art expert."
+    },
+    {
+      role: "user",
+      content: [
+        { type: "text", text: `Title: ${title}` },
+        { type: "image_url", image_url: { url: imageUrls.main || "" } },
+        { type: "image_url", image_url: { url: imageUrls.age || "" } },
+        { type: "image_url", image_url: { url: imageUrls.signature || "" } },
+        { type: "text", text: prompt }
+      ]
+    }
+  ];
 
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -118,17 +134,8 @@ const generateTextWithOpenAI = async (prompt, title, imageUrls) => {
         'Authorization': `Bearer ${OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'gpt-4',
-        messages: [
-          {
-            role: 'system',
-            content: 'You are a professional art expert.'
-          },
-          {
-            role: 'user',
-            content: fullPrompt
-          }
-        ],
+        model: 'gpt-4o-mini', // Asegúrate de que este es el modelo correcto que deseas usar
+        messages: messagesWithRoles,
         max_tokens: 500,
         temperature: 0.7
       })
@@ -148,6 +155,7 @@ const generateTextWithOpenAI = async (prompt, title, imageUrls) => {
     throw new Error('Error generando texto con OpenAI.');
   }
 };
+
 
 // Función para actualizar metadatos en WordPress
 const updateWordPressMetadata = async (wpPostId, metadataKey, metadataValue) => {
