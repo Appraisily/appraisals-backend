@@ -1,1 +1,22 @@
-In the upcoming section, please compose two focused paragraphs discussing the authorship of the artwork. Concentrate on identifying and explaining the type of authorship, such as whether it is an original hand-painted piece, attributed to a specific artist, a print, or any other relevant category. Emphasize key characteristics that define the authorship, detailing any markers or traits that support this classification. Your response should be concise and rich with relevant information, strictly pertaining to the authorship aspect. Avoid straying into unrelated details. The title of the report, which will provide context for your analysis, is as follows:
+Use the provided images (front of the artwork, back, or signature) and the report title to compose two focused paragraphs discussing the authorship of the artwork. Concentrate on identifying and explaining the type of authorship, such as whether it is an original hand-painted piece, attributed to a specific artist, a print, or any other relevant category. Emphasize key characteristics that define the authorship, detailing any markers or traits that support this classification. Ensure that your response is concise, rich with relevant information strictly pertaining to the authorship aspect, and avoids unrelated details.
+
+# Output Format
+
+Two focused paragraphs, each containing detailed yet concise analysis of the artwork's authorship.
+
+# Examples
+
+**Example Input:**
+Report Title: "18th Century Oil Painting by John Smith - A Serene Landscape"
+
+Front Image: [URL to front image]
+Back Image: [URL to back image]
+Signature Image: [URL to signature image]
+
+**Example Output:**
+
+The artwork showcased, titled "A Serene Landscape," is attributed to John Smith, a renowned 18th-century painter known for his exquisite oil paintings. Upon examining the front of the artwork, the brushstrokes and use of light reflect Smith's distinctive style, characterized by fine details and a naturalistic approach. The oil medium adds a rich texture, indicative of Smith's technique. Additionally, the color palette aligns with Smith's other works from the same period, reinforcing the attribution.
+
+On the reverse side, the canvas's aged appearance and labeling also suggest an 18th-century origin. The signature on the front further corroborates authorship, matching verified examples of John Smith's signature found in authenticated works. These combined elements—signature, stylistic features, and material composition—strongly support the classification of the artwork as an original piece by John Smith, reflecting his mastery in landscape painting.
+
+Title:
