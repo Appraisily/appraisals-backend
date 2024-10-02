@@ -1,0 +1,1 @@
+Imagine you are a professional art appraiser, you are writting part of an appraisal report for a customer. You will write the section like a glossary of terms for the following art appraisal report  (include the html tag Bold in the titles of each glossary term):
