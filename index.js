@@ -219,8 +219,13 @@ const updateWordPressMetadata = async (wpPostId, metadataKey, metadataValue) => 
 // Función para analizar la imagen con Google Vision y obtener detecciones web
 const analyzeImageWithGoogleVision = async (imageUrl) => {
   try {
+    console.log(`Analizando la imagen con Google Vision: ${imageUrl}`);
     const [result] = await visionClient.webDetection(imageUrl);
     const webDetection = result.webDetection;
+
+    if (!webDetection) {
+      throw new Error('No se obtuvieron resultados de detección web.');
+    }
 
     // Estructurar la información obtenida
     const detectionInfo = {
@@ -244,6 +249,7 @@ const analyzeImageWithGoogleVision = async (imageUrl) => {
 const uploadImageToWordPress = async (imageUrl) => {
   try {
     // Descargar la imagen
+    console.log(`Descargando la imagen desde: ${imageUrl}`);
     const response = await fetch(imageUrl);
     if (!response.ok) {
       console.error(`Error descargando la imagen desde ${imageUrl}:`, await response.text());
@@ -259,6 +265,7 @@ const uploadImageToWordPress = async (imageUrl) => {
     form.append('file', buffer, filename);
 
     // Subir la imagen a WordPress
+    console.log(`Subiendo la imagen a WordPress: ${filename}`);
     const uploadResponse = await fetch(`${WORDPRESS_API_URL}/media`, {
       method: 'POST',
       headers: {
@@ -289,6 +296,7 @@ const processMainImageWithGoogleVision = async (postId) => {
     // Obtener detalles del post desde WordPress
     const getPostEndpoint = `${WORDPRESS_API_URL}/appraisals/${postId}`;
 
+    console.log(`Obteniendo detalles del post ID: ${postId}`);
     const postResponse = await fetch(getPostEndpoint, {
       method: 'GET',
       headers: {
@@ -328,7 +336,7 @@ const processMainImageWithGoogleVision = async (postId) => {
 
     // Extraer URLs de imágenes similares proporcionadas por Google Vision
     const similarImageUrls = detectionInfo.visuallySimilarImages.map(image => image.url).filter(url => url);
-
+    
     console.log('Imágenes similares obtenidas de Google Vision:', similarImageUrls);
 
     if (similarImageUrls.length === 0) {
@@ -379,6 +387,7 @@ app.post('/update-metadata', async (req, res) => {
     // Obtener detalles del post desde WordPress
     const getPostEndpoint = `${WORDPRESS_API_URL}/appraisals/${postId}`;
 
+    console.log(`Obteniendo detalles del post ID: ${postId}`);
     const postResponse = await fetch(getPostEndpoint, {
       method: 'GET',
       headers: {
