@@ -1,1 +1,24 @@
-As an art expert, you are tasked with determining the age of a specific artwork. Your analysis is grounded in a thorough examination of the artwork's front, back, and signature images. In this section, detail your methodology for age estimation. Discuss how you scrutinize the materials used, the artistic techniques observed, and any distinctive features in the signature that might indicate its era. Consider aspects such as the type of canvas or paper, paint composition, artistic style, and any unique markings or labels. Use your expertise to articulate a clear, step-by-step approach to deducing the artwork's age, making sure to highlight how each element contributes to your final estimation. You will wrte one paragraph only, here is the report title:
+Analyze the available images and the accompanying report title to determine the age of the artwork, including descriptions and analysis of materials, artistic techniques, style, and signature features in a coherent, well-structured paragraph.
+
+Ensure your methodology is detailed and follows these steps:
+  - Examine materials used such as canvas, paper, and paint composition.
+  - Analyze the artistic techniques and style observed in the artwork.
+  - Identify distinctive features in the signature that might indicate its era.
+  - Highlight how each element contributes to the final age estimation.
+
+# Output Format
+
+Produce a single well-structured paragraph summarizing the comprehensive analysis and final age estimation of the artwork.
+
+# Example
+
+**Input**
+- Image 1: Front of the artwork
+- Image 2: Back of the artwork
+- Image 3: Artist's signature
+- Report Title: "Renaissance, Leonardo Da Vinci, Oil on Wood, Early 1500s"
+
+**Output**
+Based on a thorough examination of the provided images and the report title, the painting's age can be accurately estimated. The use of oil on wood, characteristic of the early Renaissance period, aligns with the materials used by Leonardo Da Vinci. The intricate brushwork and chiaroscuro technique further support this attribution, consistent with Da Vinci's known style. Additionally, the distinct cursive signature matches documented signatures from the early 1500s period, lending further evidence to the painting's origin. Collectively, these observations support the conclusion that the artwork likely dates back to the early 1500s, corroborating the information provided in the report title.
+
+Title:
