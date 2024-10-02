@@ -4,26 +4,48 @@ const express = require('express');
 const fetch = require('node-fetch');
 const fs = require('fs').promises;
 const path = require('path');
-require('dotenv').config(); // Cargar variables de entorno
+const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 
 const app = express();
 
 // Middleware para parsear JSON
 app.use(express.json());
 
-// Variables de entorno
-const {
-  PORT = 8080,
-  WORDPRESS_API_URL,
-  WORDPRESS_USERNAME,
-  WORDPRESS_APP_PASSWORD,
-  OPENAI_API_KEY
-} = process.env;
+// Inicializar el cliente de Secret Manager
+const client = new SecretManagerServiceClient();
 
-// Validación de variables de entorno
-if (!WORDPRESS_API_URL || !WORDPRESS_USERNAME || !WORDPRESS_APP_PASSWORD || !OPENAI_API_KEY) {
-  console.error('Error: Faltan variables de entorno necesarias.');
-  process.exit(1);
+// Función genérica para obtener un secreto de Secret Manager
+async function getSecret(secretName) {
+  try {
+    const [version] = await client.accessSecretVersion({
+      name: `projects/${process.env.GOOGLE_CLOUD_PROJECT}/secrets/${secretName}/versions/latest`,
+    });
+    const payload = version.payload.data.toString('utf8');
+    return payload;
+  } catch (error) {
+    console.error(`Error obteniendo el secreto ${secretName}:`, error);
+    throw new Error(`No se pudo obtener el secreto ${secretName}.`);
+  }
+}
+
+// Variables para almacenar los secretos
+let WORDPRESS_API_URL;
+let WORDPRESS_USERNAME;
+let WORDPRESS_APP_PASSWORD;
+let OPENAI_API_KEY;
+
+// Función para cargar todos los secretos al iniciar la aplicación
+async function loadSecrets() {
+  try {
+    WORDPRESS_API_URL = await getSecret('WORDPRESS_API_URL');
+    WORDPRESS_USERNAME = await getSecret('wp_username');
+    WORDPRESS_APP_PASSWORD = await getSecret('wp_app_password');
+    OPENAI_API_KEY = await getSecret('OPENAI_API_KEY');
+    console.log('Todos los secretos han sido cargados exitosamente.');
+  } catch (error) {
+    console.error('Error cargando los secretos:', error);
+    process.exit(1); // Salir si no se pudieron cargar los secretos
+  }
 }
 
 // Función para obtener la URL de la imagen desde WordPress
@@ -94,7 +116,7 @@ const generateTextWithOpenAI = async (prompt, title, imageUrls) => {
         'Authorization': `Bearer ${OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'gpt-4', // Asegúrate de que el modelo soporta tus necesidades
+        model: 'gpt-4',
         messages: [
           {
             role: 'system',
@@ -127,7 +149,7 @@ const generateTextWithOpenAI = async (prompt, title, imageUrls) => {
 
 // Función para actualizar metadatos en WordPress
 const updateWordPressMetadata = async (wpPostId, metadataKey, metadataValue) => {
-  const updateWpEndpoint = `${WORDPRESS_API_URL}/appraisals/${wpPostId}`; // Asegúrate de que el endpoint sea correcto
+  const updateWpEndpoint = `${WORDPRESS_API_URL}/appraisals/${wpPostId}`;
 
   const updateData = {
     acf: {
@@ -215,7 +237,10 @@ app.post('/update-metadata', async (req, res) => {
   }
 });
 
-// Iniciar el servidor
-app.listen(PORT, () => {
-  console.log(`Servidor backend corriendo en el puerto ${PORT}`);
+// Iniciar el servidor después de cargar los secretos
+loadSecrets().then(() => {
+  const PORT = process.env.PORT || 8080;
+  app.listen(PORT, () => {
+    console.log(`Servidor backend corriendo en el puerto ${PORT}`);
+  });
 });
