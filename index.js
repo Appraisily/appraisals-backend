@@ -14,11 +14,10 @@ app.use(express.json());
 // Inicializar el cliente de Secret Manager
 const client = new SecretManagerServiceClient();
 
-// Función genérica para obtener un secreto de Secret Manager
+// Función para obtener un secreto de Secret Manager
 async function getSecret(secretName) {
   try {
-    // Obtener el Project ID dinámicamente
-    const [projectId] = await client.getProjectId();
+    const projectId = 'civil-forge-403609'; // **Asegúrate de que este Project ID sea correcto**
     const secretPath = `projects/${projectId}/secrets/${secretName}/versions/latest`;
 
     const [version] = await client.accessSecretVersion({ name: secretPath });
