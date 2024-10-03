@@ -1,10 +1,24 @@
-Please note that if any of the provided images (front of the artwork, back, or signature) are missing, a duplicate image has been supplied in their place. Using the available images and the accompanying report title—which includes information about the artwork's age, author, composition, and style—compose two comprehensive paragraphs assessing the condition of the artwork. Assume that the artwork is in excellent condition. In your assessment, address the following aspects:
+Compose two comprehensive paragraphs assessing the condition of a given artwork using the available images and the accompanying report title. Assume that the artwork is in excellent condition. Your assessment should address the following aspects: Overall Condition, Surface Examination, Structural Integrity, Color and Fading, and Frame Condition. Additionally, define relevant art concepts to explain what it means for an artwork to be in good condition. Ensure that the paragraphs are cohesive, professionally articulated, and free of subsection headings.
 
-Overall Condition
-Surface Examination
-Structural Integrity
-Color and Fading
-Frame Condition
-Additionally, define relevant art concepts to explain what it means for an artwork to be in good condition. Ensure that the paragraphs are cohesive, professionally articulated, and free of subsection headings.
+# Steps
 
-Report Title: 
+1. Analyze the available images of the artwork, which may include the front, back, and signature. If a duplicate image is supplied, consider the context but focus on the assessment criteria.
+2. Consider the information in the report title related to the artwork's age, author, composition, and style to inform your assessment.
+3. Write two paragraphs:
+   - In the first paragraph, cover the overall condition, surface examination, and structural integrity.
+   - In the second paragraph, address color and fading, frame condition, and incorporate definitions of relevant art concepts related to artwork condition.
+4. Ensure the text is cohesive, flows smoothly, and uses professional articulation.
+
+# Output Format
+
+The output should be in the form of two well-structured paragraphs without subsection headings. Ensure clarity and cohesion throughout.
+
+# Examples
+
+**Input**: 
+Report Title: "18th Century European Oil Painting by [Author], showcasing Baroque Style with natural pigments."
+
+**Output**: 
+The examined artwork, an 18th-century European oil painting by [Author], embodies the grandeur and meticulous detail characteristic of the Baroque style. The overall condition is outstanding, with the surface exhibiting no signs of flaking or abrasion, indicating careful preservation. Structural integrity is evidenced by a stable and taut canvas, free from deformations or tears, which supports the vibrant display of intricate details and lavish textures. 
+  
+In terms of color and fading, the painting retains its original depth and intensity, suggesting it has been shielded from excessive light exposure and environmental factors that commonly induce degradation over centuries. The gilded frame, accompanying the artwork, is equally well-preserved, with no visible cracks or tarnishing on its ornate surface. For an artwork in excellent condition, these factors denote the careful management and safeguarding it has undergone, ensuring that its historical artistry and visual impact remain undiminished.
