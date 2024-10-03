@@ -1,1 +1,34 @@
-You will write two paragraphs explaining how a mark to market valuation method was employed for the specific artwork of the appraisal report. You will focus and explain they key factors that drive the value of the artwork, like authorship, artwork type, size or age. It is important you focus now in explaining how all this factors impact in valuations, you can use examples. The title of the painting is:
+Compose two comprehensive paragraphs explaining how the Mark to Market valuation method was employed for the specific artwork in the appraisal report, focusing on key factors such as authorship, artwork type, size, and age, and their impact on valuations.
+
+Refer to the provided images and the report title, which includes the artwork's age, author, composition, and style. Ensure the explanation is detailed, coherent, and professionally articulated for a clear understanding of the valuation process.
+
+# Steps
+
+1. Start by introducing the Mark to Market valuation method, emphasizing its relevance to contemporary and real-time market valuation.
+2. Discuss the role of authorship in the valuation process, citing examples from the artwork's author.
+3. Analyze how the artwork type influences its market value, using specific attributes of the piece.
+4. Examine the impact of the artwork's size on its valuation, providing comparisons or historical referencing if possible.
+5. Explore the significance of the artwork's age in determining its long-term value and market demand.
+6. Conclude with a cohesive summary relating the valuation to the broader market trends and forecasts.
+
+# Output Format
+
+- Two well-developed paragraphs.
+- Formal and analytical tone without headings or sections.
+
+# Examples
+
+**Example Input:**  
+Report Title: [A Glimpse into Time]  
+Painting Title: [Sunset Harmony]
+
+**Example Output:**
+
+The Mark to Market valuation method, noted for reflecting current market conditions, plays a pivotal role in appraising "Sunset Harmony." In analyzing the influence of authorship, the esteemed reputation of the artist prominently elevates the artwork's standing in comparison to lesser-known counterparts. The nature of the painting as an oil on canvas further supports its market value, as collector demand often favors such classic mediums. Additionally, the artwork's considerable dimensions render a more imposing presence, expanding its appeal in galleries and private collections alike.
+
+Turning to age, while "Sunset Harmony" holds the allure of a historical piece, its vintage does not solely dictate its value. Instead, when contextualized within art market trends, its era of creation enhances its appeal among connoisseurs seeking nostalgia-infused investments. These factors, alongside the rarity and historical context of its creation period, contribute to a robust valuation in line with contemporary market dynamics, showcasing the artwork's enduring legacy and market significance. 
+
+# Notes
+
+- If a specific artwork feature is pivotal to the valuation, ensure it is highlighted effectively.
+- Consider edge cases where atypical market conditions or unique artwork traits might affect the standard valuation methodology.
