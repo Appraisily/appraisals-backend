@@ -9,6 +9,9 @@ const { v4: uuidv4 } = require('uuid'); // Para generar nombres de archivos úni
 const vision = require('@google-cloud/vision'); // Importar el cliente de Vision
 const FormData = require('form-data'); // Para subir imágenes a WordPress
 
+// Importar el router de pdfGenerator
+const { router: pdfRouter, initializeGoogleApis } = require('./pdfGenerator');
+
 const app = express();
 
 // Middleware para parsear JSON
@@ -159,7 +162,7 @@ const generateTextWithOpenAI = async (prompt, title, imageUrls) => {
         'Authorization': `Bearer ${OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini', // Asegúrate de que este es el modelo correcto que deseas usar
+        model: 'gpt-4', // Mantener el modelo como 'gpt-4'
         messages: messagesWithRoles,
         max_tokens: 500,
         temperature: 0.7
@@ -348,7 +351,7 @@ const processMainImageWithGoogleVision = async (postId) => {
             }
           } catch (uploadError) {
             console.error(`Error subiendo la imagen similar desde ${url}:`, uploadError.message);
-            // Continue with next image
+            // Continuar con la siguiente imagen
           }
         }
 
@@ -362,7 +365,7 @@ const processMainImageWithGoogleVision = async (postId) => {
             console.info(`Metadato '${metadataKey}' actualizado correctamente en WordPress.`);
           } catch (metadataError) {
             console.error(`Error actualizando metadata 'GoogleVision' en WordPress para post ID ${postId}:`, metadataError.message);
-            // Continue
+            // Continuar con el siguiente paso
           }
         } else {
           console.warn('No se pudieron subir imágenes similares a WordPress.');
@@ -586,9 +589,13 @@ app.post('/complete-appraisal-report', async (req, res) => {
   }
 });
 
-// Iniciar el servidor después de cargar los secretos e inicializar Vision Client
-loadSecrets().then(() => {
+// Montar el router de pdfGenerator en el path raíz
+app.use('/', pdfRouter);
+
+// Iniciar el servidor después de cargar los secretos, inicializar Vision Client y Google APIs
+loadSecrets().then(async () => {
   initializeVisionClient(); // Inicializar el cliente de Vision
+  await initializeGoogleApis(); // Inicializar las APIs de Google
   const PORT = process.env.PORT || 8080;
   app.listen(PORT, () => {
     console.log(`Servidor backend corriendo en el puerto ${PORT}`);
