@@ -1,30 +1,71 @@
-Please note that if any of the provided images (front of the artwork, back, or signature) are missing, a duplicate image has been supplied in their place. Using the available images and the accompanying report title—which includes information about the artwork's age, author, composition, and style—and the description provided at the end, fill in the following set of parameters. Prioritize information from the description text, and use the images for fields that cannot be obtained from the text. Write up to 5 words for each field. Ensure that all parameters are filled accurately based on the available information.
+Extract information from the description text and images to fill out the parameters related to the artwork.
 
+Prioritize information from the description text, using the images only for fields not covered in the text. Keep responses concise, with each field's response limited to a maximum of five words. Present the filled parameters in the exact order listed.
 
-Parameters to Fill:
+# Steps
 
-Artists_Name:
-Artists_Date_of_Birth_and_Death:
-Title_of_Artwork:
-Period_Age:
-Color_Palette:
-Art_Style_Period:
-Medium:
-Dimensions:
-Is_it_Framed?:
-Edition_Information:
-Printer_Publisher:
-Composition_Description:
-Condition:
-Is_it_signed?:
-Provenance_Information:
-Registration_Number:
-Additional_Notes:
-COA?:
-Possible_Meaning_of_the_composition:
-Instructions:
+1. **Prioritize Description Text**: 
+   - Read through the provided description text carefully.
+   - Extract as much information as possible for each parameter.
 
-Prioritize Description Text: Extract as much information as possible from the provided description.
-Utilize Images for Missing Information: For any parameters not covered in the description, refer to the provided images (front, back, signature) to obtain the necessary details.
-Conciseness: Limit each field's response to a maximum of five words.
-Format Consistency: Present the filled parameters in the exact order listed above, maintaining the bullet point format.
+2. **Utilize Images for Missing Information**:
+   - If certain parameters are not addressed in the description text, analyze the provided images.
+   - Use the front, back, or signature images to derive necessary details for any remaining fields.
+
+3. **Formatted Output**:
+   - Fill in each parameter accurately, based on the derived information.
+   - Ensure that each response does not exceed five words.
+
+# Output Format
+
+- Present the information for each parameter following the bullet point order as listed below:
+  - Artists_Name: [up to 5 words]
+  - Artists_Date_of_Birth_and_Death: [up to 5 words]
+  - Title_of_Artwork: [up to 5 words]
+  - Period_Age: [up to 5 words]
+  - Color_Palette: [up to 5 words]
+  - Art_Style_Period: [up to 5 words]
+  - Medium: [up to 5 words]
+  - Dimensions: [up to 5 words]
+  - Is_it_Framed?: [Yes/No]
+  - Edition_Information: [up to 5 words]
+  - Printer_Publisher: [up to 5 words]
+  - Composition_Description: [up to 5 words]
+  - Condition: [up to 5 words]
+  - Is_it_signed?: [Yes/No]
+  - Provenance_Information: [up to 5 words]
+  - Registration_Number: [up to 5 words]
+  - Additional_Notes: [up to 5 words]
+  - COA?: [Yes/No]
+  - Possible_Meaning_of_the_composition: [up to 5 words]
+
+# Examples
+
+### Example 1:
+- *Input Description*: "This piece by John Doe, created in 1985, showcases a vibrant color palette typical of the modernist movement. The canvas measures 100x150 cm."
+- *Input Images*: Contains clear signature of John Doe.
+- *Output*:
+  - Artists_Name: John Doe
+  - Artists_Date_of_Birth_and_Death: Not mentioned
+  - Title_of_Artwork: Not mentioned
+  - Period_Age: 1985
+  - Color_Palette: Vibrant
+  - Art_Style_Period: Modernist
+  - Medium: Canvas
+  - Dimensions: 100x150 cm
+  - Is_it_Framed?: Unknown
+  - Edition_Information: Not mentioned
+  - Printer_Publisher: Not mentioned
+  - Composition_Description: Not mentioned
+  - Condition: Not mentioned
+  - Is_it_signed?: Yes
+  - Provenance_Information: Not mentioned
+  - Registration_Number: Not mentioned
+  - Additional_Notes: Not mentioned
+  - COA?: No
+  - Possible_Meaning_of_the_composition: Not mentioned
+
+# Notes
+
+- Make sure to verify any details gleaned from images for accuracy.
+- Double-check for exact wording consistency and brevity.
