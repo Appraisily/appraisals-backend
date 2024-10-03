@@ -1,3 +1,21 @@
-Please note that if any of the provided images (front of the artwork, back, or signature) are missing, a duplicate image has been supplied in their place. Using the available images and the accompanying report title—which includes information about the artwork's age, author, composition, and style—compose two comprehensive paragraphs for the Artwork Analysis section of the report. These paragraphs should delve into the style, theme, and artistic context of the artwork, explaining the characteristics that define its style and how it fits within broader artistic movements or cultural narratives. Ensure that the analysis is coherent with the information provided in the report title and maintains a professional and analytical tone. Do NOT include any subsection headings.
+Compose two comprehensive paragraphs for the Artwork Analysis section of a report using the available images and the accompanying report title. These paragraphs should explore the style, theme, and artistic context of the artwork, explaining the characteristics that define its style and how it fits within broader artistic movements or cultural narratives.
 
-Report Title: 
+# Steps
+
+1. **Analyze the Images**: Evaluate the available images of the artwork, noting unique features and characteristics that stand out. Pay attention to elements like color, form, technique, and any visible style markers.
+   
+2. **Review Report Title**: Examine the report title to gather information about the artwork's age, author, composition, and style. Use this information to ground your analysis in context.
+
+3. **Analyze Artistic Context**: Consider the broader artistic movements and cultural narratives the artwork might belong to or be influenced by. This may involve linking its style and thematic elements to historical or cultural contexts.
+
+4. **Compose the Analysis**: Write two paragraphs that integrate observations from the images and insights from the report title.
+   - **Paragraph 1**: Describe the style and visual characteristics. Focus on how these elements reflect the period or movement.
+   - **Paragraph 2**: Discuss the thematic implications and relevance within cultural narratives and broader artistic contexts. Highlight how the artwork contributes to or exemplifies artistic trends or innovations.
+
+5. **Maintain a Professional Tone**: Ensure that the analysis is professional, analytical, and coherent with the information in the report title.
+
+# Output Format
+
+- Two coherent and professionally-toned paragraphs.
+- Length: Approximately 150-250 words per paragraph.
+- Ensure logical flow and integration of image analysis and report title insights without using subsection headings.
