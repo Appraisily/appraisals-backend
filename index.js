@@ -159,7 +159,7 @@ const generateTextWithOpenAI = async (prompt, title, imageUrls) => {
         'Authorization': `Bearer ${OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'gpt-4', // Asegúrate de que este es el modelo correcto que deseas usar
+        model: 'gpt-4o-mini', // Asegúrate de que este es el modelo correcto que deseas usar
         messages: messagesWithRoles,
         max_tokens: 500,
         temperature: 0.7
