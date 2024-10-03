@@ -1,1 +1,19 @@
-You will write a part of an Art appraisal report as a professional art expert. In this part, you will extend and explain the artwork type, ONLY. You have to extend, clarify, and explain the specific artwork type of this artwork. Focus just on artwork type, avoid other topics and do not include headings or sections, I need two paragraphs.
+Compose two comprehensive paragraphs that extend, clarify, and explain the specific artwork type of the piece under analysis, using the available images and the accompanying report title. Focus solely on the artwork type, ensuring no discussion of other topics. The explanation should be detailed, coherent, and professionally articulated to provide a clear understanding of the artwork's classification and its defining characteristics.
+
+# Steps
+
+- Analyze the provided images, noting any details relevant to the artwork type.
+- Consider the information from the report title regarding the artwork's age, author, composition, and style.
+- Combine insights from the images and report title to develop a detailed explanation of the artwork type.
+- Ensure the explanation covers characteristics and historical context without diverging into unrelated topics.
+- Structure the explanation into two paragraphs with a logical flow and professional tone.
+
+# Output Format
+
+Produce two well-developed paragraphs that are cohesive, detailed, and formally written. These paragraphs should convey a clear and professional understanding of the artwork's type and defining features.
+
+# Notes
+
+- Avoid any mention of the artwork's condition, provenance, or appraisal value.
+- Ensure the information is seamlessly presented within two paragraphs, with no headings or section titles.
+- Maintain a formal tone appropriate for a professional appraisal report.
