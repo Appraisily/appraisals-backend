@@ -1,1 +1,4 @@
-provide the name (alone) of the artist extracted from the following information:
+
+Please note that if any of the provided images (front of the artwork, back, or signature) are missing, a duplicate image has been supplied in their place. Using the available images and the accompanying report title—which includes information about the artwork's age, author, composition, and style—extract and provide only the name of the artist from the following information. Carefully analyze the signature image to determine the artist's name. If the signature is unclear or missing, utilize contextual clues from the report title and other provided images to infer the most plausible artist's name. Ensure that the response includes solely the artist's name without any additional text or explanations.
+
+Report Title: 
