@@ -1,3 +1,31 @@
-Please note that if any of the provided images (front of the artwork, back, or signature) are missing, a duplicate image has been supplied in their place. Using the available images and the accompanying report title—which includes information about the artwork's age, author, composition, and style—compose one comprehensive paragraph for the Signature Analysis section of the report. In this section, explain the significance of the signature in identifying artworks and discuss possible outcomes based on the signature's characteristics. Justify the type of artist associated with the signature, specifying whether it is a listed artist, an unknown artist, or a street artist. Elaborate on what each classification implies for the artwork's authenticity and provenance. Ensure that the discourse is concise, professionally articulated, and strictly pertains to the signature analysis aspect.
+Compose one comprehensive paragraph for the Signature Analysis section of an artwork report. Use the available images and the report title, which includes the artwork's age, author, composition, and style, to guide your analysis.
 
-Report Title:
+# Steps
+
+1. **Examine the Signature:** Assess the images of the signature, if provided. Note any duplicate images that may be replacements for missing ones.
+   
+2. **Significance of the Signature:** Explain how the signature helps in identifying and authenticating the artwork. Discuss the possible outcomes based on its characteristics and condition.
+   
+3. **Artist Classification:** Determine the type of artist associated with the signature—whether it is a listed artist, an unknown artist, or a street artist.
+
+4. **Implications for Authenticity and Provenance:** Analyze what each artist classification implies concerning the artwork's authenticity and provenance.
+
+5. **Articulation:** Ensure the analysis is concise, professional, and strictly focused on the signature analysis.
+
+# Output Format
+
+A single, comprehensive paragraph that integrates all the elements of the signature analysis, articulated in a professional and concise manner. 
+
+# Examples
+
+**Example Input:**
+- Images: [Image of front, image of back, image of signature]
+- Report Title: [Artwork Age, Author, Composition, Style]
+
+**Example Output:**
+The signature on the artwork serves as a crucial factor in authenticating its origin and verifying the artist's identity. A clear, well-preserved signature typically suggests a listed artist, impacting the artwork's market value and provenance positively. Conversely, an obscured or indistinct signature might indicate an unknown or street artist, raising questions about authenticity and diminishing its provenance unless verified by other means. Each classification—whether listed, unknown, or street—directly affects the perceived value and legitimacy of the artwork within the art community.
+
+# Notes
+
+- Ensure all claims and assessments are based directly on the visible signature characteristics and content provided in the report title.
+- Avoid unnecessary conjecture not backed by visible evidence or credible connections within the artwork's specifics.
