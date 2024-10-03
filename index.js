@@ -159,7 +159,7 @@ const generateTextWithOpenAI = async (prompt, title, imageUrls) => {
         'Authorization': `Bearer ${OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini', // Asegúrate de que este es el modelo correcto que deseas usar
+        model: 'gpt-4', // Asegúrate de que este es el modelo correcto que deseas usar
         messages: messagesWithRoles,
         max_tokens: 500,
         temperature: 0.7
@@ -207,9 +207,9 @@ const updateWordPressMetadata = async (wpPostId, metadataKey, metadataValue) => 
       throw new Error(`Error actualizando metadata '${metadataKey}' en WordPress.`);
     }
 
-    const responseData = await response.json();
-    console.log(`Metadata '${metadataKey}' actualizado exitosamente en WordPress:`, responseData);
-    return responseData;
+    // No log the full response, just a success message
+    console.log(`Metadata '${metadataKey}' actualizado correctamente en WordPress.`);
+    return;
   } catch (error) {
     console.error(`Error actualizando metadata '${metadataKey}' en WordPress:`, error);
     throw new Error(`Error actualizando metadata '${metadataKey}' en WordPress.`);
@@ -237,7 +237,7 @@ const analyzeImageWithGoogleVision = async (imageUrl) => {
       visuallySimilarImages: webDetection.visuallySimilarImages || []
     };
 
-    console.log('Información de detección web obtenida de Google Vision:', detectionInfo);
+    console.log('Información de detección web obtenida de Google Vision.');
     return detectionInfo;
   } catch (error) {
     console.error('Error analizando la imagen con Google Vision:', error);
@@ -323,51 +323,61 @@ const processMainImageWithGoogleVision = async (postId) => {
     console.info(`Post ID: ${postId} - Main Image URL: ${mainImageUrl}`);
 
     // Analizar la imagen con Google Vision para obtener detecciones web
-    const detectionInfo = await analyzeImageWithGoogleVision(mainImageUrl);
-    if (
-      !detectionInfo.fullMatchingImages.length &&
-      !detectionInfo.partialMatchingImages.length &&
-      !detectionInfo.webEntities.length &&
-      !detectionInfo.bestGuessLabels.length &&
-      !detectionInfo.visuallySimilarImages.length
-    ) {
-      throw new Error('No se obtuvo información útil de Google Vision.');
+    let detectionInfo;
+    try {
+      detectionInfo = await analyzeImageWithGoogleVision(mainImageUrl);
+    } catch (visionError) {
+      console.error(`Error en Google Vision para post ID ${postId}:`, visionError.message);
+      detectionInfo = null;
     }
 
-    // Extraer URLs de imágenes similares proporcionadas por Google Vision
-    const similarImageUrls = detectionInfo.visuallySimilarImages.map(image => image.url).filter(url => url);
-    
-    console.log('Imágenes similares obtenidas de Google Vision:', similarImageUrls);
+    if (detectionInfo) {
+      // Extraer URLs de imágenes similares proporcionadas por Google Vision
+      const similarImageUrls = detectionInfo.visuallySimilarImages.map(image => image.url).filter(url => url);
 
-    if (similarImageUrls.length === 0) {
-      throw new Error('No se encontraron imágenes similares en las detecciones de Google Vision.');
-    }
+      console.log('Imágenes similares obtenidas de Google Vision:', similarImageUrls);
 
-    // Subir las imágenes similares a WordPress y obtener sus IDs
-    const uploadedImageIds = [];
-    for (const url of similarImageUrls) {
-      const imageId = await uploadImageToWordPress(url);
-      if (imageId) {
-        uploadedImageIds.push(imageId);
+      if (similarImageUrls.length > 0) {
+        // Subir las imágenes similares a WordPress y obtener sus IDs
+        const uploadedImageIds = [];
+        for (const url of similarImageUrls) {
+          try {
+            const imageId = await uploadImageToWordPress(url);
+            if (imageId) {
+              uploadedImageIds.push(imageId);
+            }
+          } catch (uploadError) {
+            console.error(`Error subiendo la imagen similar desde ${url}:`, uploadError.message);
+            // Continue with next image
+          }
+        }
+
+        if (uploadedImageIds.length > 0) {
+          try {
+            // Actualizar el metadato 'GoogleVision' en WordPress
+            const metadataKey = 'GoogleVision'; // Asegúrate de que este es el nombre correcto del metadato
+            const metadataValue = uploadedImageIds;
+
+            await updateWordPressMetadata(postId, metadataKey, metadataValue);
+            console.info(`Metadato '${metadataKey}' actualizado correctamente en WordPress.`);
+          } catch (metadataError) {
+            console.error(`Error actualizando metadata 'GoogleVision' en WordPress para post ID ${postId}:`, metadataError.message);
+            // Continue
+          }
+        } else {
+          console.warn('No se pudieron subir imágenes similares a WordPress.');
+        }
+      } else {
+        console.warn('No se encontraron imágenes similares en las detecciones de Google Vision.');
       }
+    } else {
+      console.warn('No se pudo obtener información de Google Vision.');
     }
-
-    if (uploadedImageIds.length === 0) {
-      throw new Error('No se pudieron subir imágenes similares a WordPress.');
-    }
-
-    // Actualizar el metadato 'GoogleVision' en WordPress
-    const metadataKey = 'GoogleVision'; // Asegúrate de que este es el nombre correcto del metadato
-    const metadataValue = uploadedImageIds;
-
-    await updateWordPressMetadata(postId, metadataKey, metadataValue);
-    console.info(`Metadato '${metadataKey}' actualizado exitosamente en WordPress.`);
 
     return {
       success: true,
-      message: `Imágenes similares obtenidas y subidas exitosamente al metadato '${metadataKey}'.`,
-      imageIds: uploadedImageIds,
-      detectionInfo // Devolver toda la información de Google Vision para decisiones futuras
+      message: `Proceso de Google Vision completado para el post ID '${postId}'.`,
+      detectionInfo: detectionInfo || {}
     };
   } catch (error) {
     console.error(`Error procesando la imagen principal con Google Vision:`, error);
@@ -474,64 +484,99 @@ app.post('/complete-appraisal-report', async (req, res) => {
     console.info(`Post ID: ${postId} - Main Image URL: ${mainImageUrl}`);
 
     // Analizar la imagen con Google Vision para obtener detecciones web
-    const detectionInfo = await analyzeImageWithGoogleVision(mainImageUrl);
-    if (
-      !detectionInfo.fullMatchingImages.length &&
-      !detectionInfo.partialMatchingImages.length &&
-      !detectionInfo.webEntities.length &&
-      !detectionInfo.bestGuessLabels.length &&
-      !detectionInfo.visuallySimilarImages.length
-    ) {
-      throw new Error('No se obtuvo información útil de Google Vision.');
+    let detectionInfo;
+    try {
+      detectionInfo = await analyzeImageWithGoogleVision(mainImageUrl);
+    } catch (visionError) {
+      console.error(`Error en Google Vision para post ID ${postId}:`, visionError.message);
+      detectionInfo = null;
     }
 
-    // Extraer URLs de imágenes similares proporcionadas por Google Vision
-    const similarImageUrls = detectionInfo.visuallySimilarImages.map(image => image.url).filter(url => url);
-    
-    console.log('Imágenes similares obtenidas de Google Vision:', similarImageUrls);
+    if (detectionInfo) {
+      // Extraer URLs de imágenes similares proporcionadas por Google Vision
+      const similarImageUrls = detectionInfo.visuallySimilarImages.map(image => image.url).filter(url => url);
 
-    if (similarImageUrls.length === 0) {
-      throw new Error('No se encontraron imágenes similares en las detecciones de Google Vision.');
-    }
+      console.log('Imágenes similares obtenidas de Google Vision:', similarImageUrls);
 
-    // Subir las imágenes similares a WordPress y obtener sus IDs
-    const uploadedImageIds = [];
-    for (const url of similarImageUrls) {
-      const imageId = await uploadImageToWordPress(url);
-      if (imageId) {
-        uploadedImageIds.push(imageId);
+      if (similarImageUrls.length > 0) {
+        // Subir las imágenes similares a WordPress y obtener sus IDs
+        const uploadedImageIds = [];
+        for (const url of similarImageUrls) {
+          try {
+            const imageId = await uploadImageToWordPress(url);
+            if (imageId) {
+              uploadedImageIds.push(imageId);
+            }
+          } catch (uploadError) {
+            console.error(`Error subiendo la imagen similar desde ${url}:`, uploadError.message);
+            // Continuar con la siguiente imagen
+          }
+        }
+
+        if (uploadedImageIds.length > 0) {
+          try {
+            // Actualizar el metadato 'GoogleVision' en WordPress
+            const metadataKey = 'GoogleVision'; // Asegúrate de que este es el nombre correcto del metadato
+            const metadataValue = uploadedImageIds;
+
+            await updateWordPressMetadata(postId, metadataKey, metadataValue);
+            console.info(`Metadato '${metadataKey}' actualizado correctamente en WordPress.`);
+          } catch (metadataError) {
+            console.error(`Error actualizando metadata 'GoogleVision' en WordPress para post ID ${postId}:`, metadataError.message);
+            // Continuar con el siguiente paso
+          }
+        } else {
+          console.warn('No se pudieron subir imágenes similares a WordPress.');
+        }
+      } else {
+        console.warn('No se encontraron imágenes similares en las detecciones de Google Vision.');
       }
+    } else {
+      console.warn('No se pudo obtener información de Google Vision.');
     }
-
-    if (uploadedImageIds.length === 0) {
-      throw new Error('No se pudieron subir imágenes similares a WordPress.');
-    }
-
-    // Actualizar el metadato 'GoogleVision' en WordPress
-    const metadataKey = 'GoogleVision'; // Asegúrate de que este es el nombre correcto del metadato
-    const metadataValue = uploadedImageIds;
-
-    await updateWordPressMetadata(postId, metadataKey, metadataValue);
-    console.info(`Metadato '${metadataKey}' actualizado exitosamente en WordPress.`);
 
     // Listar todos los archivos .txt en la carpeta 'prompts'
     const promptsDir = path.join(__dirname, 'prompts');
-    const files = await fs.readdir(promptsDir);
-    const txtFiles = files.filter(file => path.extname(file).toLowerCase() === '.txt');
-
-    if (txtFiles.length === 0) {
-      throw new Error('No se encontraron archivos de prompt en la carpeta.');
+    let txtFiles = [];
+    try {
+      const files = await fs.readdir(promptsDir);
+      txtFiles = files.filter(file => path.extname(file).toLowerCase() === '.txt');
+    } catch (fsError) {
+      console.error('Error listando archivos de prompts:', fsError.message);
+      // Continuar
     }
 
-    // Procesar cada archivo .txt
-    for (const file of txtFiles) {
-      const custom_post_type_name = path.basename(file, '.txt');
-      const prompt = await getPrompt(custom_post_type_name);
-      const generatedText = await generateTextWithOpenAI(prompt, postTitle, { main: mainImageUrl }); // Puedes ajustar los campos de imageUrls según sea necesario
+    if (txtFiles.length === 0) {
+      console.warn('No se encontraron archivos de prompt en la carpeta.');
+    } else {
+      // Procesar cada archivo .txt
+      for (const file of txtFiles) {
+        const custom_post_type_name = path.basename(file, '.txt');
+        let prompt;
+        try {
+          prompt = await getPrompt(custom_post_type_name);
+        } catch (promptError) {
+          console.error(`Error obteniendo prompt para '${custom_post_type_name}':`, promptError.message);
+          continue; // Saltar al siguiente archivo
+        }
 
-      // Actualizar el metadato en WordPress
-      await updateWordPressMetadata(postId, custom_post_type_name, generatedText);
-      console.info(`Metadato '${custom_post_type_name}' actualizado exitosamente en WordPress.`);
+        let generatedText;
+        try {
+          generatedText = await generateTextWithOpenAI(prompt, postTitle, { main: mainImageUrl });
+        } catch (openAIError) {
+          console.error(`Error generando texto con OpenAI para '${custom_post_type_name}':`, openAIError.message);
+          continue; // Saltar al siguiente archivo
+        }
+
+        try {
+          // Actualizar el metadato en WordPress
+          await updateWordPressMetadata(postId, custom_post_type_name, generatedText);
+          console.info(`Metadata '${custom_post_type_name}' actualizado correctamente en WordPress.`);
+        } catch (metadataError) {
+          console.error(`Error actualizando metadata '${custom_post_type_name}' en WordPress:`, metadataError.message);
+          // Continuar con el siguiente archivo
+        }
+      }
     }
 
     res.json({ success: true, message: 'Informe de tasación completado exitosamente.' });
