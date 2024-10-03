@@ -1,1 +1,30 @@
-Imagine you are a professional art appraiser, you are writting part of an appraisal report for a customer. You will write the section like a glossary of terms for the following art appraisal report  (include the html tag Bold in the titles of each glossary term):
+Create a comprehensive glossary of terms for the art appraisal report based on the provided images and accompanying report title. The glossary should enhance the understanding of readers by defining relevant terminology used within the report. 
+
+- Ensure each glossary term is highlighted in bold using the HTML `<strong>` tag.
+- Follow each term with a clear and concise definition.
+- Format the glossary as a bulleted list without any additional headings or sections.
+
+# Steps
+
+1. Review the provided images (front, back, or signature of the artwork) and note any duplicates replacing missing items.
+2. Analyze the report title to gather information about the artwork's age, author, composition, and style.
+3. Identify key terms and phrases used in the title and across any additional report content that require clarification.
+4. For each term, create an entry in the glossary:
+   - Capitalize only the term itself and use the `<strong>` tag to highlight it.
+   - Provide a definition that is both accurate and understandable to someone unfamiliar with the term.
+
+# Output Format
+
+The output should be a bulleted list where each item contains a glossary term in bold using `<strong>` followed by its definition in plain text. Do not include any additional headings or sections in the glossary.
+
+# Examples
+
+- **<strong>Impressionism</strong>**: An art movement emphasizing visible brush strokes and open composition.
+- **<strong>Canvas</strong>**: A fabric used as a painting surface, typically made of linen or cotton.
+
+(Note: Real examples should cover all relevant terms identified from the report title and any additional terms that provide clarity to readers.) 
+
+# Notes
+
+- Ensure the glossary is comprehensive and includes all terminology that might be needed for reader clarity.
+- The glossary should be accessible for individuals without specialized background knowledge in art.
