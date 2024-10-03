@@ -7,19 +7,17 @@ const path = require('path');
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const { google } = require('googleapis');
 const Handlebars = require('handlebars');
+const { v4: uuidv4 } = require('uuid'); // Para generar nombres de archivos únicos
 
 const router = express.Router();
 
 // Inicializar el cliente de Secret Manager
 const secretClient = new SecretManagerServiceClient();
 
-// Variables para almacenar los secretos de Google Docs
-let GOOGLE_DOCS_CREDENTIALS;
-
 // Función para obtener un secreto de Secret Manager
 async function getGoogleDocsCredentials() {
   try {
-    const secretName = 'GOOGLE_DOCS_CREDENTIALS'; // Nombre del secreto
+    const secretName = 'GOOGLE_SERVICE_ACCOUNT_JSON'; // Nombre del secreto que almacena las credenciales de la cuenta de servicio
     const projectId = 'civil-forge-403609'; // Asegúrate de que este Project ID sea correcto
     const secretPath = `projects/${projectId}/secrets/${secretName}/versions/latest`;
 
@@ -62,13 +60,13 @@ async function initializeGoogleApis() {
 }
 
 // Función para obtener los metadatos de un post de WordPress
-const getPostMetadata = async (postId, metadataKey) => {
+const getPostMetadata = async (postId, metadataKey, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
   try {
-    const response = await fetch(`${process.env.WORDPRESS_API_URL}/appraisals/${postId}`, {
+    const response = await fetch(`${WORDPRESS_API_URL}/appraisals/${postId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(process.env.WORDPRESS_USERNAME)}:${process.env.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
       }
     });
 
@@ -154,12 +152,12 @@ const exportDocumentToPDF = async (documentId) => {
 };
 
 // Función para subir el PDF a Google Drive
-const uploadPDFToDrive = async (pdfBuffer, filename) => {
+const uploadPDFToDrive = async (pdfBuffer, filename, driveFolderId) => {
   try {
     const fileMetadata = {
       name: filename,
       mimeType: 'application/pdf',
-      parents: ['YOUR_GOOGLE_DRIVE_FOLDER_ID'], // Reemplaza con el ID de la carpeta en Google Drive donde deseas almacenar los PDFs
+      parents: [driveFolderId],
     };
 
     const media = {
@@ -190,23 +188,30 @@ router.post('/generate-pdf', async (req, res) => {
   }
 
   try {
-    // Paso 1: Obtener el metadato 'age_text' del post
-    const ageText = await getPostMetadata(postId, 'age_text');
+    // Paso 1: Obtener los secretos y variables de entorno necesarios
+    const GOOGLE_DOCS_TEMPLATE_ID = process.env.GOOGLE_DOCS_TEMPLATE_ID;
+    const GOOGLE_DRIVE_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
-    // Paso 2: Clonar la plantilla de Google Docs
-    const templateId = 'YOUR_GOOGLE_DOCS_TEMPLATE_ID'; // Reemplaza con el ID de tu plantilla de Google Docs
-    const clonedDocId = await cloneTemplate(templateId);
+    if (!GOOGLE_DOCS_TEMPLATE_ID || !GOOGLE_DRIVE_FOLDER_ID) {
+      throw new Error('GOOGLE_DOCS_TEMPLATE_ID y GOOGLE_DRIVE_FOLDER_ID deben estar definidos en las variables de entorno.');
+    }
 
-    // Paso 3: Reemplazar los marcadores de posición en el documento
+    // Paso 2: Obtener el metadato 'age_text' del post
+    const ageText = await getPostMetadata(postId, 'age_text', process.env.WORDPRESS_API_URL, process.env.WORDPRESS_USERNAME, process.env.WORDPRESS_APP_PASSWORD);
+
+    // Paso 3: Clonar la plantilla de Google Docs
+    const clonedDocId = await cloneTemplate(GOOGLE_DOCS_TEMPLATE_ID);
+
+    // Paso 4: Reemplazar los marcadores de posición en el documento
     const data = { age_text: ageText };
     await replacePlaceholders(clonedDocId, data);
 
-    // Paso 4: Exportar el documento a PDF
+    // Paso 5: Exportar el documento a PDF
     const pdfBuffer = await exportDocumentToPDF(clonedDocId);
 
-    // Paso 5: Subir el PDF a Google Drive
-    const pdfFilename = `Informe_Tasacion_${postId}_${uuidv4()}.pdf`;
-    const pdfLink = await uploadPDFToDrive(pdfBuffer, pdfFilename);
+    // Paso 6: Subir el PDF a Google Drive
+    const pdfFilename = `Informe_Tasacion_Post_${postId}_${uuidv4()}.pdf`;
+    const pdfLink = await uploadPDFToDrive(pdfBuffer, pdfFilename, GOOGLE_DRIVE_FOLDER_ID);
 
     res.json({ success: true, message: 'PDF generado exitosamente.', pdfLink: pdfLink });
   } catch (error) {
