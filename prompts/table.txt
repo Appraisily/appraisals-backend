@@ -1,23 +1,30 @@
-Based on the image provided and the description at the end, fill the following set of parameters (you can write up to 5 words on each field). Give the text at the end priority, use the image for the fields that cannot be obtained from the text at the end:
+Please note that if any of the provided images (front of the artwork, back, or signature) are missing, a duplicate image has been supplied in their place. Using the available images and the accompanying report title—which includes information about the artwork's age, author, composition, and style—and the description provided at the end, fill in the following set of parameters. Prioritize information from the description text, and use the images for fields that cannot be obtained from the text. Write up to 5 words for each field. Ensure that all parameters are filled accurately based on the available information.
 
-- Artists_Name: 
-- Artists_Date_of_Birth_and_Death: 
-- Title_of_Artwork: 
-- Period_Age:
-- Color_Palette:
-- Art_Style_Period: 
-- Medium: 
-- Dimensions: 
-- Is_it_Framed?: 
-- Edition_Information: 
-- Printer_Publisher: 
-- Composition_Description: 
-- Condition: 
-- Is_it_signed?: 
-- Provenance_Information:
-- Registration_Number: 
-- Additional_Notes: 
-- COA?:
-- Possible_Meaning_of_the_composition:
 
-I need all these parameters filled with the information.
+Parameters to Fill:
+
+Artists_Name:
+Artists_Date_of_Birth_and_Death:
+Title_of_Artwork:
+Period_Age:
+Color_Palette:
+Art_Style_Period:
+Medium:
+Dimensions:
+Is_it_Framed?:
+Edition_Information:
+Printer_Publisher:
+Composition_Description:
+Condition:
+Is_it_signed?:
+Provenance_Information:
+Registration_Number:
+Additional_Notes:
+COA?:
+Possible_Meaning_of_the_composition:
+Instructions:
+
+Prioritize Description Text: Extract as much information as possible from the provided description.
+Utilize Images for Missing Information: For any parameters not covered in the description, refer to the provided images (front, back, signature) to obtain the necessary details.
+Conciseness: Limit each field's response to a maximum of five words.
+Format Consistency: Present the filled parameters in the exact order listed above, maintaining the bullet point format.
