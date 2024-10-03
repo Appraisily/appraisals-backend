@@ -16,8 +16,8 @@ const secretClient = new SecretManagerServiceClient();
 
 // Función para obtener un secreto de Secret Manager
 async function getGoogleDocsCredentials() {
+  const secretName = 'GOOGLE_SERVICE_ACCOUNT_JSON'; // Nombre del secreto que almacena las credenciales de la cuenta de servicio
   try {
-    const secretName = 'GOOGLE_SERVICE_ACCOUNT_JSON'; // Nombre del secreto que almacena las credenciales de la cuenta de servicio
     const projectId = 'civil-forge-403609'; // Asegúrate de que este Project ID sea correcto
     const secretPath = `projects/${projectId}/secrets/${secretName}/versions/latest`;
 
