@@ -88,6 +88,31 @@ const getPostMetadata = async (postId, metadataKey, WORDPRESS_API_URL, WORDPRESS
   }
 };
 
+// Función para obtener el título de un post de WordPress
+const getPostTitle = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
+  try {
+    const response = await fetch(`${WORDPRESS_API_URL}/appraisals/${postId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error obteniendo post de WordPress:`, errorText);
+      throw new Error('Error obteniendo post de WordPress.');
+    }
+
+    const postData = await response.json();
+    return postData.title.rendered || '';
+  } catch (error) {
+    console.error(`Error obteniendo el título del post ID ${postId}:`, error);
+    throw error;
+  }
+};
+
 // Función para clonar una plantilla de Google Docs
 const cloneTemplate = async (templateId) => {
   try {
@@ -229,23 +254,27 @@ router.post('/generate-pdf', async (req, res) => {
     // Paso 2: Obtener el metadato 'age_text' del post
     const ageText = await getPostMetadata(postId, 'age_text', process.env.WORDPRESS_API_URL, process.env.WORDPRESS_USERNAME, process.env.WORDPRESS_APP_PASSWORD);
 
-    // Log para verificar el metadato obtenido
-    console.log(`Metadato 'age_text' obtenido: '${ageText}'`);
+    // Paso 3: Obtener el título del post
+    const postTitle = await getPostTitle(postId, process.env.WORDPRESS_API_URL, process.env.WORDPRESS_USERNAME, process.env.WORDPRESS_APP_PASSWORD);
 
-    // Paso 3: Clonar la plantilla de Google Docs
+    // Log para verificar el metadato y el título obtenidos
+    console.log(`Metadato 'age_text' obtenido: '${ageText}'`);
+    console.log(`Título del post obtenido: '${postTitle}'`);
+
+    // Paso 4: Clonar la plantilla de Google Docs
     const clonedDocId = await cloneTemplate(GOOGLE_DOCS_TEMPLATE_ID);
 
     // (Opcional) Mover el archivo clonado a la carpeta deseada
     await moveFileToFolder(clonedDocId, GOOGLE_DRIVE_FOLDER_ID);
 
-    // Paso 4: Reemplazar los marcadores de posición en el documento
-    const data = { age_text: ageText };
+    // Paso 5: Reemplazar los marcadores de posición en el documento
+    const data = { age_text: ageText, appraisal_title: postTitle };
     await replacePlaceholders(clonedDocId, data);
 
-    // Paso 5: Exportar el documento a PDF
+    // Paso 6: Exportar el documento a PDF
     const pdfBuffer = await exportDocumentToPDF(clonedDocId);
 
-    // Paso 6: Determinar el nombre del archivo PDF
+    // Paso 7: Determinar el nombre del archivo PDF
     let pdfFilename;
     if (session_ID && typeof session_ID === 'string' && session_ID.trim() !== '') {
       pdfFilename = `${session_ID}.pdf`;
@@ -253,7 +282,7 @@ router.post('/generate-pdf', async (req, res) => {
       pdfFilename = `Informe_Tasacion_Post_${postId}_${uuidv4()}.pdf`;
     }
 
-    // Paso 7: Subir el PDF a Google Drive
+    // Paso 8: Subir el PDF a Google Drive
     const pdfLink = await uploadPDFToDrive(pdfBuffer, pdfFilename, GOOGLE_DRIVE_FOLDER_ID);
 
     res.json({ success: true, message: 'PDF generado exitosamente.', pdfLink: pdfLink });
