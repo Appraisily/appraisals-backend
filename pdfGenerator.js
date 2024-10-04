@@ -236,7 +236,10 @@ const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WOR
     }
 
     const postData = await response.json();
-    const gallery = postData.acf && postData.acf.image_gallery ? postData.acf.image_gallery : [];
+    const gallery = postData.acf && postData.acf.GoogleVision ? postData.acf.GoogleVision : [];
+
+    // Verificar la estructura de la galería
+    console.log(`Galería de imágenes obtenida:`, gallery);
 
     return gallery;
   } catch (error) {
@@ -244,6 +247,7 @@ const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WOR
     throw error;
   }
 };
+
 
 // Función para clonar una plantilla de Google Docs
 const cloneTemplate = async (templateId) => {
