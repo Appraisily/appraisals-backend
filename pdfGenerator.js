@@ -8,6 +8,7 @@ const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const { google } = require('googleapis');
 const Handlebars = require('handlebars');
 const { v4: uuidv4 } = require('uuid'); // Para generar nombres de archivos únicos
+const { Readable } = require('stream'); // Importar Readable desde stream
 
 const router = express.Router();
 
@@ -43,7 +44,7 @@ async function initializeGoogleApis() {
       credentials: credentials,
       scopes: [
         'https://www.googleapis.com/auth/documents',
-        'https://www.googleapis.com/auth/drive',
+        'https://www.googleapis.com/auth/drive', // Scope ampliado
       ],
     });
 
@@ -101,8 +102,7 @@ const cloneTemplate = async (templateId) => {
       requestBody: {
         name: `Informe_Tasacion_${uuidv4()}`,
       },
-        supportsAllDrives: true, // Añadido
-
+      supportsAllDrives: true, // Soporte para Unidades Compartidas
     });
 
     console.log(`Plantilla clonada con ID: ${copiedFile.data.id}`);
@@ -171,15 +171,14 @@ const uploadPDFToDrive = async (pdfBuffer, filename, driveFolderId) => {
 
     const media = {
       mimeType: 'application/pdf',
-      body: Buffer.from(pdfBuffer),
+      body: Readable.from(pdfBuffer), // Convertir Buffer a Readable Stream
     };
 
     const file = await drive.files.create({
       requestBody: fileMetadata,
       media: media,
       fields: 'id, webViewLink',
-        supportsAllDrives: true, // Añadido
-
+      supportsAllDrives: true, // Soporte para Unidades Compartidas
     });
 
     console.log(`PDF subido a Google Drive con ID: ${file.data.id}`);
@@ -187,6 +186,22 @@ const uploadPDFToDrive = async (pdfBuffer, filename, driveFolderId) => {
   } catch (error) {
     console.error('Error subiendo el PDF a Google Drive:', error);
     throw new Error('Error subiendo el PDF a Google Drive.');
+  }
+};
+
+// Función para mover el archivo clonado a una carpeta específica (opcional)
+const moveFileToFolder = async (fileId, folderId) => {
+  try {
+    await drive.files.update({
+      fileId: fileId,
+      addParents: folderId,
+      removeParents: 'root', // Eliminar de la carpeta raíz si es necesario
+      fields: 'id, parents',
+    });
+    console.log(`Archivo ${fileId} movido a la carpeta ${folderId}`);
+  } catch (error) {
+    console.error('Error moviendo el archivo:', error);
+    throw new Error('Error moviendo el archivo.');
   }
 };
 
@@ -218,6 +233,9 @@ router.post('/generate-pdf', async (req, res) => {
 
     // Paso 3: Clonar la plantilla de Google Docs
     const clonedDocId = await cloneTemplate(GOOGLE_DOCS_TEMPLATE_ID);
+
+    // (Opcional) Mover el archivo clonado a la carpeta deseada
+    await moveFileToFolder(clonedDocId, GOOGLE_DRIVE_FOLDER_ID);
 
     // Paso 4: Reemplazar los marcadores de posición en el documento
     const data = { age_text: ageText };
