@@ -114,6 +114,58 @@ const getPostTitle = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDP
   }
 };
 
+// Función para obtener la fecha de publicación de un post de WordPress
+const getPostDate = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
+  try {
+    const response = await fetch(`${WORDPRESS_API_URL}/appraisals/${postId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error obteniendo post de WordPress:`, errorText);
+      throw new Error('Error obteniendo post de WordPress.');
+    }
+
+    const postData = await response.json();
+    return postData.date || '';
+  } catch (error) {
+    console.error(`Error obteniendo la fecha del post ID ${postId}:`, error);
+    throw error;
+  }
+};
+
+// Función para obtener la galería de imágenes de un post de WordPress
+const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
+  try {
+    const response = await fetch(`${WORDPRESS_API_URL}/appraisals/${postId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error obteniendo post de WordPress:`, errorText);
+      throw new Error('Error obteniendo post de WordPress.');
+    }
+
+    const postData = await response.json();
+    const gallery = postData.acf && postData.acf.image_gallery ? postData.acf.image_gallery : [];
+
+    return gallery;
+  } catch (error) {
+    console.error(`Error obteniendo la galería del post ID ${postId}:`, error);
+    throw error;
+  }
+};
+
 // Función para clonar una plantilla de Google Docs
 const cloneTemplate = async (templateId) => {
   try {
@@ -136,6 +188,36 @@ const cloneTemplate = async (templateId) => {
   } catch (error) {
     console.error('Error clonando la plantilla de Google Docs:', error);
     throw new Error('Error clonando la plantilla de Google Docs.');
+  }
+};
+
+// Función para agregar imágenes de la galería en el documento
+const addGalleryImages = async (documentId, gallery) => {
+  try {
+    const requests = [];
+
+    for (const image of gallery) {
+      requests.push({
+        insertInlineImage: {
+          uri: image.url,
+          location: {
+            index: 1, // Ubicación donde insertar la imagen. Ajustar según sea necesario.
+          },
+        },
+      });
+    }
+
+    await docs.documents.batchUpdate({
+      documentId: documentId,
+      requestBody: {
+        requests: requests,
+      },
+    });
+
+    console.log(`Imágenes de la galería agregadas al documento ID: ${documentId}`);
+  } catch (error) {
+    console.error('Error agregando imágenes de la galería a Google Docs:', error);
+    throw new Error('Error agregando imágenes de la galería a Google Docs.');
   }
 };
 
@@ -278,24 +360,37 @@ router.post('/generate-pdf', async (req, res) => {
     // Paso 3: Obtener el título del post
     const postTitle = await getPostTitle(postId, process.env.WORDPRESS_API_URL, process.env.WORDPRESS_USERNAME, process.env.WORDPRESS_APP_PASSWORD);
 
-    // Log para verificar el metadato y el título obtenidos
+    // Paso 4: Obtener la fecha de publicación del post
+    const postDate = await getPostDate(postId, process.env.WORDPRESS_API_URL, process.env.WORDPRESS_USERNAME, process.env.WORDPRESS_APP_PASSWORD);
+
+    // Paso 5: Obtener la galería de imágenes del post
+    const gallery = await getPostGallery(postId, process.env.WORDPRESS_API_URL, process.env.WORDPRESS_USERNAME, process.env.WORDPRESS_APP_PASSWORD);
+
+    // Log para verificar el metadato, el título, la fecha y la galería obtenidos
     console.log(`Metadato 'age_text' obtenido: '${ageText}'`);
     console.log(`Título del post obtenido: '${postTitle}'`);
+    console.log(`Fecha del post obtenida: '${postDate}'`);
+    console.log(`Galería de imágenes obtenida:`, gallery);
 
-    // Paso 4: Clonar la plantilla de Google Docs
+    // Paso 6: Clonar la plantilla de Google Docs
     const clonedDocId = await cloneTemplate(GOOGLE_DOCS_TEMPLATE_ID);
 
     // (Opcional) Mover el archivo clonado a la carpeta deseada
     await moveFileToFolder(clonedDocId, GOOGLE_DRIVE_FOLDER_ID);
 
-    // Paso 5: Reemplazar los marcadores de posición en el documento
-    const data = { age_text: ageText, appraisal_title: postTitle };
+    // Paso 7: Reemplazar los marcadores de posición en el documento
+    const data = { age_text: ageText, appraisal_title: postTitle, appraisal_date: postDate };
     await replacePlaceholders(clonedDocId, data);
 
-    // Paso 6: Exportar el documento a PDF
+    // Paso 8: Agregar las imágenes de la galería al documento
+    if (gallery.length > 0) {
+      await addGalleryImages(clonedDocId, gallery);
+    }
+
+    // Paso 9: Exportar el documento a PDF
     const pdfBuffer = await exportDocumentToPDF(clonedDocId);
 
-    // Paso 7: Determinar el nombre del archivo PDF
+    // Paso 10: Determinar el nombre del archivo PDF
     let pdfFilename;
     if (session_ID && typeof session_ID === 'string' && session_ID.trim() !== '') {
       pdfFilename = `${session_ID}.pdf`;
@@ -303,7 +398,7 @@ router.post('/generate-pdf', async (req, res) => {
       pdfFilename = `Informe_Tasacion_Post_${postId}_${uuidv4()}.pdf`;
     }
 
-    // Paso 8: Subir el PDF a Google Drive
+    // Paso 11: Subir el PDF a Google Drive
     const pdfLink = await uploadPDFToDrive(pdfBuffer, pdfFilename, GOOGLE_DRIVE_FOLDER_ID);
 
     res.json({ success: true, message: 'PDF generado exitosamente.', pdfLink: pdfLink });
