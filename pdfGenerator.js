@@ -218,6 +218,31 @@ const getPostDate = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPR
   }
 };
 
+// Función auxiliar para obtener la URL de una imagen dado su ID de media
+const getImageUrl = async (mediaId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
+  try {
+    const response = await fetch(`${WORDPRESS_API_URL}/wp/v2/media/${mediaId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error obteniendo media de WordPress:`, errorText);
+      throw new Error('Error obteniendo media de WordPress.');
+    }
+
+    const mediaData = await response.json();
+    return mediaData.source_url || null;
+  } catch (error) {
+    console.error(`Error obteniendo la URL de la media ID ${mediaId}:`, error);
+    return null;
+  }
+};
+
 // Función para obtener la galería de imágenes de un post de WordPress
 const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
   try {
@@ -241,37 +266,42 @@ const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WOR
     console.log(`postData:`, JSON.stringify(postData, null, 2));
 
     // Acceder al campo de galería ACF
-    const galleryField = postData.acf && postData.acf.GoogleVision ? postData.acf.GoogleVision : [];
+    const galleryField = postData.acf && postData.acf.attachment ? postData.acf.attachment : [];
 
     // Verificar la estructura de la galería
     console.log(`Galería de imágenes obtenida:`, galleryField);
 
     if (Array.isArray(galleryField)) {
-      // Si es una matriz de URLs directamente
-      if (typeof galleryField[0] === 'string') {
-        console.log(`URLs de imágenes procesadas:`, galleryField);
-        return galleryField;
-      }
-
-      // Si es una matriz de objetos con URLs
-      const imageUrls = galleryField.map(item => {
-        // Ajusta esto según la estructura exacta de cada objeto de imagen
-        if (item.image && item.image.url) {
-          return item.image.url;
-        } else if (item.url) {
-          return item.url;
+      // Si es una matriz de objetos con 'href'
+      const imageUrls = await Promise.all(galleryField.map(async (item) => {
+        if (item.href) {
+          // Extraer el ID de media desde la URL 'href'
+          const mediaIdMatch = item.href.match(/\/media\/(\d+)$/);
+          if (mediaIdMatch && mediaIdMatch[1]) {
+            const mediaId = mediaIdMatch[1];
+            const imageUrl = await getImageUrl(mediaId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
+            return imageUrl;
+          }
         }
         return null;
-      }).filter(url => url !== null);
+      }));
 
-      console.log(`URLs de imágenes procesadas:`, imageUrls);
-      return imageUrls;
+      // Filtrar URLs nulas
+      const validImageUrls = imageUrls.filter(url => url !== null);
+
+      console.log(`URLs de imágenes procesadas:`, validImageUrls);
+      return validImageUrls;
     }
 
     // Si es un solo objeto de imagen
-    if (typeof galleryField === 'object' && galleryField.url) {
-      console.log(`URL de imagen única:`, galleryField.url);
-      return [galleryField.url];
+    if (typeof galleryField === 'object' && galleryField.href) {
+      const mediaIdMatch = galleryField.href.match(/\/media\/(\d+)$/);
+      if (mediaIdMatch && mediaIdMatch[1]) {
+        const mediaId = mediaIdMatch[1];
+        const imageUrl = await getImageUrl(mediaId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
+        console.log(`URL de imagen única:`, imageUrl);
+        return imageUrl ? [imageUrl] : [];
+      }
     }
 
     // Si la estructura es diferente, devuelve la galería sin procesar
