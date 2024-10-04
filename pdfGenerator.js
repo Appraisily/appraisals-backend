@@ -277,14 +277,14 @@ const cloneTemplate = async (templateId) => {
 // Función para agregar imágenes de la galería en el documento
 const addGalleryImages = async (documentId, gallery) => {
   try {
-    // Obtener el contenido del documento
-    const document = await docs.documents.get({ documentId: documentId });
-    const content = document.data.body.content;
+    // Buscar el placeholder '{{gallery}}' en el documento
+    const response = await docs.documents.get({ documentId: documentId });
+    const content = response.data.body.content;
 
     let galleryPlaceholderFound = false;
     let galleryPlaceholderIndex = -1;
 
-    // Buscar el índice del elemento que contiene '{{gallery}}'
+    // Iterar sobre los elementos del documento para encontrar el placeholder
     for (let i = 0; i < content.length; i++) {
       const element = content[i];
       if (element.paragraph && element.paragraph.elements) {
@@ -309,9 +309,10 @@ const addGalleryImages = async (documentId, gallery) => {
 
     // Insertar cada imagen en el placeholder
     for (const image of gallery) {
+      // Asegúrate de que la URL de la imagen sea válida y accesible
       requests.push({
         insertInlineImage: {
-          uri: image.url, // Asegúrate de que la URL de la imagen sea accesible públicamente
+          uri: image, // Dado que 'GoogleVision' ahora retorna URLs directamente
           location: {
             index: galleryPlaceholderIndex,
           },
@@ -346,6 +347,7 @@ const addGalleryImages = async (documentId, gallery) => {
     throw new Error('Error agregando imágenes de la galería a Google Docs.');
   }
 };
+
 
 // Función para reemplazar marcadores de posición en el documento, incluyendo dentro de cuadros de texto
 const replacePlaceholders = async (documentId, data) => {
