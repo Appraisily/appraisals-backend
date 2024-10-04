@@ -313,12 +313,11 @@ const cloneTemplate = async (templateId) => {
   }
 };
 
-// Función para agregar imágenes de la galería en el documento en formato de tabla
 const addGalleryImages = async (documentId, gallery) => {
   try {
-    // Buscar el placeholder '{{gallery}}' en el documento
-    const response = await docs.documents.get({ documentId: documentId });
-    const content = response.data.body.content;
+    // Obtener el contenido completo del documento
+    let document = await docs.documents.get({ documentId: documentId });
+    let content = document.data.body.content;
 
     let galleryPlaceholderFound = false;
     let galleryPlaceholderIndex = -1;
@@ -330,7 +329,6 @@ const addGalleryImages = async (documentId, gallery) => {
         for (const elem of element.paragraph.elements) {
           if (elem.textRun && elem.textRun.content.includes('{{gallery}}')) {
             galleryPlaceholderFound = true;
-            // Obtener el índice de inserción justo después del placeholder
             galleryPlaceholderIndex = elem.startIndex;
             break;
           }
@@ -361,59 +359,108 @@ const addGalleryImages = async (documentId, gallery) => {
       },
     });
 
-    const requests = [];
+    // Obtener el documento actualizado
+    document = await docs.documents.get({ documentId: documentId });
+    content = document.data.body.content;
 
-    // Definir el número de columnas
-    const columns = 3;
-    const rows = Math.ceil(gallery.length / columns);
+    // Verificar si el índice de inserción está dentro de un párrafo
+    let insertionIndex = galleryPlaceholderIndex;
 
-    // Crear la tabla
-    requests.push({
-      insertTable: {
-        rows: rows,
-        columns: columns,
-        location: {
-          index: galleryPlaceholderIndex,
-        },
-      },
-    });
+    // Si el índice no está dentro de un párrafo, debemos ajustarlo
+    let adjustedIndex = null;
 
-    // Calcular el índice inicial de la tabla
-    let currentIndex = galleryPlaceholderIndex + 1; // +1 para moverse dentro de la tabla
-
-    // Insertar imágenes en las celdas de la tabla
-    let imageCounter = 0;
-    for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < columns; col++) {
-        if (imageCounter < gallery.length) {
-          const imageUrl = gallery[imageCounter];
-
-          // Insertar la imagen en la celda
-          requests.push({
-            insertInlineImage: {
-              uri: imageUrl,
-              location: {
-                index: currentIndex,
-              },
-            },
-          });
-
-          // Mover al siguiente elemento (cada celda ocupa un índice adicional)
-          currentIndex += 2; // Ajustar según sea necesario
-
-          imageCounter++;
-        } else {
-          // No hay más imágenes, salir del bucle
+    for (const element of content) {
+      if (element.startIndex <= insertionIndex && element.endIndex > insertionIndex) {
+        if (element.paragraph) {
+          adjustedIndex = insertionIndex;
           break;
         }
       }
     }
 
-    // Ejecutar las solicitudes
+    if (adjustedIndex === null) {
+      // Buscar el siguiente párrafo disponible
+      for (const element of content) {
+        if (element.startIndex > insertionIndex && element.paragraph) {
+          adjustedIndex = element.startIndex + 1;
+          break;
+        }
+      }
+    }
+
+    if (adjustedIndex === null) {
+      throw new Error('No se pudo encontrar un índice válido para insertar la galería.');
+    }
+
+    // Crear la tabla
+    const columns = 3;
+    const rows = Math.ceil(gallery.length / columns);
+
+    const requests = [];
+
+    requests.push({
+      insertTable: {
+        rows: rows,
+        columns: columns,
+        location: {
+          index: adjustedIndex,
+        },
+      },
+    });
+
+    // Ejecutar la solicitud de inserción de tabla
     await docs.documents.batchUpdate({
       documentId: documentId,
       requestBody: {
         requests: requests,
+      },
+    });
+
+    // Obtener el documento actualizado nuevamente
+    document = await docs.documents.get({ documentId: documentId });
+    content = document.data.body.content;
+
+    // Ahora, insertar las imágenes en las celdas de la tabla
+    // Necesitamos encontrar las ubicaciones de las celdas
+
+    // Por simplicidad, asumiremos que las celdas están en orden secuencial después de la inserción de la tabla
+    let cellIndices = [];
+    for (const element of content) {
+      if (element.tableCell && element.startIndex >= adjustedIndex) {
+        cellIndices.push(element.startIndex + 1); // +1 para moverse dentro de la celda
+      }
+    }
+
+    // Asegurarse de que tenemos suficientes celdas para las imágenes
+    if (cellIndices.length < gallery.length) {
+      throw new Error('No hay suficientes celdas en la tabla para todas las imágenes.');
+    }
+
+    const imageRequests = [];
+
+    for (let i = 0; i < gallery.length; i++) {
+      const imageUrl = gallery[i];
+      const cellIndex = cellIndices[i];
+
+      imageRequests.push({
+        insertInlineImage: {
+          uri: imageUrl,
+          location: {
+            index: cellIndex,
+          },
+          objectSize: {
+            height: { magnitude: 100, unit: 'PT' },
+            width: { magnitude: 100, unit: 'PT' },
+          },
+        },
+      });
+    }
+
+    // Ejecutar las solicitudes de inserción de imágenes
+    await docs.documents.batchUpdate({
+      documentId: documentId,
+      requestBody: {
+        requests: imageRequests,
       },
     });
 
