@@ -312,7 +312,9 @@ const cloneTemplate = async (templateId) => {
     throw new Error('Error clonando la plantilla de Google Docs.');
   }
 };
-// Función para agregar imágenes de la galería en el documento en formato de tabla
+
+
+// Función para agregar imágenes de la galería en el documento en formato de tabla utilizando tableCellLocation
 const addGalleryImages = async (documentId, gallery) => {
   try {
     // Obtener el contenido completo del documento
@@ -359,21 +361,11 @@ const addGalleryImages = async (documentId, gallery) => {
       },
     });
 
-    // Esperar brevemente para que los cambios se apliquen
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Obtener el documento actualizado
-    document = await docs.documents.get({ documentId: documentId });
-    content = document.data.body.content;
-
-    // Determinar el índice de inserción ajustado
-    let adjustedIndex = galleryPlaceholderIndex;
-
-    // Definir el número de columnas
+    // Definir el número de columnas y filas
     const columns = 3;
     const rows = Math.ceil(gallery.length / columns);
 
-    // Insertar la tabla
+    // Insertar la tabla en el índice ajustado
     await docs.documents.batchUpdate({
       documentId: documentId,
       requestBody: {
@@ -383,7 +375,7 @@ const addGalleryImages = async (documentId, gallery) => {
               rows: rows,
               columns: columns,
               location: {
-                index: adjustedIndex,
+                index: galleryPlaceholderIndex,
               },
             },
           },
@@ -391,60 +383,37 @@ const addGalleryImages = async (documentId, gallery) => {
       },
     });
 
-    // Esperar para que la tabla se inserte correctamente
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Obtener el documento actualizado nuevamente
-    document = await docs.documents.get({ documentId: documentId });
-    content = document.data.body.content;
-
-    // Encontrar las celdas de la tabla y sus índices
-    let cellIndices = [];
-    for (let i = 0; i < content.length; i++) {
-      const element = content[i];
-      if (element.table && element.startIndex <= adjustedIndex && element.endIndex > adjustedIndex) {
-        // Encontrar todas las celdas de la tabla
-        const table = element.table;
-        for (let row of table.tableRows) {
-          for (let cell of row.tableCells) {
-            const cellContent = cell.content;
-            if (cellContent && cellContent.length > 0) {
-              const cellStartIndex = cellContent[0].startIndex;
-              cellIndices.push(cellStartIndex + 1);
-            }
-          }
-        }
-        break;
-      }
-    }
-
-    // Asegurarse de que tenemos suficientes celdas para las imágenes
-    if (cellIndices.length < gallery.length) {
-      throw new Error('No hay suficientes celdas en la tabla para todas las imágenes.');
-    }
-
+    // Crear solicitudes para insertar imágenes en las celdas de la tabla
     const imageRequests = [];
 
     for (let i = 0; i < gallery.length; i++) {
       const imageUrl = gallery[i];
-      const cellIndex = cellIndices[i];
+
+      const rowIndex = Math.floor(i / columns);
+      const columnIndex = i % columns;
 
       imageRequests.push({
         insertInlineImage: {
           uri: imageUrl,
           location: {
-            index: cellIndex,
+            tableCellLocation: {
+              tableStartLocation: {
+                index: galleryPlaceholderIndex + 1, // Inicio de la tabla
+              },
+              rowIndex: rowIndex,
+              columnIndex: columnIndex,
+            },
           },
           objectSize: {
-            height: { magnitude: 150, unit: 'PT' }, // Ajusta el tamaño según sea necesario
+            height: { magnitude: 150, unit: 'PT' },
             width: { magnitude: 150, unit: 'PT' },
           },
         },
       });
     }
 
-    // Dividir las solicitudes en lotes más pequeños si es necesario
-    const MAX_REQUESTS_PER_BATCH = 100;
+    // Ejecutar las solicitudes (puedes ajustar el tamaño del lote si es necesario)
+    const MAX_REQUESTS_PER_BATCH = 20; // Ajustado para tu caso
     for (let i = 0; i < imageRequests.length; i += MAX_REQUESTS_PER_BATCH) {
       const batchRequests = imageRequests.slice(i, i + MAX_REQUESTS_PER_BATCH);
       await docs.documents.batchUpdate({
@@ -461,6 +430,7 @@ const addGalleryImages = async (documentId, gallery) => {
     throw new Error('Error agregando imágenes de la galería a Google Docs.');
   }
 };
+
 
 // Función para reemplazar marcadores de posición en el documento
 const replacePlaceholders = async (documentId, data) => {
