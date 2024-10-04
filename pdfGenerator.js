@@ -314,7 +314,7 @@ const cloneTemplate = async (templateId) => {
 };
 
 
-// Función para agregar imágenes de la galería en el documento en formato de tabla utilizando tableCellLocation
+// Función para agregar imágenes de la galería en el documento en formato de tabla
 const addGalleryImages = async (documentId, gallery) => {
   try {
     // Obtener el contenido completo del documento
@@ -361,6 +361,9 @@ const addGalleryImages = async (documentId, gallery) => {
       },
     });
 
+    // Esperar brevemente para que los cambios se apliquen
+    await new Promise(resolve => setTimeout(resolve, 500));
+
     // Definir el número de columnas y filas
     const columns = 3;
     const rows = Math.ceil(gallery.length / columns);
@@ -383,26 +386,64 @@ const addGalleryImages = async (documentId, gallery) => {
       },
     });
 
-    // Crear solicitudes para insertar imágenes en las celdas de la tabla
+    // Esperar para que la tabla se inserte correctamente
+    await new Promise(resolve => setTimeout(resolve, 500));
+
+    // Obtener el documento actualizado nuevamente
+    document = await docs.documents.get({ documentId: documentId });
+    content = document.data.body.content;
+
+    // Encontrar la tabla recién insertada
+    let tableStartIndex = null;
+    for (let i = 0; i < content.length; i++) {
+      const element = content[i];
+      if (element.table && element.startIndex === galleryPlaceholderIndex) {
+        tableStartIndex = element.startIndex;
+        break;
+      }
+    }
+
+    if (tableStartIndex === null) {
+      throw new Error('No se pudo encontrar la tabla insertada.');
+    }
+
+    // Ahora, recorrer las celdas de la tabla y obtener sus startIndex
+    let cellIndices = [];
+    for (let i = 0; i < content.length; i++) {
+      const element = content[i];
+      if (element.table && element.startIndex === tableStartIndex) {
+        const table = element.table;
+        for (let rowIndex = 0; rowIndex < table.tableRows.length; rowIndex++) {
+          const row = table.tableRows[rowIndex];
+          for (let columnIndex = 0; columnIndex < row.tableCells.length; columnIndex++) {
+            const cell = row.tableCells[columnIndex];
+            const cellContent = cell.content;
+            if (cellContent && cellContent.length > 0) {
+              const cellStartIndex = cellContent[0].startIndex;
+              cellIndices.push(cellStartIndex + 1); // +1 para moverse dentro de la celda
+            }
+          }
+        }
+        break;
+      }
+    }
+
+    // Asegurarse de que tenemos suficientes celdas para las imágenes
+    if (cellIndices.length < gallery.length) {
+      throw new Error('No hay suficientes celdas en la tabla para todas las imágenes.');
+    }
+
     const imageRequests = [];
 
     for (let i = 0; i < gallery.length; i++) {
       const imageUrl = gallery[i];
-
-      const rowIndex = Math.floor(i / columns);
-      const columnIndex = i % columns;
+      const cellIndex = cellIndices[i];
 
       imageRequests.push({
         insertInlineImage: {
           uri: imageUrl,
           location: {
-            tableCellLocation: {
-              tableStartLocation: {
-                index: galleryPlaceholderIndex + 1, // Inicio de la tabla
-              },
-              rowIndex: rowIndex,
-              columnIndex: columnIndex,
-            },
+            index: cellIndex,
           },
           objectSize: {
             height: { magnitude: 150, unit: 'PT' },
@@ -431,37 +472,6 @@ const addGalleryImages = async (documentId, gallery) => {
   }
 };
 
-
-// Función para reemplazar marcadores de posición en el documento
-const replacePlaceholders = async (documentId, data) => {
-  try {
-    const requests = [];
-
-    for (const [key, value] of Object.entries(data)) {
-      requests.push({
-        replaceAllText: {
-          containsText: {
-            text: `{{${key}}}`,
-            matchCase: true,
-          },
-          replaceText: value,
-        },
-      });
-    }
-
-    await docs.documents.batchUpdate({
-      documentId: documentId,
-      requestBody: {
-        requests: requests,
-      },
-    });
-
-    console.log(`Marcadores de posición reemplazados en el documento ID: ${documentId}`);
-  } catch (error) {
-    console.error('Error reemplazando marcadores de posición en Google Docs:', error);
-    throw new Error('Error reemplazando marcadores de posición en Google Docs.');
-  }
-};
 
 // Función para exportar el documento a PDF
 const exportDocumentToPDF = async (documentId) => {
