@@ -236,12 +236,47 @@ const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WOR
     }
 
     const postData = await response.json();
-    const gallery = postData.acf && postData.acf.GoogleVision ? postData.acf.GoogleVision : [];
+
+    // Log completo para inspeccionar la estructura
+    console.log(`postData:`, JSON.stringify(postData, null, 2));
+
+    // Acceder al campo de galería ACF
+    const galleryField = postData.acf && postData.acf.GoogleVision ? postData.acf.GoogleVision : [];
 
     // Verificar la estructura de la galería
-    console.log(`Galería de imágenes obtenida:`, gallery);
+    console.log(`Galería de imágenes obtenida:`, galleryField);
 
-    return gallery;
+    if (Array.isArray(galleryField)) {
+      // Si es una matriz de URLs directamente
+      if (typeof galleryField[0] === 'string') {
+        console.log(`URLs de imágenes procesadas:`, galleryField);
+        return galleryField;
+      }
+
+      // Si es una matriz de objetos con URLs
+      const imageUrls = galleryField.map(item => {
+        // Ajusta esto según la estructura exacta de cada objeto de imagen
+        if (item.image && item.image.url) {
+          return item.image.url;
+        } else if (item.url) {
+          return item.url;
+        }
+        return null;
+      }).filter(url => url !== null);
+
+      console.log(`URLs de imágenes procesadas:`, imageUrls);
+      return imageUrls;
+    }
+
+    // Si es un solo objeto de imagen
+    if (typeof galleryField === 'object' && galleryField.url) {
+      console.log(`URL de imagen única:`, galleryField.url);
+      return [galleryField.url];
+    }
+
+    // Si la estructura es diferente, devuelve la galería sin procesar
+    console.log(`Galería de imágenes obtenida sin procesar:`, galleryField);
+    return galleryField;
   } catch (error) {
     console.error(`Error obteniendo la galería del post ID ${postId}:`, error);
     throw error;
