@@ -386,4 +386,4 @@ router.post('/generate-pdf', async (req, res) => {
     res.json({ success: true, message: 'PDF generado exitosamente.', pdfLink: pdfLink });
   } catch (error) {
     console.error('Error generando el PDF:', error);
-    res.status(500).
+    .json({ success: false, message: error.message || 'Error generando el PDF.' })
