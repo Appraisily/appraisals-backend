@@ -139,21 +139,41 @@ const cloneTemplate = async (templateId) => {
   }
 };
 
-// Función para reemplazar marcadores de posición en el documento
+// Función para reemplazar marcadores de posición en el documento, incluyendo dentro de cuadros de texto
 const replacePlaceholders = async (documentId, data) => {
   try {
+    // Obtener el contenido del documento
+    const document = await docs.documents.get({ documentId });
+    const content = document.data.body.content;
+
     const requests = [];
 
-    for (const [key, value] of Object.entries(data)) {
-      requests.push({
-        replaceAllText: {
-          containsText: {
-            text: `{{${key}}}`,
-            matchCase: true,
-          },
-          replaceText: value,
-        },
-      });
+    // Recorrer el contenido del documento para encontrar y reemplazar los marcadores de posición
+    for (const element of content) {
+      if (element.paragraph) {
+        for (const paragraphElement of element.paragraph.elements) {
+          if (paragraphElement.textRun && paragraphElement.textRun.content) {
+            for (const [key, value] of Object.entries(data)) {
+              const placeholder = `{{${key}}}`;
+              if (paragraphElement.textRun.content.includes(placeholder)) {
+                requests.push({
+                  replaceAllText: {
+                    containsText: {
+                      text: placeholder,
+                      matchCase: true,
+                    },
+                    replaceText: value,
+                  },
+                });
+              }
+            }
+          }
+        }
+      } else if (element.table) {
+        // Manejar tablas si es necesario
+      } else if (element.sectionBreak) {
+        // Manejar saltos de sección si es necesario
+      }
     }
 
     await docs.documents.batchUpdate({
