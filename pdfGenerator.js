@@ -182,6 +182,7 @@ const uploadPDFToDrive = async (pdfBuffer, filename, driveFolderId) => {
     });
 
     console.log(`PDF subido a Google Drive con ID: ${file.data.id}`);
+    console.log(`Enlace al PDF: ${file.data.webViewLink}`); // Agregar el enlace al log
     return file.data.webViewLink;
   } catch (error) {
     console.error('Error subiendo el PDF a Google Drive:', error);
@@ -207,7 +208,7 @@ const moveFileToFolder = async (fileId, folderId) => {
 
 // Endpoint para generar el PDF
 router.post('/generate-pdf', async (req, res) => {
-  const { postId } = req.body;
+  const { postId, session_ID } = req.body; // Aceptar session_ID como parámetro
 
   if (!postId) {
     return res.status(400).json({ success: false, message: 'postId es requerido.' });
@@ -244,8 +245,15 @@ router.post('/generate-pdf', async (req, res) => {
     // Paso 5: Exportar el documento a PDF
     const pdfBuffer = await exportDocumentToPDF(clonedDocId);
 
-    // Paso 6: Subir el PDF a Google Drive
-    const pdfFilename = `Informe_Tasacion_Post_${postId}_${uuidv4()}.pdf`;
+    // Paso 6: Determinar el nombre del archivo PDF
+    let pdfFilename;
+    if (session_ID && typeof session_ID === 'string' && session_ID.trim() !== '') {
+      pdfFilename = `${session_ID}.pdf`;
+    } else {
+      pdfFilename = `Informe_Tasacion_Post_${postId}_${uuidv4()}.pdf`;
+    }
+
+    // Paso 7: Subir el PDF a Google Drive
     const pdfLink = await uploadPDFToDrive(pdfBuffer, pdfFilename, GOOGLE_DRIVE_FOLDER_ID);
 
     res.json({ success: true, message: 'PDF generado exitosamente.', pdfLink: pdfLink });
