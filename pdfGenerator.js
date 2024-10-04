@@ -90,13 +90,20 @@ const getPostMetadata = async (postId, metadataKey, WORDPRESS_API_URL, WORDPRESS
 // Función para clonar una plantilla de Google Docs
 const cloneTemplate = async (templateId) => {
   try {
+    // Sanitizar el templateId eliminando espacios y caracteres no válidos
+    const sanitizedTemplateId = templateId.trim().replace(/[^a-zA-Z0-9-_]/g, '');
+
+    // Log para verificar el ID sanitizado
+    console.log(`Clonando plantilla con ID: '${sanitizedTemplateId}'`);
+
     const copiedFile = await drive.files.copy({
-      fileId: templateId,
+      fileId: sanitizedTemplateId,
       requestBody: {
         name: `Informe_Tasacion_${uuidv4()}`,
       },
     });
 
+    console.log(`Plantilla clonada con ID: ${copiedFile.data.id}`);
     return copiedFile.data.id;
   } catch (error) {
     console.error('Error clonando la plantilla de Google Docs:', error);
@@ -192,12 +199,18 @@ router.post('/generate-pdf', async (req, res) => {
     const GOOGLE_DOCS_TEMPLATE_ID = process.env.GOOGLE_DOCS_TEMPLATE_ID;
     const GOOGLE_DRIVE_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
+    console.log(`GOOGLE_DOCS_TEMPLATE_ID: '${GOOGLE_DOCS_TEMPLATE_ID}'`);
+    console.log(`GOOGLE_DRIVE_FOLDER_ID: '${GOOGLE_DRIVE_FOLDER_ID}'`);
+
     if (!GOOGLE_DOCS_TEMPLATE_ID || !GOOGLE_DRIVE_FOLDER_ID) {
       throw new Error('GOOGLE_DOCS_TEMPLATE_ID y GOOGLE_DRIVE_FOLDER_ID deben estar definidos en las variables de entorno.');
     }
 
     // Paso 2: Obtener el metadato 'age_text' del post
     const ageText = await getPostMetadata(postId, 'age_text', process.env.WORDPRESS_API_URL, process.env.WORDPRESS_USERNAME, process.env.WORDPRESS_APP_PASSWORD);
+
+    // Log para verificar el metadato obtenido
+    console.log(`Metadato 'age_text' obtenido: '${ageText}'`);
 
     // Paso 3: Clonar la plantilla de Google Docs
     const clonedDocId = await cloneTemplate(GOOGLE_DOCS_TEMPLATE_ID);
