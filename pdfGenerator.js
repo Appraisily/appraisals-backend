@@ -132,96 +132,10 @@ const adjustTitleFontSize = async (documentId, titleText) => {
   }
 };
 
-
-// Función para obtener los metadatos de un post de WordPress
-const getPostMetadata = async (postId, metadataKey, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
-  try {
-    const response = await fetch(`${WORDPRESS_API_URL}/appraisals/${postId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
-      }
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Error obteniendo post de WordPress:`, errorText);
-      throw new Error('Error obteniendo post de WordPress.');
-    }
-
-    const postData = await response.json();
-    const acfFields = postData.acf || {};
-    let metadataValue = acfFields[metadataKey] || '';
-
-    // Validación de tamaño (ejemplo: máximo 5000 caracteres)
-    const MAX_LENGTH = 5000;
-    if (metadataValue.length > MAX_LENGTH) {
-      metadataValue = metadataValue.substring(0, MAX_LENGTH) + '...';
-      console.warn(`El metadato '${metadataKey}' excede el límite de ${MAX_LENGTH} caracteres y ha sido truncado.`);
-    }
-
-    return metadataValue;
-  } catch (error) {
-    console.error(`Error obteniendo metadato '${metadataKey}' del post ID ${postId}:`, error);
-    throw error;
-  }
-};
-
-// Función para obtener el título de un post de WordPress
-const getPostTitle = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
-  try {
-    const response = await fetch(`${WORDPRESS_API_URL}/appraisals/${postId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
-      }
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Error obteniendo post de WordPress:`, errorText);
-      throw new Error('Error obteniendo post de WordPress.');
-    }
-
-    const postData = await response.json();
-    return he.decode(postData.title.rendered || '');
-  } catch (error) {
-    console.error(`Error obteniendo el título del post ID ${postId}:`, error);
-    throw error;
-  }
-};
-
-// Función para obtener la fecha de publicación de un post de WordPress
-const getPostDate = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
-  try {
-    const response = await fetch(`${WORDPRESS_API_URL}/appraisals/${postId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
-      }
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Error obteniendo post de WordPress:`, errorText);
-      throw new Error('Error obteniendo post de WordPress.');
-    }
-
-    const postData = await response.json();
-    return format(new Date(postData.date), 'yyyy-MM-dd'); // Formatear la fecha a 'yyyy-MM-dd'
-  } catch (error) {
-    console.error(`Error obteniendo la fecha del post ID ${postId}:`, error);
-    throw error;
-  }
-};
-
 // Función auxiliar para obtener la URL de una imagen dado su ID de media
 const getImageUrl = async (mediaId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
   try {
-    const response = await fetch(`${WORDPRESS_API_URL}/wp/v2/media/${mediaId}`, {
+    const response = await fetch(`${WORDPRESS_API_URL}/media/${mediaId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -266,24 +180,15 @@ const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WOR
     console.log(`postData:`, JSON.stringify(postData, null, 2));
 
     // Acceder al campo de galería ACF
-    const galleryField = postData.acf && postData.acf.attachment ? postData.acf.attachment : [];
+    const galleryField = postData.acf && postData.acf.googlevision ? postData.acf.googlevision : [];
 
     // Verificar la estructura de la galería
     console.log(`Galería de imágenes obtenida:`, galleryField);
 
-    if (Array.isArray(galleryField)) {
-      // Si es una matriz de objetos con 'href'
-      const imageUrls = await Promise.all(galleryField.map(async (item) => {
-        if (item.href) {
-          // Extraer el ID de media desde la URL 'href'
-          const mediaIdMatch = item.href.match(/\/media\/(\d+)$/);
-          if (mediaIdMatch && mediaIdMatch[1]) {
-            const mediaId = mediaIdMatch[1];
-            const imageUrl = await getImageUrl(mediaId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
-            return imageUrl;
-          }
-        }
-        return null;
+    if (Array.isArray(galleryField) && galleryField.length > 0) {
+      // Obtener las URLs de las imágenes
+      const imageUrls = await Promise.all(galleryField.map(async (mediaId) => {
+        return await getImageUrl(mediaId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
       }));
 
       // Filtrar URLs nulas
@@ -293,26 +198,13 @@ const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WOR
       return validImageUrls;
     }
 
-    // Si es un solo objeto de imagen
-    if (typeof galleryField === 'object' && galleryField.href) {
-      const mediaIdMatch = galleryField.href.match(/\/media\/(\d+)$/);
-      if (mediaIdMatch && mediaIdMatch[1]) {
-        const mediaId = mediaIdMatch[1];
-        const imageUrl = await getImageUrl(mediaId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
-        console.log(`URL de imagen única:`, imageUrl);
-        return imageUrl ? [imageUrl] : [];
-      }
-    }
-
-    // Si la estructura es diferente, devuelve la galería sin procesar
-    console.log(`Galería de imágenes obtenida sin procesar:`, galleryField);
-    return galleryField;
+    console.log(`No se encontraron imágenes en la galería.`);
+    return [];
   } catch (error) {
     console.error(`Error obteniendo la galería del post ID ${postId}:`, error);
     throw error;
   }
 };
-
 
 // Función para clonar una plantilla de Google Docs
 const cloneTemplate = async (templateId) => {
@@ -370,6 +262,23 @@ const addGalleryImages = async (documentId, gallery) => {
       return;
     }
 
+    // Eliminar el placeholder '{{gallery}}'
+    await docs.documents.batchUpdate({
+      documentId: documentId,
+      requestBody: {
+        requests: [
+          {
+            deleteContentRange: {
+              range: {
+                startIndex: galleryPlaceholderIndex,
+                endIndex: galleryPlaceholderIndex + '{{gallery}}'.length,
+              },
+            },
+          },
+        ],
+      },
+    });
+
     const requests = [];
 
     // Insertar cada imagen en el placeholder
@@ -377,7 +286,7 @@ const addGalleryImages = async (documentId, gallery) => {
       // Asegúrate de que la URL de la imagen sea válida y accesible
       requests.push({
         insertInlineImage: {
-          uri: image, // Dado que 'GoogleVision' ahora retorna URLs directamente
+          uri: image,
           location: {
             index: galleryPlaceholderIndex,
           },
@@ -389,13 +298,13 @@ const addGalleryImages = async (documentId, gallery) => {
         insertText: {
           text: '\n',
           location: {
-            index: galleryPlaceholderIndex + 1, // Ajustar según sea necesario
+            index: galleryPlaceholderIndex + 1,
           },
         },
       });
 
       // Actualizar el índice de inserción para la próxima imagen
-      galleryPlaceholderIndex += 2; // Ajustar según sea necesario
+      galleryPlaceholderIndex += 2;
     }
 
     // Ejecutar las solicitudes
@@ -413,8 +322,7 @@ const addGalleryImages = async (documentId, gallery) => {
   }
 };
 
-
-// Función para reemplazar marcadores de posición en el documento, incluyendo dentro de cuadros de texto
+// Función para reemplazar marcadores de posición en el documento
 const replacePlaceholders = async (documentId, data) => {
   try {
     const requests = [];
@@ -590,6 +498,5 @@ router.post('/generate-pdf', async (req, res) => {
     res.status(500).json({ success: false, message: error.message || 'Error generando el PDF.' });
   }
 });
-
 
 module.exports = { router, initializeGoogleApis };
