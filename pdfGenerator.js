@@ -10,6 +10,7 @@ const Handlebars = require('handlebars');
 const { v4: uuidv4 } = require('uuid'); // Para generar nombres de archivos únicos
 const { Readable } = require('stream'); // Importar Readable desde stream
 const he = require('he'); // Librería para decodificar HTML entities
+const { format } = require('date-fns'); // Librería para formatear fechas
 
 const router = express.Router();
 
@@ -132,7 +133,7 @@ const getPostDate = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPR
     }
 
     const postData = await response.json();
-    return postData.date || '';
+    return format(new Date(postData.date), 'yyyy-MM-dd'); // Formatear la fecha a 'yyyy-MM-dd'
   } catch (error) {
     console.error(`Error obteniendo la fecha del post ID ${postId}:`, error);
     throw error;
@@ -201,6 +202,7 @@ const addGalleryImages = async (documentId, gallery) => {
         insertInlineImage: {
           uri: image.url,
           location: {
+            segmentId: '',
             index: 1, // Ubicación donde insertar la imagen. Ajustar según sea necesario.
           },
         },
@@ -224,38 +226,18 @@ const addGalleryImages = async (documentId, gallery) => {
 // Función para reemplazar marcadores de posición en el documento, incluyendo dentro de cuadros de texto
 const replacePlaceholders = async (documentId, data) => {
   try {
-    // Obtener el contenido del documento
-    const document = await docs.documents.get({ documentId });
-    const content = document.data.body.content;
-
     const requests = [];
 
-    // Recorrer el contenido del documento para encontrar y reemplazar los marcadores de posición
-    for (const element of content) {
-      if (element.paragraph) {
-        for (const paragraphElement of element.paragraph.elements) {
-          if (paragraphElement.textRun && paragraphElement.textRun.content) {
-            for (const [key, value] of Object.entries(data)) {
-              const placeholder = `{{${key}}}`;
-              if (paragraphElement.textRun.content.includes(placeholder)) {
-                requests.push({
-                  replaceAllText: {
-                    containsText: {
-                      text: placeholder,
-                      matchCase: true,
-                    },
-                    replaceText: value,
-                  },
-                });
-              }
-            }
-          }
-        }
-      } else if (element.table) {
-        // Manejar tablas si es necesario
-      } else if (element.sectionBreak) {
-        // Manejar saltos de sección si es necesario
-      }
+    for (const [key, value] of Object.entries(data)) {
+      requests.push({
+        replaceAllText: {
+          containsText: {
+            text: `{{${key}}}`,
+            matchCase: true,
+          },
+          replaceText: value,
+        },
+      });
     }
 
     await docs.documents.batchUpdate({
@@ -404,8 +386,4 @@ router.post('/generate-pdf', async (req, res) => {
     res.json({ success: true, message: 'PDF generado exitosamente.', pdfLink: pdfLink });
   } catch (error) {
     console.error('Error generando el PDF:', error);
-    res.status(500).json({ success: false, message: error.message || 'Error generando el PDF.' });
-  }
-});
-
-module.exports = { router, initializeGoogleApis };
+    res.status(500).
