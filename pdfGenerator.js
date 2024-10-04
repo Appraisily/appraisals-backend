@@ -59,10 +59,9 @@ async function initializeGoogleApis() {
   }
 }
 
-// Función para ajustar el tamaño de la fuente del título
 const adjustTitleFontSize = async (documentId, titleText) => {
   try {
-    // Obtener el contenido completo del documento
+    // Obtener el contenido completo del documento después de reemplazar los placeholders
     const document = await docs.documents.get({ documentId: documentId });
     const content = document.data.body.content;
 
@@ -72,7 +71,7 @@ const adjustTitleFontSize = async (documentId, titleText) => {
     for (const element of content) {
       if (element.paragraph && element.paragraph.elements) {
         for (const elem of element.paragraph.elements) {
-          if (elem.textRun && elem.textRun.content.trim() === titleText) {
+          if (elem.textRun && elem.textRun.content.trim() === titleText.trim()) {
             titleRange = {
               startIndex: elem.startIndex,
               endIndex: elem.endIndex,
@@ -128,6 +127,7 @@ const adjustTitleFontSize = async (documentId, titleText) => {
     throw new Error('Error ajustando el tamaño de la fuente del título.');
   }
 };
+
 
 // Función para obtener metadatos de un post de WordPress
 const getPostMetadata = async (postId, metadataKey, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
@@ -593,16 +593,17 @@ router.post('/generate-pdf', async (req, res) => {
     // (Opcional) Mover el archivo clonado a la carpeta deseada
     await moveFileToFolder(clonedDocId, GOOGLE_DRIVE_FOLDER_ID);
 
-    // Paso 7: Reemplazar los marcadores de posición en el documento
-    const data = {
-      ...metadata,
-      appraisal_title: postTitle,
-      appraisal_date: postDate
-    };
-    await replacePlaceholders(clonedDocId, data);
+ // Paso 7: Reemplazar los marcadores de posición en el documento
+const data = {
+  ...metadata,
+  appraisal_title: postTitle,
+  appraisal_date: postDate
+};
+await replacePlaceholders(clonedDocId, data);
 
-    // Paso 8: Ajustar el tamaño de la fuente del título
-    await adjustTitleFontSize(clonedDocId, postTitle);
+// Paso 8: Ajustar el tamaño de la fuente del título
+await adjustTitleFontSize(clonedDocId, postTitle);
+
 
     // Paso 9: Agregar las imágenes de la galería al documento
     if (gallery.length > 0) {
