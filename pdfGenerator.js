@@ -2,11 +2,8 @@
 
 const express = require('express');
 const fetch = require('node-fetch');
-const fs = require('fs').promises;
-const path = require('path');
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const { google } = require('googleapis');
-const Handlebars = require('handlebars');
 const { v4: uuidv4 } = require('uuid'); // Para generar nombres de archivos únicos
 const { Readable } = require('stream'); // Importar Readable desde stream
 const he = require('he'); // Librería para decodificar HTML entities
@@ -132,12 +129,95 @@ const adjustTitleFontSize = async (documentId, titleText) => {
   }
 };
 
+// Función para obtener metadatos de un post de WordPress
+const getPostMetadata = async (postId, metadataKey, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
+  try {
+    const response = await fetch(`${WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      }
+    });
 
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error obteniendo post de WordPress:`, errorText);
+      throw new Error('Error obteniendo post de WordPress.');
+    }
+
+    const postData = await response.json();
+    const acfFields = postData.acf || {};
+    let metadataValue = acfFields[metadataKey] || '';
+
+    // Validación de tamaño (ejemplo: máximo 5000 caracteres)
+    const MAX_LENGTH = 5000;
+    if (metadataValue.length > MAX_LENGTH) {
+      metadataValue = metadataValue.substring(0, MAX_LENGTH) + '...';
+      console.warn(`El metadato '${metadataKey}' excede el límite de ${MAX_LENGTH} caracteres y ha sido truncado.`);
+    }
+
+    return metadataValue;
+  } catch (error) {
+    console.error(`Error obteniendo metadato '${metadataKey}' del post ID ${postId}:`, error);
+    throw error;
+  }
+};
+
+// Función para obtener el título de un post de WordPress
+const getPostTitle = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
+  try {
+    const response = await fetch(`${WORDPRESS_API_URL}/appraisals/${postId}?_fields=title`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error obteniendo post de WordPress:`, errorText);
+      throw new Error('Error obteniendo post de WordPress.');
+    }
+
+    const postData = await response.json();
+    return he.decode(postData.title.rendered || '');
+  } catch (error) {
+    console.error(`Error obteniendo el título del post ID ${postId}:`, error);
+    throw error;
+  }
+};
+
+// Función para obtener la fecha de publicación de un post de WordPress
+const getPostDate = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
+  try {
+    const response = await fetch(`${WORDPRESS_API_URL}/appraisals/${postId}?_fields=date`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error obteniendo post de WordPress:`, errorText);
+      throw new Error('Error obteniendo post de WordPress.');
+    }
+
+    const postData = await response.json();
+    return format(new Date(postData.date), 'yyyy-MM-dd'); // Formatear la fecha a 'yyyy-MM-dd'
+  } catch (error) {
+    console.error(`Error obteniendo la fecha del post ID ${postId}:`, error);
+    throw error;
+  }
+};
 
 // Función auxiliar para obtener la URL de una imagen dado su ID de media
 const getImageUrl = async (mediaId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
   try {
-    const response = await fetch(`${WORDPRESS_API_URL}/wp/v2/media/${mediaId}`, {
+    const response = await fetch(`${WORDPRESS_API_URL}/media/${mediaId}?_fields=source_url`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -208,7 +288,6 @@ const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WOR
   }
 };
 
-
 // Función para clonar una plantilla de Google Docs
 const cloneTemplate = async (templateId) => {
   try {
@@ -273,8 +352,8 @@ const addGalleryImages = async (documentId, gallery) => {
           {
             deleteContentRange: {
               range: {
-                startIndex: galleryPlaceholderIndex,
-                endIndex: galleryPlaceholderIndex + '{{gallery}}'.length,
+                startIndex: galleryPlaceholderIndex - '{{gallery}}'.length + 1,
+                endIndex: galleryPlaceholderIndex + 1,
               },
             },
           },
@@ -445,17 +524,21 @@ router.post('/generate-pdf', async (req, res) => {
       throw new Error('GOOGLE_DOCS_TEMPLATE_ID y GOOGLE_DRIVE_FOLDER_ID deben estar definidos en las variables de entorno.');
     }
 
+    const WORDPRESS_API_URL = process.env.WORDPRESS_API_URL;
+    const WORDPRESS_USERNAME = process.env.WORDPRESS_USERNAME;
+    const WORDPRESS_APP_PASSWORD = process.env.WORDPRESS_APP_PASSWORD;
+
     // Paso 2: Obtener el metadato 'age_text' del post
-    const ageText = await getPostMetadata(postId, 'age_text', process.env.WORDPRESS_API_URL, process.env.WORDPRESS_USERNAME, process.env.WORDPRESS_APP_PASSWORD);
+    const ageText = await getPostMetadata(postId, 'age_text', WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
 
     // Paso 3: Obtener el título del post
-    const postTitle = await getPostTitle(postId, process.env.WORDPRESS_API_URL, process.env.WORDPRESS_USERNAME, process.env.WORDPRESS_APP_PASSWORD);
+    const postTitle = await getPostTitle(postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
 
     // Paso 4: Obtener la fecha de publicación del post
-    const postDate = await getPostDate(postId, process.env.WORDPRESS_API_URL, process.env.WORDPRESS_USERNAME, process.env.WORDPRESS_APP_PASSWORD);
+    const postDate = await getPostDate(postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
 
     // Paso 5: Obtener la galería de imágenes del post
-    const gallery = await getPostGallery(postId, process.env.WORDPRESS_API_URL, process.env.WORDPRESS_USERNAME, process.env.WORDPRESS_APP_PASSWORD);
+    const gallery = await getPostGallery(postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
 
     // Log para verificar el metadato, el título, la fecha y la galería obtenidos
     console.log(`Metadato 'age_text' obtenido: '${ageText}'`);
