@@ -313,7 +313,7 @@ const cloneTemplate = async (templateId) => {
   }
 };
 
-// Función para agregar imágenes de la galería en el documento
+// Función para agregar imágenes de la galería en el documento en formato de tabla
 const addGalleryImages = async (documentId, gallery) => {
   try {
     // Buscar el placeholder '{{gallery}}' en el documento
@@ -331,7 +331,7 @@ const addGalleryImages = async (documentId, gallery) => {
           if (elem.textRun && elem.textRun.content.includes('{{gallery}}')) {
             galleryPlaceholderFound = true;
             // Obtener el índice de inserción justo después del placeholder
-            galleryPlaceholderIndex = elem.endIndex - 1;
+            galleryPlaceholderIndex = elem.startIndex;
             break;
           }
         }
@@ -352,8 +352,8 @@ const addGalleryImages = async (documentId, gallery) => {
           {
             deleteContentRange: {
               range: {
-                startIndex: galleryPlaceholderIndex - '{{gallery}}'.length + 1,
-                endIndex: galleryPlaceholderIndex + 1,
+                startIndex: galleryPlaceholderIndex,
+                endIndex: galleryPlaceholderIndex + '{{gallery}}'.length,
               },
             },
           },
@@ -363,30 +363,50 @@ const addGalleryImages = async (documentId, gallery) => {
 
     const requests = [];
 
-    // Insertar cada imagen en el placeholder
-    for (const image of gallery) {
-      // Asegúrate de que la URL de la imagen sea válida y accesible
-      requests.push({
-        insertInlineImage: {
-          uri: image,
-          location: {
-            index: galleryPlaceholderIndex,
-          },
-        },
-      });
+    // Definir el número de columnas
+    const columns = 3;
+    const rows = Math.ceil(gallery.length / columns);
 
-      // Opcional: Añadir un salto de línea después de cada imagen
-      requests.push({
-        insertText: {
-          text: '\n',
-          location: {
-            index: galleryPlaceholderIndex + 1,
-          },
+    // Crear la tabla
+    requests.push({
+      insertTable: {
+        rows: rows,
+        columns: columns,
+        location: {
+          index: galleryPlaceholderIndex,
         },
-      });
+      },
+    });
 
-      // Actualizar el índice de inserción para la próxima imagen
-      galleryPlaceholderIndex += 2;
+    // Calcular el índice inicial de la tabla
+    let currentIndex = galleryPlaceholderIndex + 1; // +1 para moverse dentro de la tabla
+
+    // Insertar imágenes en las celdas de la tabla
+    let imageCounter = 0;
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < columns; col++) {
+        if (imageCounter < gallery.length) {
+          const imageUrl = gallery[imageCounter];
+
+          // Insertar la imagen en la celda
+          requests.push({
+            insertInlineImage: {
+              uri: imageUrl,
+              location: {
+                index: currentIndex,
+              },
+            },
+          });
+
+          // Mover al siguiente elemento (cada celda ocupa un índice adicional)
+          currentIndex += 2; // Ajustar según sea necesario
+
+          imageCounter++;
+        } else {
+          // No hay más imágenes, salir del bucle
+          break;
+        }
+      }
     }
 
     // Ejecutar las solicitudes
@@ -397,7 +417,7 @@ const addGalleryImages = async (documentId, gallery) => {
       },
     });
 
-    console.log(`Imágenes de la galería agregadas al documento ID: ${documentId}`);
+    console.log(`Imágenes de la galería agregadas al documento ID: ${documentId} en formato de tabla.`);
   } catch (error) {
     console.error('Error agregando imágenes de la galería a Google Docs:', error);
     throw new Error('Error agregando imágenes de la galería a Google Docs.');
@@ -528,20 +548,41 @@ router.post('/generate-pdf', async (req, res) => {
     const WORDPRESS_USERNAME = process.env.WORDPRESS_USERNAME;
     const WORDPRESS_APP_PASSWORD = process.env.WORDPRESS_APP_PASSWORD;
 
-    // Paso 2: Obtener el metadato 'age_text' del post
-    const ageText = await getPostMetadata(postId, 'age_text', WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
+    // Paso 2: Obtener los metadatos adicionales del post
+    const metadataKeys = [
+      'test',
+      'ad_copy',
+      'age_text',
+      'age1',
+      'condition',
+      'signature1',
+      'signature2',
+      'style',
+      'valuation_method',
+      'conclusion1',
+      'conclusion2',
+      'authorship'
+    ];
 
-    // Paso 3: Obtener el título del post
-    const postTitle = await getPostTitle(postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
+    const metadataPromises = metadataKeys.map(key => getPostMetadata(postId, key, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD));
+    const metadataValues = await Promise.all(metadataPromises);
 
-    // Paso 4: Obtener la fecha de publicación del post
-    const postDate = await getPostDate(postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
+    const metadata = {};
+    metadataKeys.forEach((key, index) => {
+      metadata[key] = metadataValues[index];
+    });
 
-    // Paso 5: Obtener la galería de imágenes del post
+    // Obtener el título y la fecha del post
+    const [postTitle, postDate] = await Promise.all([
+      getPostTitle(postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD),
+      getPostDate(postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD)
+    ]);
+
+    // Obtener la galería de imágenes del post
     const gallery = await getPostGallery(postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
 
-    // Log para verificar el metadato, el título, la fecha y la galería obtenidos
-    console.log(`Metadato 'age_text' obtenido: '${ageText}'`);
+    // Log para verificar los metadatos, el título, la fecha y la galería obtenidos
+    console.log(`Metadatos obtenidos:`, metadata);
     console.log(`Título del post obtenido: '${postTitle}'`);
     console.log(`Fecha del post obtenida: '${postDate}'`);
     console.log(`Galería de imágenes obtenida:`, gallery);
@@ -553,7 +594,11 @@ router.post('/generate-pdf', async (req, res) => {
     await moveFileToFolder(clonedDocId, GOOGLE_DRIVE_FOLDER_ID);
 
     // Paso 7: Reemplazar los marcadores de posición en el documento
-    const data = { age_text: ageText, appraisal_title: postTitle, appraisal_date: postDate };
+    const data = {
+      ...metadata,
+      appraisal_title: postTitle,
+      appraisal_date: postDate
+    };
     await replacePlaceholders(clonedDocId, data);
 
     // Paso 8: Ajustar el tamaño de la fuente del título
