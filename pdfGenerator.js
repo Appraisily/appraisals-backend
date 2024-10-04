@@ -9,6 +9,7 @@ const { google } = require('googleapis');
 const Handlebars = require('handlebars');
 const { v4: uuidv4 } = require('uuid'); // Para generar nombres de archivos únicos
 const { Readable } = require('stream'); // Importar Readable desde stream
+const he = require('he'); // Librería para decodificar HTML entities
 
 const router = express.Router();
 
@@ -106,7 +107,7 @@ const getPostTitle = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDP
     }
 
     const postData = await response.json();
-    return postData.title.rendered || '';
+    return he.decode(postData.title.rendered || '');
   } catch (error) {
     console.error(`Error obteniendo el título del post ID ${postId}:`, error);
     throw error;
