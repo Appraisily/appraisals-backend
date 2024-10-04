@@ -312,7 +312,7 @@ const cloneTemplate = async (templateId) => {
     throw new Error('Error clonando la plantilla de Google Docs.');
   }
 };
-
+// Función para agregar imágenes de la galería en el documento en formato de tabla
 const addGalleryImages = async (documentId, gallery) => {
   try {
     // Obtener el contenido completo del documento
@@ -359,75 +359,62 @@ const addGalleryImages = async (documentId, gallery) => {
       },
     });
 
+    // Esperar brevemente para que los cambios se apliquen
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     // Obtener el documento actualizado
     document = await docs.documents.get({ documentId: documentId });
     content = document.data.body.content;
 
-    // Verificar si el índice de inserción está dentro de un párrafo
-    let insertionIndex = galleryPlaceholderIndex;
+    // Determinar el índice de inserción ajustado
+    let adjustedIndex = galleryPlaceholderIndex;
 
-    // Si el índice no está dentro de un párrafo, debemos ajustarlo
-    let adjustedIndex = null;
-
-    for (const element of content) {
-      if (element.startIndex <= insertionIndex && element.endIndex > insertionIndex) {
-        if (element.paragraph) {
-          adjustedIndex = insertionIndex;
-          break;
-        }
-      }
-    }
-
-    if (adjustedIndex === null) {
-      // Buscar el siguiente párrafo disponible
-      for (const element of content) {
-        if (element.startIndex > insertionIndex && element.paragraph) {
-          adjustedIndex = element.startIndex + 1;
-          break;
-        }
-      }
-    }
-
-    if (adjustedIndex === null) {
-      throw new Error('No se pudo encontrar un índice válido para insertar la galería.');
-    }
-
-    // Crear la tabla
+    // Definir el número de columnas
     const columns = 3;
     const rows = Math.ceil(gallery.length / columns);
 
-    const requests = [];
-
-    requests.push({
-      insertTable: {
-        rows: rows,
-        columns: columns,
-        location: {
-          index: adjustedIndex,
-        },
-      },
-    });
-
-    // Ejecutar la solicitud de inserción de tabla
+    // Insertar la tabla
     await docs.documents.batchUpdate({
       documentId: documentId,
       requestBody: {
-        requests: requests,
+        requests: [
+          {
+            insertTable: {
+              rows: rows,
+              columns: columns,
+              location: {
+                index: adjustedIndex,
+              },
+            },
+          },
+        ],
       },
     });
+
+    // Esperar para que la tabla se inserte correctamente
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Obtener el documento actualizado nuevamente
     document = await docs.documents.get({ documentId: documentId });
     content = document.data.body.content;
 
-    // Ahora, insertar las imágenes en las celdas de la tabla
-    // Necesitamos encontrar las ubicaciones de las celdas
-
-    // Por simplicidad, asumiremos que las celdas están en orden secuencial después de la inserción de la tabla
+    // Encontrar las celdas de la tabla y sus índices
     let cellIndices = [];
-    for (const element of content) {
-      if (element.tableCell && element.startIndex >= adjustedIndex) {
-        cellIndices.push(element.startIndex + 1); // +1 para moverse dentro de la celda
+    for (let i = 0; i < content.length; i++) {
+      const element = content[i];
+      if (element.table && element.startIndex <= adjustedIndex && element.endIndex > adjustedIndex) {
+        // Encontrar todas las celdas de la tabla
+        const table = element.table;
+        for (let row of table.tableRows) {
+          for (let cell of row.tableCells) {
+            const cellContent = cell.content;
+            if (cellContent && cellContent.length > 0) {
+              const cellStartIndex = cellContent[0].startIndex;
+              cellIndices.push(cellStartIndex + 1);
+            }
+          }
+        }
+        break;
       }
     }
 
@@ -449,20 +436,24 @@ const addGalleryImages = async (documentId, gallery) => {
             index: cellIndex,
           },
           objectSize: {
-            height: { magnitude: 100, unit: 'PT' },
-            width: { magnitude: 100, unit: 'PT' },
+            height: { magnitude: 150, unit: 'PT' }, // Ajusta el tamaño según sea necesario
+            width: { magnitude: 150, unit: 'PT' },
           },
         },
       });
     }
 
-    // Ejecutar las solicitudes de inserción de imágenes
-    await docs.documents.batchUpdate({
-      documentId: documentId,
-      requestBody: {
-        requests: imageRequests,
-      },
-    });
+    // Dividir las solicitudes en lotes más pequeños si es necesario
+    const MAX_REQUESTS_PER_BATCH = 100;
+    for (let i = 0; i < imageRequests.length; i += MAX_REQUESTS_PER_BATCH) {
+      const batchRequests = imageRequests.slice(i, i + MAX_REQUESTS_PER_BATCH);
+      await docs.documents.batchUpdate({
+        documentId: documentId,
+        requestBody: {
+          requests: batchRequests,
+        },
+      });
+    }
 
     console.log(`Imágenes de la galería agregadas al documento ID: ${documentId} en formato de tabla.`);
   } catch (error) {
