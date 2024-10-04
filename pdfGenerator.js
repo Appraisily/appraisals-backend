@@ -62,6 +62,77 @@ async function initializeGoogleApis() {
   }
 }
 
+// Función para ajustar el tamaño de la fuente del título
+const adjustTitleFontSize = async (documentId, titleText) => {
+  try {
+    // Obtener el contenido completo del documento
+    const document = await docs.documents.get({ documentId: documentId });
+    const content = document.data.body.content;
+
+    let titleRange = null;
+
+    // Recorrer los elementos del documento para encontrar el título
+    for (const element of content) {
+      if (element.paragraph && element.paragraph.elements) {
+        for (const elem of element.paragraph.elements) {
+          if (elem.textRun && elem.textRun.content.trim() === titleText) {
+            titleRange = {
+              startIndex: elem.startIndex,
+              endIndex: elem.endIndex,
+            };
+            break;
+          }
+        }
+      }
+      if (titleRange) break;
+    }
+
+    if (!titleRange) {
+      console.warn('No se encontró el título en el documento para ajustar el tamaño de la fuente.');
+      return;
+    }
+
+    // Determinar el tamaño de fuente basado en la longitud del título
+    let fontSize;
+
+    if (titleText.length <= 20) {
+      fontSize = 18; // Tamaño para títulos cortos
+    } else if (titleText.length <= 40) {
+      fontSize = 16; // Tamaño para títulos medianos
+    } else {
+      fontSize = 14; // Tamaño para títulos largos
+    }
+
+    // Crear la solicitud para actualizar el estilo del texto
+    const requests = [{
+      updateTextStyle: {
+        range: titleRange,
+        textStyle: {
+          fontSize: {
+            magnitude: fontSize,
+            unit: 'PT',
+          },
+        },
+        fields: 'fontSize',
+      },
+    }];
+
+    // Enviar la solicitud a la API de Google Docs
+    await docs.documents.batchUpdate({
+      documentId: documentId,
+      requestBody: {
+        requests: requests,
+      },
+    });
+
+    console.log(`Tamaño de fuente ajustado a ${fontSize}pt para el título en el documento ID: ${documentId}`);
+  } catch (error) {
+    console.error('Error ajustando el tamaño de la fuente del título:', error);
+    throw new Error('Error ajustando el tamaño de la fuente del título.');
+  }
+};
+
+
 // Función para obtener los metadatos de un post de WordPress
 const getPostMetadata = async (postId, metadataKey, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
   try {
@@ -420,15 +491,18 @@ router.post('/generate-pdf', async (req, res) => {
     const data = { age_text: ageText, appraisal_title: postTitle, appraisal_date: postDate };
     await replacePlaceholders(clonedDocId, data);
 
-    // Paso 8: Agregar las imágenes de la galería al documento
+    // Paso 8: Ajustar el tamaño de la fuente del título
+    await adjustTitleFontSize(clonedDocId, postTitle);
+
+    // Paso 9: Agregar las imágenes de la galería al documento
     if (gallery.length > 0) {
       await addGalleryImages(clonedDocId, gallery);
     }
 
-    // Paso 9: Exportar el documento a PDF
+    // Paso 10: Exportar el documento a PDF
     const pdfBuffer = await exportDocumentToPDF(clonedDocId);
 
-    // Paso 10: Determinar el nombre del archivo PDF
+    // Paso 11: Determinar el nombre del archivo PDF
     let pdfFilename;
     if (session_ID && typeof session_ID === 'string' && session_ID.trim() !== '') {
       pdfFilename = `${session_ID}.pdf`;
@@ -436,7 +510,7 @@ router.post('/generate-pdf', async (req, res) => {
       pdfFilename = `Informe_Tasacion_Post_${postId}_${uuidv4()}.pdf`;
     }
 
-    // Paso 11: Subir el PDF a Google Drive
+    // Paso 12: Subir el PDF a Google Drive
     const pdfLink = await uploadPDFToDrive(pdfBuffer, pdfFilename, GOOGLE_DRIVE_FOLDER_ID);
 
     res.json({ success: true, message: 'PDF generado exitosamente.', pdfLink: pdfLink });
@@ -445,5 +519,6 @@ router.post('/generate-pdf', async (req, res) => {
     res.status(500).json({ success: false, message: error.message || 'Error generando el PDF.' });
   }
 });
+
 
 module.exports = { router, initializeGoogleApis };
