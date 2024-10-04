@@ -101,6 +101,8 @@ const cloneTemplate = async (templateId) => {
       requestBody: {
         name: `Informe_Tasacion_${uuidv4()}`,
       },
+        supportsAllDrives: true, // Añadido
+
     });
 
     console.log(`Plantilla clonada con ID: ${copiedFile.data.id}`);
@@ -176,6 +178,8 @@ const uploadPDFToDrive = async (pdfBuffer, filename, driveFolderId) => {
       requestBody: fileMetadata,
       media: media,
       fields: 'id, webViewLink',
+        supportsAllDrives: true, // Añadido
+
     });
 
     console.log(`PDF subido a Google Drive con ID: ${file.data.id}`);
