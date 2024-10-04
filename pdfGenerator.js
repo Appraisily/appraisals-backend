@@ -81,7 +81,14 @@ const getPostMetadata = async (postId, metadataKey, WORDPRESS_API_URL, WORDPRESS
 
     const postData = await response.json();
     const acfFields = postData.acf || {};
-    const metadataValue = acfFields[metadataKey] || '';
+    let metadataValue = acfFields[metadataKey] || '';
+
+    // Validación de tamaño (ejemplo: máximo 5000 caracteres)
+    const MAX_LENGTH = 5000;
+    if (metadataValue.length > MAX_LENGTH) {
+      metadataValue = metadataValue.substring(0, MAX_LENGTH) + '...';
+      console.warn(`El metadato '${metadataKey}' excede el límite de ${MAX_LENGTH} caracteres y ha sido truncado.`);
+    }
 
     return metadataValue;
   } catch (error) {
@@ -195,20 +202,62 @@ const cloneTemplate = async (templateId) => {
 // Función para agregar imágenes de la galería en el documento
 const addGalleryImages = async (documentId, gallery) => {
   try {
+    // Obtener el contenido del documento
+    const document = await docs.documents.get({ documentId: documentId });
+    const content = document.data.body.content;
+
+    let galleryPlaceholderFound = false;
+    let galleryPlaceholderIndex = -1;
+
+    // Buscar el índice del elemento que contiene '{{gallery}}'
+    for (let i = 0; i < content.length; i++) {
+      const element = content[i];
+      if (element.paragraph && element.paragraph.elements) {
+        for (const elem of element.paragraph.elements) {
+          if (elem.textRun && elem.textRun.content.includes('{{gallery}}')) {
+            galleryPlaceholderFound = true;
+            // Obtener el índice de inserción justo después del placeholder
+            galleryPlaceholderIndex = elem.endIndex - 1;
+            break;
+          }
+        }
+      }
+      if (galleryPlaceholderFound) break;
+    }
+
+    if (!galleryPlaceholderFound) {
+      console.warn('Placeholder "{{gallery}}" no encontrado en el documento.');
+      return;
+    }
+
     const requests = [];
 
+    // Insertar cada imagen en el placeholder
     for (const image of gallery) {
       requests.push({
         insertInlineImage: {
-          uri: image.url,
+          uri: image.url, // Asegúrate de que la URL de la imagen sea accesible públicamente
           location: {
-            segmentId: '',
-            index: 1, // Ubicación donde insertar la imagen. Ajustar según sea necesario.
+            index: galleryPlaceholderIndex,
           },
         },
       });
+
+      // Opcional: Añadir un salto de línea después de cada imagen
+      requests.push({
+        insertText: {
+          text: '\n',
+          location: {
+            index: galleryPlaceholderIndex + 1, // Ajustar según sea necesario
+          },
+        },
+      });
+
+      // Actualizar el índice de inserción para la próxima imagen
+      galleryPlaceholderIndex += 2; // Ajustar según sea necesario
     }
 
+    // Ejecutar las solicitudes
     await docs.documents.batchUpdate({
       documentId: documentId,
       requestBody: {
@@ -265,6 +314,13 @@ const exportDocumentToPDF = async (documentId) => {
     console.log(`Documento ID: ${documentId} exportado a PDF correctamente.`);
     return Buffer.from(response.data, 'binary');
   } catch (error) {
+    if (error.response && error.response.data && error.response.data.error) {
+      const { message, reason } = error.response.data.error;
+      if (reason === 'exportSizeLimitExceeded') {
+        console.error('Error: El documento excede el límite de tamaño para exportación.');
+        throw new Error('El documento es demasiado grande para ser exportado a PDF. Por favor, reduzca el tamaño o la complejidad del documento.');
+      }
+    }
     console.error('Error exportando el documento a PDF:', error);
     throw new Error('Error exportando el documento a PDF.');
   }
