@@ -132,10 +132,12 @@ const adjustTitleFontSize = async (documentId, titleText) => {
   }
 };
 
+
+
 // Función auxiliar para obtener la URL de una imagen dado su ID de media
 const getImageUrl = async (mediaId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
   try {
-    const response = await fetch(`${WORDPRESS_API_URL}/media/${mediaId}`, {
+    const response = await fetch(`${WORDPRESS_API_URL}/wp/v2/media/${mediaId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -146,7 +148,7 @@ const getImageUrl = async (mediaId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDP
     if (!response.ok) {
       const errorText = await response.text();
       console.error(`Error obteniendo media de WordPress:`, errorText);
-      throw new Error('Error obteniendo media de WordPress.');
+      return null; // Devolver null en caso de error para continuar con las demás imágenes
     }
 
     const mediaData = await response.json();
@@ -160,7 +162,7 @@ const getImageUrl = async (mediaId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDP
 // Función para obtener la galería de imágenes de un post de WordPress
 const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
   try {
-    const response = await fetch(`${WORDPRESS_API_URL}/appraisals/${postId}`, {
+    const response = await fetch(`${WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -179,14 +181,14 @@ const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WOR
     // Log completo para inspeccionar la estructura
     console.log(`postData:`, JSON.stringify(postData, null, 2));
 
-    // Acceder al campo de galería ACF
+    // Acceder al campo de galería ACF (asegurándose de usar el nombre correcto del campo)
     const galleryField = postData.acf && postData.acf.googlevision ? postData.acf.googlevision : [];
 
     // Verificar la estructura de la galería
-    console.log(`Galería de imágenes obtenida:`, galleryField);
+    console.log(`Galería de imágenes obtenida (IDs de medios):`, galleryField);
 
     if (Array.isArray(galleryField) && galleryField.length > 0) {
-      // Obtener las URLs de las imágenes
+      // Obtener las URLs de las imágenes usando getImageUrl
       const imageUrls = await Promise.all(galleryField.map(async (mediaId) => {
         return await getImageUrl(mediaId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
       }));
@@ -205,6 +207,7 @@ const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WOR
     throw error;
   }
 };
+
 
 // Función para clonar una plantilla de Google Docs
 const cloneTemplate = async (templateId) => {
