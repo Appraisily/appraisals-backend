@@ -386,4 +386,8 @@ router.post('/generate-pdf', async (req, res) => {
     res.json({ success: true, message: 'PDF generado exitosamente.', pdfLink: pdfLink });
   } catch (error) {
     console.error('Error generando el PDF:', error);
-    .json({ success: false, message: error.message || 'Error generando el PDF.' })
+    res.status(500).json({ success: false, message: error.message || 'Error generando el PDF.' });
+  }
+});
+
+module.exports = { router, initializeGoogleApis };
