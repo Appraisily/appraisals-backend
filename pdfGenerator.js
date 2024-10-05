@@ -433,15 +433,18 @@ const addGalleryImages = async (documentId, gallery) => {
     let tableElement = null;
     for (let i = 0; i < content.length; i++) {
       const element = content[i];
-      if (element.table && element.startIndex === galleryPlaceholderIndex) {
-        tableElement = element;
-        break;
+      if (element.table) {
+        // Verificar si el startIndex coincide con el índice de inserción
+        if (element.startIndex === galleryPlaceholderIndex) {
+          tableElement = element;
+          break;
+        }
       }
     }
 
     if (!tableElement) {
-      // Si no se encontró la tabla en el índice esperado, buscar en todo el contenido
-      for (let i = 0; i < content.length; i++) {
+      // Si no se encuentra la tabla en el índice esperado, buscar la última tabla insertada
+      for (let i = content.length - 1; i >= 0; i--) {
         const element = content[i];
         if (element.table) {
           tableElement = element;
@@ -470,6 +473,9 @@ const addGalleryImages = async (documentId, gallery) => {
       }
     }
 
+    console.log(`Número de celdas encontradas: ${cellIndices.length}`);
+    console.log(`Número de imágenes en la galería: ${gallery.length}`);
+
     // Asegurarse de que tenemos suficientes celdas para las imágenes
     if (cellIndices.length < gallery.length) {
       throw new Error('No hay suficientes celdas en la tabla para todas las imágenes.');
@@ -494,6 +500,25 @@ const addGalleryImages = async (documentId, gallery) => {
         },
       });
     }
+
+    // Ejecutar las solicitudes
+    const MAX_REQUESTS_PER_BATCH = 20; // Ajustado para tu caso
+    for (let i = 0; i < imageRequests.length; i += MAX_REQUESTS_PER_BATCH) {
+      const batchRequests = imageRequests.slice(i, i + MAX_REQUESTS_PER_BATCH);
+      await docs.documents.batchUpdate({
+        documentId: documentId,
+        requestBody: {
+          requests: batchRequests,
+        },
+      });
+    }
+
+    console.log(`Imágenes de la galería agregadas al documento ID: ${documentId} en formato de tabla.`);
+  } catch (error) {
+    console.error('Error agregando imágenes de la galería a Google Docs:', error);
+    throw new Error('Error agregando imágenes de la galería a Google Docs.');
+  }
+};
 
     // Ejecutar las solicitudes
     const MAX_REQUESTS_PER_BATCH = 20; // Ajustado para tu caso
