@@ -67,11 +67,14 @@ const adjustTitleFontSize = async (documentId, titleText) => {
 
     let titleRange = null;
 
+    // Usar una expresión regular para encontrar el título
+    const titleRegex = new RegExp(titleText.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+
     // Recorrer los elementos del documento para encontrar el título
     for (const element of content) {
       if (element.paragraph && element.paragraph.elements) {
         for (const elem of element.paragraph.elements) {
-          if (elem.textRun && elem.textRun.content.trim() === titleText.trim()) {
+          if (elem.textRun && elem.textRun.content.trim().match(titleRegex)) {
             titleRange = {
               startIndex: elem.startIndex,
               endIndex: elem.endIndex,
