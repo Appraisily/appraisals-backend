@@ -430,37 +430,43 @@ const addGalleryImages = async (documentId, gallery) => {
     content = document.data.body.content;
 
     // Encontrar la tabla recién insertada
-    let tableStartIndex = null;
+    let tableElement = null;
     for (let i = 0; i < content.length; i++) {
       const element = content[i];
       if (element.table && element.startIndex === galleryPlaceholderIndex) {
-        tableStartIndex = element.startIndex;
+        tableElement = element;
         break;
       }
     }
 
-    if (tableStartIndex === null) {
+    if (!tableElement) {
+      // Si no se encontró la tabla en el índice esperado, buscar en todo el contenido
+      for (let i = 0; i < content.length; i++) {
+        const element = content[i];
+        if (element.table) {
+          tableElement = element;
+          break;
+        }
+      }
+    }
+
+    if (!tableElement) {
       throw new Error('No se pudo encontrar la tabla insertada.');
     }
 
     // Ahora, recorrer las celdas de la tabla y obtener sus startIndex
     let cellIndices = [];
-    for (let i = 0; i < content.length; i++) {
-      const element = content[i];
-      if (element.table && element.startIndex === tableStartIndex) {
-        const table = element.table;
-        for (let rowIndex = 0; rowIndex < table.tableRows.length; rowIndex++) {
-          const row = table.tableRows[rowIndex];
-          for (let columnIndex = 0; columnIndex < row.tableCells.length; columnIndex++) {
-            const cell = row.tableCells[columnIndex];
-            const cellContent = cell.content;
-            if (cellContent && cellContent.length > 0) {
-              const cellStartIndex = cellContent[0].startIndex;
-              cellIndices.push(cellStartIndex + 1); // +1 para moverse dentro de la celda
-            }
-          }
+    const table = tableElement.table;
+
+    for (let rowIndex = 0; rowIndex < table.tableRows.length; rowIndex++) {
+      const row = table.tableRows[rowIndex];
+      for (let columnIndex = 0; columnIndex < row.tableCells.length; columnIndex++) {
+        const cell = row.tableCells[columnIndex];
+        const cellContent = cell.content;
+        if (cellContent && cellContent.length > 0) {
+          const cellStartIndex = cellContent[0].startIndex;
+          cellIndices.push(cellStartIndex + 1); // +1 para moverse dentro de la celda
         }
-        break;
       }
     }
 
@@ -489,7 +495,7 @@ const addGalleryImages = async (documentId, gallery) => {
       });
     }
 
-    // Ejecutar las solicitudes (puedes ajustar el tamaño del lote si es necesario)
+    // Ejecutar las solicitudes
     const MAX_REQUESTS_PER_BATCH = 20; // Ajustado para tu caso
     for (let i = 0; i < imageRequests.length; i += MAX_REQUESTS_PER_BATCH) {
       const batchRequests = imageRequests.slice(i, i + MAX_REQUESTS_PER_BATCH);
