@@ -470,6 +470,7 @@ const addGalleryImages = async (documentId, gallery) => {
 
     // Ahora, recorrer las celdas de la tabla y obtener sus startIndex
     let cellIndices = [];
+    let emptyCells = [];
     const table = tableElement.table;
 
     for (let rowIndex = 0; rowIndex < table.tableRows.length; rowIndex++) {
@@ -477,10 +478,71 @@ const addGalleryImages = async (documentId, gallery) => {
       for (let columnIndex = 0; columnIndex < row.tableCells.length; columnIndex++) {
         const cell = row.tableCells[columnIndex];
         const cellContent = cell.content;
+
+        let paragraphFound = false;
         if (cellContent && cellContent.length > 0) {
-          const cellStartIndex = cellContent[0].startIndex;
-          cellIndices.push(cellStartIndex + 1); // +1 para moverse dentro de la celda
-          console.log(`Celda encontrada en fila ${rowIndex}, columna ${columnIndex}, startIndex ${cellStartIndex}`);
+          for (const contentElement of cellContent) {
+            if (contentElement.paragraph) {
+              cellIndices.push(contentElement.startIndex + 1); // +1 para moverse dentro del párrafo
+              paragraphFound = true;
+              break;
+            }
+          }
+        }
+
+        if (!paragraphFound) {
+          // La celda está vacía o no tiene párrafo, agregar a la lista de celdas vacías
+          emptyCells.push(cell.startIndex + 1);
+        }
+      }
+    }
+
+    // Si hay celdas vacías, insertar un párrafo en cada una
+    if (emptyCells.length > 0) {
+      console.log(`Insertando párrafos en ${emptyCells.length} celdas vacías`);
+      const insertParagraphRequests = emptyCells.map(index => ({
+        insertParagraph: {
+          location: {
+            index: index,
+          },
+          paragraphStyle: {},
+        },
+      }));
+
+      await docs.documents.batchUpdate({
+        documentId: documentId,
+        requestBody: {
+          requests: insertParagraphRequests,
+        },
+      });
+
+      console.log('Párrafos insertados en celdas vacías');
+
+      // Esperar para que los cambios se apliquen
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      // Obtener el documento actualizado nuevamente
+      document = await docs.documents.get({ documentId: documentId });
+      content = document.data.body.content;
+
+      // Recalcular cellIndices ahora que todas las celdas tienen párrafos
+      cellIndices = [];
+      const table = tableElement.table;
+
+      for (let rowIndex = 0; rowIndex < table.tableRows.length; rowIndex++) {
+        const row = table.tableRows[rowIndex];
+        for (let columnIndex = 0; columnIndex < row.tableCells.length; columnIndex++) {
+          const cell = row.tableCells[columnIndex];
+          const cellContent = cell.content;
+
+          if (cellContent && cellContent.length > 0) {
+            for (const contentElement of cellContent) {
+              if (contentElement.paragraph) {
+                cellIndices.push(contentElement.startIndex + 1); // +1 para moverse dentro del párrafo
+                break;
+              }
+            }
+          }
         }
       }
     }
