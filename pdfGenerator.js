@@ -361,7 +361,7 @@ const addGalleryImages = async (documentId, gallery) => {
     let galleryPlaceholderFound = false;
     let galleryPlaceholderIndex = -1;
 
-    // Iterar sobre los elementos del documento para encontrar el placeholder
+    // Buscar el placeholder '{{gallery}}'
     for (let i = 0; i < content.length; i++) {
       const element = content[i];
       if (element.paragraph && element.paragraph.elements) {
@@ -402,16 +402,15 @@ const addGalleryImages = async (documentId, gallery) => {
 
     console.log('Placeholder "{{gallery}}" eliminado del documento');
 
-    // Esperar brevemente para que los cambios se apliquen
+    // Esperar para que los cambios se apliquen
     await new Promise(resolve => setTimeout(resolve, 500));
 
-    // Definir el número de columnas y filas
+    // Insertar la tabla
     const columns = 3;
     const rows = Math.ceil(gallery.length / columns);
 
     console.log(`Insertando tabla con ${rows} filas y ${columns} columnas`);
 
-    // Insertar la tabla en el índice ajustado
     await docs.documents.batchUpdate({
       documentId: documentId,
       requestBody: {
@@ -432,167 +431,114 @@ const addGalleryImages = async (documentId, gallery) => {
     console.log('Tabla insertada en el documento');
 
     // Esperar para que la tabla se inserte correctamente
-    await new Promise(resolve => setTimeout(resolve, 500));
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Preparar los marcadores de posición para cada celda
+    const insertTextRequests = [];
+    let imagePlaceholders = [];
+
+    // Llenar cada celda con un marcador de posición único
+    let placeholderIndex = 1;
+    for (let row = 0; row < rows; row++) {
+      for (let col = 0; col < columns; col++) {
+        if (gallery.length < placeholderIndex) break;
+        const placeholderText = `{{image${placeholderIndex}}}`;
+        imagePlaceholders.push({
+          placeholder: placeholderText,
+          imageUrl: gallery[placeholderIndex - 1],
+        });
+        insertTextRequests.push({
+          insertText: {
+            location: {
+              index: galleryPlaceholderIndex + 1, // +1 para dentro de la tabla
+            },
+            text: placeholderText,
+          },
+        });
+        placeholderIndex++;
+      }
+    }
+
+    // Insertar los marcadores de posición en el documento
+    await docs.documents.batchUpdate({
+      documentId: documentId,
+      requestBody: {
+        requests: insertTextRequests,
+      },
+    });
+
+    console.log('Marcadores de posición insertados en las celdas de la tabla');
+
+    // Esperar para que los cambios se apliquen
+    await new Promise(resolve => setTimeout(resolve, 1000));
 
     // Obtener el documento actualizado nuevamente
     document = await docs.documents.get({ documentId: documentId });
     content = document.data.body.content;
 
-    // Encontrar la tabla recién insertada
-    let tableElement = null;
-    for (let i = 0; i < content.length; i++) {
-      const element = content[i];
-      if (element.table) {
-        // Verificar si el startIndex coincide con el índice de inserción
-        if (element.startIndex === galleryPlaceholderIndex) {
-          tableElement = element;
-          break;
-        }
-      }
-    }
+    // Buscar cada marcador de posición e insertar la imagen correspondiente
+    const requests = [];
+    for (const { placeholder, imageUrl } of imagePlaceholders) {
+      // Encontrar el marcador de posición en el documento
+      let placeholderFound = false;
+      let placeholderIndex = -1;
 
-    if (!tableElement) {
-      // Si no se encuentra la tabla en el índice esperado, buscar la última tabla insertada
-      for (let i = content.length - 1; i >= 0; i--) {
-        const element = content[i];
-        if (element.table) {
-          tableElement = element;
-          break;
-        }
-      }
-    }
-
-    if (!tableElement) {
-      throw new Error('No se pudo encontrar la tabla insertada.');
-    }
-
-    console.log('Tabla encontrada en el documento');
-
-    // Ahora, recorrer las celdas de la tabla y obtener sus startIndex
-    let cellIndices = [];
-    let emptyCells = [];
-    const table = tableElement.table;
-
-    for (let rowIndex = 0; rowIndex < table.tableRows.length; rowIndex++) {
-      const row = table.tableRows[rowIndex];
-      for (let columnIndex = 0; columnIndex < row.tableCells.length; columnIndex++) {
-        const cell = row.tableCells[columnIndex];
-        const cellContent = cell.content;
-
-        let paragraphFound = false;
-        if (cellContent && cellContent.length > 0) {
-          for (const contentElement of cellContent) {
-            if (contentElement.paragraph) {
-              cellIndices.push(contentElement.startIndex + 1); // +1 para moverse dentro del párrafo
-              paragraphFound = true;
+      for (const element of content) {
+        if (element.paragraph && element.paragraph.elements) {
+          for (const elem of element.paragraph.elements) {
+            if (elem.textRun && elem.textRun.content.includes(placeholder)) {
+              placeholderFound = true;
+              placeholderIndex = elem.startIndex;
               break;
             }
           }
         }
+        if (placeholderFound) break;
+      }
 
-        if (!paragraphFound) {
-          // La celda está vacía o no tiene párrafo, agregar a la lista de celdas vacías
-          emptyCells.push(cell.startIndex + 1);
-        }
+      if (placeholderFound) {
+        // Eliminar el marcador de posición
+        requests.push({
+          deleteContentRange: {
+            range: {
+              startIndex: placeholderIndex,
+              endIndex: placeholderIndex + placeholder.length,
+            },
+          },
+        });
+
+        // Insertar la imagen en el índice del marcador de posición
+        requests.push({
+          insertInlineImage: {
+            uri: imageUrl,
+            location: {
+              index: placeholderIndex,
+            },
+            objectSize: {
+              height: { magnitude: 150, unit: 'PT' },
+              width: { magnitude: 150, unit: 'PT' },
+            },
+          },
+        });
+      } else {
+        console.warn(`No se encontró el marcador de posición ${placeholder} en el documento.`);
       }
     }
 
-    // Si hay celdas vacías, insertar un párrafo en cada una
-    if (emptyCells.length > 0) {
-      console.log(`Insertando párrafos en ${emptyCells.length} celdas vacías`);
-      const insertParagraphRequests = emptyCells.map(index => ({
-        insertParagraph: {
-          location: {
-            index: index,
-          },
-          paragraphStyle: {},
-        },
-      }));
-
-      await docs.documents.batchUpdate({
-        documentId: documentId,
-        requestBody: {
-          requests: insertParagraphRequests,
-        },
-      });
-
-      console.log('Párrafos insertados en celdas vacías');
-
-      // Esperar para que los cambios se apliquen
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // Obtener el documento actualizado nuevamente
-      document = await docs.documents.get({ documentId: documentId });
-      content = document.data.body.content;
-
-      // Recalcular cellIndices ahora que todas las celdas tienen párrafos
-      cellIndices = [];
-      const table = tableElement.table;
-
-      for (let rowIndex = 0; rowIndex < table.tableRows.length; rowIndex++) {
-        const row = table.tableRows[rowIndex];
-        for (let columnIndex = 0; columnIndex < row.tableCells.length; columnIndex++) {
-          const cell = row.tableCells[columnIndex];
-          const cellContent = cell.content;
-
-          if (cellContent && cellContent.length > 0) {
-            for (const contentElement of cellContent) {
-              if (contentElement.paragraph) {
-                cellIndices.push(contentElement.startIndex + 1); // +1 para moverse dentro del párrafo
-                break;
-              }
-            }
-          }
-        }
-      }
-    }
-
-    console.log(`Número de celdas encontradas: ${cellIndices.length}`);
-    console.log(`Número de imágenes en la galería: ${gallery.length}`);
-
-    // Asegurarse de que tenemos suficientes celdas para las imágenes
-    if (cellIndices.length < gallery.length) {
-      throw new Error('No hay suficientes celdas en la tabla para todas las imágenes.');
-    }
-
-    const imageRequests = [];
-
-    for (let i = 0; i < gallery.length; i++) {
-      const imageUrl = gallery[i];
-      const cellIndex = cellIndices[i];
-
-      console.log(`Preparando inserción de imagen en índice ${cellIndex}: ${imageUrl}`);
-
-      imageRequests.push({
-        insertInlineImage: {
-          uri: imageUrl,
-          location: {
-            index: cellIndex,
-          },
-          objectSize: {
-            height: { magnitude: 150, unit: 'PT' },
-            width: { magnitude: 150, unit: 'PT' },
-          },
-        },
-      });
-    }
-
-    console.log('Iniciando inserción de imágenes en el documento');
-
-    // Ejecutar las solicitudes
+    // Ejecutar las solicitudes en lotes
     const MAX_REQUESTS_PER_BATCH = 20; // Ajustado para tu caso
-    for (let i = 0; i < imageRequests.length; i += MAX_REQUESTS_PER_BATCH) {
-      const batchRequests = imageRequests.slice(i, i + MAX_REQUESTS_PER_BATCH);
+    for (let i = 0; i < requests.length; i += MAX_REQUESTS_PER_BATCH) {
+      const batchRequests = requests.slice(i, i + MAX_REQUESTS_PER_BATCH);
       await docs.documents.batchUpdate({
         documentId: documentId,
         requestBody: {
           requests: batchRequests,
         },
       });
-      console.log(`Se han insertado imágenes en el lote desde ${i} hasta ${i + MAX_REQUESTS_PER_BATCH}`);
+      console.log(`Procesadas solicitudes desde ${i} hasta ${i + MAX_REQUESTS_PER_BATCH}`);
     }
 
-    console.log(`Imágenes de la galería agregadas al documento ID: ${documentId} en formato de tabla.`);
+    console.log('Imágenes insertadas en el documento.');
 
   } catch (error) {
     console.error('Error agregando imágenes de la galería a Google Docs:', error);
