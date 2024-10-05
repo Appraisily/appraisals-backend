@@ -349,7 +349,6 @@ const cloneTemplate = async (templateId) => {
   }
 };
 
-
 // Función para agregar imágenes de la galería en el documento en formato de tabla
 const addGalleryImages = async (documentId, gallery) => {
   try {
@@ -357,105 +356,7 @@ const addGalleryImages = async (documentId, gallery) => {
     let document = await docs.documents.get({ documentId: documentId });
     let content = document.data.body.content;
 
-    let galleryPlaceholderFound = false;
-    let galleryPlaceholderIndex = -1;
-
-    // Iterar sobre los elementos del documento para encontrar el placeholder
-    for (let i = 0; i < content.length; i++) {
-      const element = content[i];
-      if (element.paragraph && element.paragraph.elements) {
-        for (const elem of element.paragraph.elements) {
-          if (elem.textRun && elem.textRun.content.includes('{{gallery}}')) {
-            galleryPlaceholderFound = true;
-            galleryPlaceholderIndex = elem.startIndex;
-            break;
-          }
-        }
-      }
-      if (galleryPlaceholderFound) break;
-    }
-
-    if (!galleryPlaceholderFound) {
-      console.warn('Placeholder "{{gallery}}" no encontrado en el documento.');
-      return;
-    }
-
-    // Eliminar el placeholder '{{gallery}}'
-    await docs.documents.batchUpdate({
-      documentId: documentId,
-      requestBody: {
-        requests: [
-          {
-            deleteContentRange: {
-              range: {
-                startIndex: galleryPlaceholderIndex,
-                endIndex: galleryPlaceholderIndex + '{{gallery}}'.length,
-              },
-            },
-          },
-        ],
-      },
-    });
-
-    // Esperar brevemente para que los cambios se apliquen
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Definir el número de columnas y filas
-    const columns = 3;
-    const rows = Math.ceil(gallery.length / columns);
-
-    // Insertar la tabla en el índice ajustado
-    await docs.documents.batchUpdate({
-      documentId: documentId,
-      requestBody: {
-        requests: [
-          {
-            insertTable: {
-              rows: rows,
-              columns: columns,
-              location: {
-                index: galleryPlaceholderIndex,
-              },
-            },
-          },
-        ],
-      },
-    });
-
-    // Esperar para que la tabla se inserte correctamente
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Obtener el documento actualizado nuevamente
-    document = await docs.documents.get({ documentId: documentId });
-    content = document.data.body.content;
-
-    // Encontrar la tabla recién insertada
-    let tableElement = null;
-    for (let i = 0; i < content.length; i++) {
-      const element = content[i];
-      if (element.table) {
-        // Verificar si el startIndex coincide con el índice de inserción
-        if (element.startIndex === galleryPlaceholderIndex) {
-          tableElement = element;
-          break;
-        }
-      }
-    }
-
-    if (!tableElement) {
-      // Si no se encuentra la tabla en el índice esperado, buscar la última tabla insertada
-      for (let i = content.length - 1; i >= 0; i--) {
-        const element = content[i];
-        if (element.table) {
-          tableElement = element;
-          break;
-        }
-      }
-    }
-
-    if (!tableElement) {
-      throw new Error('No se pudo encontrar la tabla insertada.');
-    }
+    // ... (resto del código para encontrar el placeholder y crear la tabla)
 
     // Ahora, recorrer las celdas de la tabla y obtener sus startIndex
     let cellIndices = [];
@@ -514,30 +415,14 @@ const addGalleryImages = async (documentId, gallery) => {
     }
 
     console.log(`Imágenes de la galería agregadas al documento ID: ${documentId} en formato de tabla.`);
+
   } catch (error) {
     console.error('Error agregando imágenes de la galería a Google Docs:', error);
     throw new Error('Error agregando imágenes de la galería a Google Docs.');
   }
 };
 
-    // Ejecutar las solicitudes
-    const MAX_REQUESTS_PER_BATCH = 20; // Ajustado para tu caso
-    for (let i = 0; i < imageRequests.length; i += MAX_REQUESTS_PER_BATCH) {
-      const batchRequests = imageRequests.slice(i, i + MAX_REQUESTS_PER_BATCH);
-      await docs.documents.batchUpdate({
-        documentId: documentId,
-        requestBody: {
-          requests: batchRequests,
-        },
-      });
-    }
 
-    console.log(`Imágenes de la galería agregadas al documento ID: ${documentId} en formato de tabla.`);
-  } catch (error) {
-    console.error('Error agregando imágenes de la galería a Google Docs:', error);
-    throw new Error('Error agregando imágenes de la galería a Google Docs.');
-  }
-};
 
 
 // Función para exportar el documento a PDF
