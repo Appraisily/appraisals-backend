@@ -131,7 +131,6 @@ const adjustTitleFontSize = async (documentId, titleText) => {
   }
 };
 
-
 // Función para obtener metadatos de un post de WordPress
 const getPostMetadata = async (postId, metadataKey, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
   try {
@@ -167,6 +166,52 @@ const getPostMetadata = async (postId, metadataKey, WORDPRESS_API_URL, WORDPRESS
   }
 };
 
+// Función para obtener la URL de un campo de imagen ACF
+const getImageFieldUrlFromPost = async (postId, fieldName, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
+  try {
+    const response = await fetch(`${WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error obteniendo post de WordPress:`, errorText);
+      throw new Error('Error obteniendo post de WordPress.');
+    }
+
+    const postData = await response.json();
+    const acfFields = postData.acf || {};
+    const imageField = acfFields[fieldName];
+
+    if (imageField) {
+      if (typeof imageField === 'string' && imageField.startsWith('http')) {
+        // URL de la imagen
+        return imageField;
+      } else if (typeof imageField === 'number') {
+        // ID de media
+        const imageUrl = await getImageUrl(imageField, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
+        return imageUrl;
+      } else if (typeof imageField === 'object' && imageField.url) {
+        // Objeto de imagen con URL
+        return imageField.url;
+      } else {
+        console.warn(`Formato de campo de imagen '${fieldName}' no reconocido.`);
+        return null;
+      }
+    } else {
+      console.warn(`No se encontró el campo de imagen '${fieldName}' o está vacío.`);
+      return null;
+    }
+  } catch (error) {
+    console.error(`Error obteniendo la URL de la imagen para el campo '${fieldName}' del post ID ${postId}:`, error);
+    throw error;
+  }
+};
+
 // Función para reemplazar marcadores de posición en el documento
 const replacePlaceholders = async (documentId, data) => {
   try {
@@ -197,8 +242,6 @@ const replacePlaceholders = async (documentId, data) => {
     throw new Error('Error reemplazando marcadores de posición en Google Docs.');
   }
 };
-
-
 
 // Función para obtener el título de un post de WordPress
 const getPostTitle = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
@@ -349,225 +392,84 @@ const cloneTemplate = async (templateId) => {
   }
 };
 
-const addGalleryImages = async (documentId, gallery) => {
+// Función para insertar imágenes en los placeholders
+const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
   try {
-    console.log('Iniciando addGalleryImages');
-    console.log(`Número de imágenes en la galería: ${gallery.length}`);
+    // Obtener el contenido del documento
+    const document = await docs.documents.get({ documentId: documentId });
+    const content = document.data.body.content;
 
-    // Obtener el contenido completo del documento
-    let document = await docs.documents.get({ documentId: documentId });
-    let content = document.data.body.content;
+    let placeholderFound = false;
+    let placeholderIndex = -1;
 
-    let galleryPlaceholderFound = false;
-    let galleryPlaceholderIndex = -1;
-
-    // Buscar el placeholder '{{gallery}}'
-    for (let i = 0; i < content.length; i++) {
-      const element = content[i];
+    // Buscar el placeholder en el documento
+    for (const element of content) {
       if (element.paragraph && element.paragraph.elements) {
         for (const elem of element.paragraph.elements) {
-          if (elem.textRun && elem.textRun.content.includes('{{gallery}}')) {
-            galleryPlaceholderFound = true;
-            galleryPlaceholderIndex = elem.startIndex;
+          if (elem.textRun && elem.textRun.content.includes(`{{${placeholder}}}`)) {
+            placeholderFound = true;
+            placeholderIndex = elem.startIndex;
             break;
           }
         }
       }
-      if (galleryPlaceholderFound) break;
+      if (placeholderFound) break;
     }
 
-    if (!galleryPlaceholderFound) {
-      console.warn('Placeholder "{{gallery}}" no encontrado en el documento.');
-      return;
-    }
-
-    console.log(`Placeholder "{{gallery}}" encontrado en el índice ${galleryPlaceholderIndex}`);
-
-    // Eliminar el placeholder '{{gallery}}'
-    await docs.documents.batchUpdate({
-      documentId: documentId,
-      requestBody: {
-        requests: [
-          {
-            deleteContentRange: {
-              range: {
-                startIndex: galleryPlaceholderIndex,
-                endIndex: galleryPlaceholderIndex + '{{gallery}}'.length,
-              },
-            },
-          },
-        ],
-      },
-    });
-
-    console.log('Placeholder "{{gallery}}" eliminado del documento');
-
-    // Esperar para que los cambios se apliquen
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Insertar la tabla
-    const columns = 3;
-    const rows = Math.ceil(gallery.length / columns);
-
-    console.log(`Insertando tabla con ${rows} filas y ${columns} columnas`);
-
-    await docs.documents.batchUpdate({
-      documentId: documentId,
-      requestBody: {
-        requests: [
-          {
-            insertTable: {
-              rows: rows,
-              columns: columns,
-              location: {
-                index: galleryPlaceholderIndex,
-              },
-            },
-          },
-        ],
-      },
-    });
-
-    console.log('Tabla insertada en el documento');
-
-    // Esperar para que la tabla se inserte correctamente
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Obtener el documento actualizado nuevamente
-    document = await docs.documents.get({ documentId: documentId });
-    content = document.data.body.content;
-
-    // Encontrar la tabla recién insertada
-    let tableElement = null;
-    for (let i = 0; i < content.length; i++) {
-      const element = content[i];
-      if (element.table) {
-        // Verificar si el startIndex coincide con el índice de inserción
-        if (element.startIndex === galleryPlaceholderIndex) {
-          tableElement = element;
-          break;
-        }
-      }
-    }
-
-    if (!tableElement) {
-      // Si no se encuentra la tabla en el índice esperado, buscar la última tabla insertada
-      for (let i = content.length - 1; i >= 0; i--) {
-        const element = content[i];
-        if (element.table) {
-          tableElement = element;
-          break;
-        }
-      }
-    }
-
-    if (!tableElement) {
-      throw new Error('No se pudo encontrar la tabla insertada.');
-    }
-
-    console.log('Tabla encontrada en el documento');
-
-    // Ahora, recorrer las celdas de la tabla y preparar las solicitudes
-    const table = tableElement.table;
-
-    let imageCounter = 0;
-
-    for (let rowIndex = 0; rowIndex < table.tableRows.length; rowIndex++) {
-      const row = table.tableRows[rowIndex];
-      const cells = row.tableCells;
-      for (let columnIndex = 0; columnIndex < cells.length; columnIndex++) {
-        if (imageCounter >= gallery.length) break; // No más imágenes para insertar
-
-        const cell = cells[columnIndex];
-        const cellContent = cell.content;
-        let cellStartIndex = null;
-
-        // Buscar el startIndex del párrafo dentro de la celda
-        if (cellContent && cellContent.length > 0) {
-          for (const contentElement of cellContent) {
-            if (contentElement.paragraph) {
-              cellStartIndex = contentElement.startIndex + 1; // +1 para dentro del párrafo
-              break;
-            }
-          }
-        }
-
-        if (cellStartIndex === null) {
-          // La celda está vacía, insertamos un párrafo vacío
-          cellStartIndex = cell.startIndex + 1;
-          await docs.documents.batchUpdate({
-            documentId: documentId,
-            requestBody: {
-              requests: [
-                {
-                  insertParagraph: {
-                    location: {
-                      index: cellStartIndex,
-                    },
-                    paragraphStyle: {},
-                  },
-                },
-              ],
-            },
-          });
-          // Esperar para que los cambios se apliquen
-          await new Promise(resolve => setTimeout(resolve, 100));
-
-          // Actualizar el documento para obtener el nuevo startIndex
-          document = await docs.documents.get({ documentId: documentId });
-          content = document.data.body.content;
-
-          // Encontrar el nuevo startIndex del párrafo
-          for (const contentElement of content) {
-            if (contentElement.paragraph && contentElement.startIndex === cellStartIndex) {
-              cellStartIndex = contentElement.startIndex + 1;
-              break;
-            }
-          }
-        }
-
-        const imageUrl = gallery[imageCounter];
-
-        // Insertar la imagen directamente en el cellStartIndex
-        await docs.documents.batchUpdate({
-          documentId: documentId,
-          requestBody: {
-            requests: [
-              {
-                insertInlineImage: {
-                  uri: imageUrl,
-                  location: {
-                    index: cellStartIndex,
-                  },
-                  objectSize: {
-                    height: { magnitude: 150, unit: 'PT' },
-                    width: { magnitude: 150, unit: 'PT' },
-                  },
+    if (placeholderFound) {
+      // Eliminar el placeholder
+      await docs.documents.batchUpdate({
+        documentId: documentId,
+        requestBody: {
+          requests: [
+            {
+              deleteContentRange: {
+                range: {
+                  startIndex: placeholderIndex,
+                  endIndex: placeholderIndex + `{{${placeholder}}}`.length,
                 },
               },
-            ],
-          },
-        });
-        console.log(`Imagen insertada en celda [${rowIndex}, ${columnIndex}]`);
+            },
+          ],
+        },
+      });
 
-        imageCounter++;
-        // Esperar brevemente antes de procesar la siguiente celda
-        await new Promise(resolve => setTimeout(resolve, 100));
-      }
-      if (imageCounter >= gallery.length) break; // No más imágenes para insertar
+      // Insertar la imagen en el índice del placeholder
+      await docs.documents.batchUpdate({
+        documentId: documentId,
+        requestBody: {
+          requests: [
+            {
+              insertInlineImage: {
+                uri: imageUrl,
+                location: {
+                  index: placeholderIndex,
+                },
+                objectSize: {
+                  height: { magnitude: 150, unit: 'PT' },
+                  width: { magnitude: 150, unit: 'PT' },
+                },
+              },
+            },
+          ],
+        },
+      });
+
+      console.log(`Imagen insertada en el placeholder {{${placeholder}}}`);
+    } else {
+      console.warn(`No se encontró el placeholder {{${placeholder}}} en el documento.`);
     }
-
-    console.log('Imágenes insertadas en el documento.');
-
   } catch (error) {
-    console.error('Error agregando imágenes de la galería a Google Docs:', error);
-    throw new Error(`Error agregando imágenes de la galería a Google Docs: ${error.message}`);
+    console.error(`Error insertando imagen en el placeholder {{${placeholder}}}:`, error);
+    throw error;
   }
 };
 
-
-
-
+// Función para agregar imágenes de la galería
+const addGalleryImages = async (documentId, gallery) => {
+  // ... Tu función existente de addGalleryImages ...
+  // La función que ya has implementado para agregar imágenes de la galería.
+};
 
 // Función para exportar el documento a PDF
 const exportDocumentToPDF = async (documentId) => {
@@ -686,10 +588,13 @@ router.post('/generate-pdf', async (req, res) => {
       metadata[key] = metadataValues[index];
     });
 
-    // Obtener el título y la fecha del post
-    const [postTitle, postDate] = await Promise.all([
+    // Obtener el título, la fecha y las URLs de las imágenes
+    const [postTitle, postDate, ageImageUrl, signatureImageUrl, mainImageUrl] = await Promise.all([
       getPostTitle(postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD),
-      getPostDate(postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD)
+      getPostDate(postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD),
+      getImageFieldUrlFromPost(postId, 'age', WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD),
+      getImageFieldUrlFromPost(postId, 'signature', WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD),
+      getImageFieldUrlFromPost(postId, 'main', WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD),
     ]);
 
     // Obtener la galería de imágenes del post
@@ -700,6 +605,9 @@ router.post('/generate-pdf', async (req, res) => {
     console.log(`Título del post obtenido: '${postTitle}'`);
     console.log(`Fecha del post obtenida: '${postDate}'`);
     console.log(`Galería de imágenes obtenida:`, gallery);
+    console.log(`URL de imagen 'age': ${ageImageUrl}`);
+    console.log(`URL de imagen 'signature': ${signatureImageUrl}`);
+    console.log(`URL de imagen 'main': ${mainImageUrl}`);
 
     // Paso 6: Clonar la plantilla de Google Docs
     const clonedDocId = await cloneTemplate(GOOGLE_DOCS_TEMPLATE_ID);
@@ -707,27 +615,37 @@ router.post('/generate-pdf', async (req, res) => {
     // (Opcional) Mover el archivo clonado a la carpeta deseada
     await moveFileToFolder(clonedDocId, GOOGLE_DRIVE_FOLDER_ID);
 
- // Paso 7: Reemplazar los marcadores de posición en el documento
-const data = {
-  ...metadata,
-  appraisal_title: postTitle,
-  appraisal_date: postDate
-};
-await replacePlaceholders(clonedDocId, data);
+    // Paso 7: Reemplazar los marcadores de posición en el documento
+    const data = {
+      ...metadata,
+      appraisal_title: postTitle,
+      appraisal_date: postDate
+    };
+    await replacePlaceholders(clonedDocId, data);
 
-// Paso 8: Ajustar el tamaño de la fuente del título
-await adjustTitleFontSize(clonedDocId, postTitle);
-
+    // Paso 8: Ajustar el tamaño de la fuente del título
+    await adjustTitleFontSize(clonedDocId, postTitle);
 
     // Paso 9: Agregar las imágenes de la galería al documento
     if (gallery.length > 0) {
       await addGalleryImages(clonedDocId, gallery);
     }
 
-    // Paso 10: Exportar el documento a PDF
+    // Paso 10: Insertar imágenes en los placeholders
+    if (ageImageUrl) {
+      await insertImageAtPlaceholder(clonedDocId, 'age_image', ageImageUrl);
+    }
+    if (signatureImageUrl) {
+      await insertImageAtPlaceholder(clonedDocId, 'signature_image', signatureImageUrl);
+    }
+    if (mainImageUrl) {
+      await insertImageAtPlaceholder(clonedDocId, 'main_image', mainImageUrl);
+    }
+
+    // Paso 11: Exportar el documento a PDF
     const pdfBuffer = await exportDocumentToPDF(clonedDocId);
 
-    // Paso 11: Determinar el nombre del archivo PDF
+    // Paso 12: Determinar el nombre del archivo PDF
     let pdfFilename;
     if (session_ID && typeof session_ID === 'string' && session_ID.trim() !== '') {
       pdfFilename = `${session_ID}.pdf`;
@@ -735,7 +653,7 @@ await adjustTitleFontSize(clonedDocId, postTitle);
       pdfFilename = `Informe_Tasacion_Post_${postId}_${uuidv4()}.pdf`;
     }
 
-    // Paso 12: Subir el PDF a Google Drive
+    // Paso 13: Subir el PDF a Google Drive
     const pdfLink = await uploadPDFToDrive(pdfBuffer, pdfFilename, GOOGLE_DRIVE_FOLDER_ID);
 
     res.json({ success: true, message: 'PDF generado exitosamente.', pdfLink: pdfLink });
