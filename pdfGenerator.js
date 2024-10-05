@@ -565,28 +565,30 @@ router.post('/generate-pdf', async (req, res) => {
     const WORDPRESS_APP_PASSWORD = process.env.WORDPRESS_APP_PASSWORD;
 
     // Paso 2: Obtener los metadatos adicionales del post
-    const metadataKeys = [
-      'test',
-      'ad_copy',
-      'age_text',
-      'age1',
-      'condition',
-      'signature1',
-      'signature2',
-      'style',
-      'valuation_method',
-      'conclusion1',
-      'conclusion2',
-      'authorship'
-    ];
+const metadataKeys = [
+  'test',
+  'ad_copy',
+  'age_text',
+  'age1',
+  'condition',
+  'signature1',
+  'signature2',
+  'style',
+  'valuation_method',
+  'conclusion1',
+  'conclusion2',
+  'authorship',
+  'table',        // Añadido
+  'glossary'      // Añadido
+];
 
-    const metadataPromises = metadataKeys.map(key => getPostMetadata(postId, key, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD));
-    const metadataValues = await Promise.all(metadataPromises);
+const metadataPromises = metadataKeys.map(key => getPostMetadata(postId, key, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD));
+const metadataValues = await Promise.all(metadataPromises);
 
-    const metadata = {};
-    metadataKeys.forEach((key, index) => {
-      metadata[key] = metadataValues[index];
-    });
+const metadata = {};
+metadataKeys.forEach((key, index) => {
+  metadata[key] = metadataValues[index];
+});
 
     // Obtener el título, la fecha y las URLs de las imágenes
     const [postTitle, postDate, ageImageUrl, signatureImageUrl, mainImageUrl] = await Promise.all([
@@ -615,14 +617,14 @@ router.post('/generate-pdf', async (req, res) => {
     // (Opcional) Mover el archivo clonado a la carpeta deseada
     await moveFileToFolder(clonedDocId, GOOGLE_DRIVE_FOLDER_ID);
 
-    // Paso 7: Reemplazar los marcadores de posición en el documento
-    const data = {
-      ...metadata,
-      appraisal_title: postTitle,
-      appraisal_date: postDate
-    };
-    await replacePlaceholders(clonedDocId, data);
-
+   // Paso 7: Reemplazar los marcadores de posición en el documento
+const data = {
+  ...metadata,
+  appraisal_title: postTitle,
+  appraisal_date: postDate
+};
+await replacePlaceholders(clonedDocId, data);
+    
     // Paso 8: Ajustar el tamaño de la fuente del título
     await adjustTitleFontSize(clonedDocId, postTitle);
 
