@@ -467,16 +467,17 @@ const addGalleryImages = async (documentId, gallery) => {
 
     console.log('Tabla encontrada en el documento');
 
-    // Ahora, recorrer las celdas de la tabla y obtener los startIndex de los párrafos en cada celda
+    // Ahora, recorrer las celdas de la tabla y preparar las solicitudes
     const table = tableElement.table;
 
-    const cellInfos = []; // Para almacenar info de cada celda: { index, placeholder, imageUrl }
+    let imageCounter = 0;
 
-    let placeholderCounter = 1;
     for (let rowIndex = 0; rowIndex < table.tableRows.length; rowIndex++) {
       const row = table.tableRows[rowIndex];
       const cells = row.tableCells;
       for (let columnIndex = 0; columnIndex < cells.length; columnIndex++) {
+        if (imageCounter >= gallery.length) break; // No más imágenes para insertar
+
         const cell = cells[columnIndex];
         const cellContent = cell.content;
         let cellStartIndex = null;
@@ -511,6 +512,7 @@ const addGalleryImages = async (documentId, gallery) => {
           });
           // Esperar para que los cambios se apliquen
           await new Promise(resolve => setTimeout(resolve, 100));
+
           // Actualizar el documento para obtener el nuevo startIndex
           document = await docs.documents.get({ documentId: documentId });
           content = document.data.body.content;
@@ -524,106 +526,35 @@ const addGalleryImages = async (documentId, gallery) => {
           }
         }
 
-        if (placeholderCounter <= gallery.length) {
-          const placeholderText = `{{image${placeholderCounter}}}`;
-          const imageUrl = gallery[placeholderCounter - 1];
-          cellInfos.push({
-            index: cellStartIndex,
-            placeholder: placeholderText,
-            imageUrl: imageUrl,
-          });
-          placeholderCounter++;
-        }
-      }
-    }
+        const imageUrl = gallery[imageCounter];
 
-    // Crear las solicitudes para insertar los marcadores de posición
-    const insertTextRequests = cellInfos.map(cellInfo => ({
-      insertText: {
-        location: {
-          index: cellInfo.index,
-        },
-        text: cellInfo.placeholder,
-      },
-    }));
-
-    // Insertar los marcadores de posición en el documento
-    await docs.documents.batchUpdate({
-      documentId: documentId,
-      requestBody: {
-        requests: insertTextRequests,
-      },
-    });
-
-    console.log('Marcadores de posición insertados en las celdas de la tabla');
-
-    // Esperar para que los cambios se apliquen
-    await new Promise(resolve => setTimeout(resolve, 500));
-
-    // Obtener el documento actualizado nuevamente
-    document = await docs.documents.get({ documentId: documentId });
-    content = document.data.body.content;
-
-    // Buscar cada marcador de posición e insertar la imagen correspondiente
-    const requests = [];
-    for (const cellInfo of cellInfos) {
-      const { placeholder, imageUrl } = cellInfo;
-      let placeholderFound = false;
-      let placeholderIndex = -1;
-
-      for (const element of content) {
-        if (element.paragraph && element.paragraph.elements) {
-          for (const elem of element.paragraph.elements) {
-            if (elem.textRun && elem.textRun.content.includes(placeholder)) {
-              placeholderFound = true;
-              placeholderIndex = elem.startIndex;
-              break;
-            }
-          }
-        }
-        if (placeholderFound) break;
-      }
-
-      if (placeholderFound) {
-        // Eliminar el marcador de posición
-        requests.push({
-          deleteContentRange: {
-            range: {
-              startIndex: placeholderIndex,
-              endIndex: placeholderIndex + placeholder.length,
-            },
+        // Insertar la imagen directamente en el cellStartIndex
+        await docs.documents.batchUpdate({
+          documentId: documentId,
+          requestBody: {
+            requests: [
+              {
+                insertInlineImage: {
+                  uri: imageUrl,
+                  location: {
+                    index: cellStartIndex,
+                  },
+                  objectSize: {
+                    height: { magnitude: 150, unit: 'PT' },
+                    width: { magnitude: 150, unit: 'PT' },
+                  },
+                },
+              },
+            ],
           },
         });
+        console.log(`Imagen insertada en celda [${rowIndex}, ${columnIndex}]`);
 
-        // Insertar la imagen en el índice del marcador de posición
-        requests.push({
-          insertInlineImage: {
-            uri: imageUrl,
-            location: {
-              index: placeholderIndex,
-            },
-            objectSize: {
-              height: { magnitude: 150, unit: 'PT' },
-              width: { magnitude: 150, unit: 'PT' },
-            },
-          },
-        });
-      } else {
-        console.warn(`No se encontró el marcador de posición ${placeholder} en el documento.`);
+        imageCounter++;
+        // Esperar brevemente antes de procesar la siguiente celda
+        await new Promise(resolve => setTimeout(resolve, 100));
       }
-    }
-
-    // Ejecutar las solicitudes en lotes
-    const MAX_REQUESTS_PER_BATCH = 20; // Ajustado para tu caso
-    for (let i = 0; i < requests.length; i += MAX_REQUESTS_PER_BATCH) {
-      const batchRequests = requests.slice(i, i + MAX_REQUESTS_PER_BATCH);
-      await docs.documents.batchUpdate({
-        documentId: documentId,
-        requestBody: {
-          requests: batchRequests,
-        },
-      });
-      console.log(`Procesadas solicitudes desde ${i} hasta ${i + MAX_REQUESTS_PER_BATCH}`);
+      if (imageCounter >= gallery.length) break; // No más imágenes para insertar
     }
 
     console.log('Imágenes insertadas en el documento.');
@@ -633,7 +564,6 @@ const addGalleryImages = async (documentId, gallery) => {
     throw new Error(`Error agregando imágenes de la galería a Google Docs: ${error.message}`);
   }
 };
-
 
 
 
