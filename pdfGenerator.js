@@ -433,31 +433,119 @@ const addGalleryImages = async (documentId, gallery) => {
     // Esperar para que la tabla se inserte correctamente
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Preparar los marcadores de posición para cada celda
-    const insertTextRequests = [];
-    let imagePlaceholders = [];
+    // Obtener el documento actualizado nuevamente
+    document = await docs.documents.get({ documentId: documentId });
+    content = document.data.body.content;
 
-    // Llenar cada celda con un marcador de posición único
-    let placeholderIndex = 1;
-    for (let row = 0; row < rows; row++) {
-      for (let col = 0; col < columns; col++) {
-        if (gallery.length < placeholderIndex) break;
-        const placeholderText = `{{image${placeholderIndex}}}`;
-        imagePlaceholders.push({
-          placeholder: placeholderText,
-          imageUrl: gallery[placeholderIndex - 1],
-        });
-        insertTextRequests.push({
-          insertText: {
-            location: {
-              index: galleryPlaceholderIndex + 1, // +1 para dentro de la tabla
-            },
-            text: placeholderText,
-          },
-        });
-        placeholderIndex++;
+    // Encontrar la tabla recién insertada
+    let tableElement = null;
+    for (let i = 0; i < content.length; i++) {
+      const element = content[i];
+      if (element.table) {
+        // Verificar si el startIndex coincide con el índice de inserción
+        if (element.startIndex === galleryPlaceholderIndex) {
+          tableElement = element;
+          break;
+        }
       }
     }
+
+    if (!tableElement) {
+      // Si no se encuentra la tabla en el índice esperado, buscar la última tabla insertada
+      for (let i = content.length - 1; i >= 0; i--) {
+        const element = content[i];
+        if (element.table) {
+          tableElement = element;
+          break;
+        }
+      }
+    }
+
+    if (!tableElement) {
+      throw new Error('No se pudo encontrar la tabla insertada.');
+    }
+
+    console.log('Tabla encontrada en el documento');
+
+    // Ahora, recorrer las celdas de la tabla y obtener los startIndex de los párrafos en cada celda
+    const table = tableElement.table;
+
+    const cellInfos = []; // Para almacenar info de cada celda: { index, placeholder, imageUrl }
+
+    let placeholderCounter = 1;
+    for (let rowIndex = 0; rowIndex < table.tableRows.length; rowIndex++) {
+      const row = table.tableRows[rowIndex];
+      const cells = row.tableCells;
+      for (let columnIndex = 0; columnIndex < cells.length; columnIndex++) {
+        const cell = cells[columnIndex];
+        const cellContent = cell.content;
+        let cellStartIndex = null;
+
+        // Buscar el startIndex del párrafo dentro de la celda
+        if (cellContent && cellContent.length > 0) {
+          for (const contentElement of cellContent) {
+            if (contentElement.paragraph) {
+              cellStartIndex = contentElement.startIndex + 1; // +1 para dentro del párrafo
+              break;
+            }
+          }
+        }
+
+        if (cellStartIndex === null) {
+          // La celda está vacía, insertamos un párrafo vacío
+          cellStartIndex = cell.startIndex + 1;
+          await docs.documents.batchUpdate({
+            documentId: documentId,
+            requestBody: {
+              requests: [
+                {
+                  insertParagraph: {
+                    location: {
+                      index: cellStartIndex,
+                    },
+                    paragraphStyle: {},
+                  },
+                },
+              ],
+            },
+          });
+          // Esperar para que los cambios se apliquen
+          await new Promise(resolve => setTimeout(resolve, 100));
+          // Actualizar el documento para obtener el nuevo startIndex
+          document = await docs.documents.get({ documentId: documentId });
+          content = document.data.body.content;
+
+          // Encontrar el nuevo startIndex del párrafo
+          for (const contentElement of content) {
+            if (contentElement.paragraph && contentElement.startIndex === cellStartIndex) {
+              cellStartIndex = contentElement.startIndex + 1;
+              break;
+            }
+          }
+        }
+
+        if (placeholderCounter <= gallery.length) {
+          const placeholderText = `{{image${placeholderCounter}}}`;
+          const imageUrl = gallery[placeholderCounter - 1];
+          cellInfos.push({
+            index: cellStartIndex,
+            placeholder: placeholderText,
+            imageUrl: imageUrl,
+          });
+          placeholderCounter++;
+        }
+      }
+    }
+
+    // Crear las solicitudes para insertar los marcadores de posición
+    const insertTextRequests = cellInfos.map(cellInfo => ({
+      insertText: {
+        location: {
+          index: cellInfo.index,
+        },
+        text: cellInfo.placeholder,
+      },
+    }));
 
     // Insertar los marcadores de posición en el documento
     await docs.documents.batchUpdate({
@@ -470,7 +558,7 @@ const addGalleryImages = async (documentId, gallery) => {
     console.log('Marcadores de posición insertados en las celdas de la tabla');
 
     // Esperar para que los cambios se apliquen
-    await new Promise(resolve => setTimeout(resolve, 1000));
+    await new Promise(resolve => setTimeout(resolve, 500));
 
     // Obtener el documento actualizado nuevamente
     document = await docs.documents.get({ documentId: documentId });
@@ -478,8 +566,8 @@ const addGalleryImages = async (documentId, gallery) => {
 
     // Buscar cada marcador de posición e insertar la imagen correspondiente
     const requests = [];
-    for (const { placeholder, imageUrl } of imagePlaceholders) {
-      // Encontrar el marcador de posición en el documento
+    for (const cellInfo of cellInfos) {
+      const { placeholder, imageUrl } = cellInfo;
       let placeholderFound = false;
       let placeholderIndex = -1;
 
@@ -545,6 +633,7 @@ const addGalleryImages = async (documentId, gallery) => {
     throw new Error(`Error agregando imágenes de la galería a Google Docs: ${error.message}`);
   }
 };
+
 
 
 
