@@ -320,7 +320,6 @@ const replacePlaceholders = async (documentId, data) => {
   }
 };
 
-
 // Función para obtener la galería de imágenes de un post de WordPress
 const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
   try {
