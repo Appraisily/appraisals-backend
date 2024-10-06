@@ -478,6 +478,34 @@ const replacePlaceholders = async (documentId, data) => {
   }
 };
 
+// Función para mover el archivo clonado a una carpeta específica en Google Drive
+const moveFileToFolder = async (fileId, folderId) => {
+  try {
+    // Obtener los detalles del archivo para obtener su(s) padre(s) actual(es)
+    const file = await drive.files.get({
+      fileId: fileId,
+      fields: 'parents',
+      supportsAllDrives: true, // Si estás utilizando Unidades Compartidas
+    });
+
+    // Obtener los IDs de los padres actuales
+    const previousParents = file.data.parents.join(',');
+
+    // Mover el archivo a la nueva carpeta y eliminarlo de los padres anteriores
+    await drive.files.update({
+      fileId: fileId,
+      addParents: folderId,
+      removeParents: previousParents,
+      supportsAllDrives: true, // Si estás utilizando Unidades Compartidas
+      fields: 'id, parents',
+    });
+
+    console.log(`Archivo ${fileId} movido a la carpeta ${folderId}`);
+  } catch (error) {
+    console.error('Error moviendo el archivo:', error);
+    throw new Error('Error moviendo el archivo.');
+  }
+};
 
 // Función para agregar imágenes de la galería (actualizada)
 const addGalleryImages = async (documentId, gallery) => {
