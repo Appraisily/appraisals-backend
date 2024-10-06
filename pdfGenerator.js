@@ -856,31 +856,49 @@ router.post('/generate-pdf', async (req, res) => {
     const WORDPRESS_USERNAME = process.env.WORDPRESS_USERNAME;
     const WORDPRESS_APP_PASSWORD = process.env.WORDPRESS_APP_PASSWORD;
 
-    // Paso 2: Obtener los metadatos adicionales del post
-    const metadataKeys = [
-      'test',
-      'ad_copy',
-      'age_text',
-      'age1',
-      'condition',
-      'signature1',
-      'signature2',
-      'style',
-      'valuation_method',
-      'conclusion1',
-      'conclusion2',
-      'authorship',
-      'table',        // Añadido
-      'glossary'      // Añadido
-    ];
+// Paso 2: Obtener los metadatos adicionales del post
+const metadataKeys = [
+  'test',
+  'ad_copy',
+  'age_text',
+  'age1',
+  'condition',
+  'signature1',
+  'signature2',
+  'style',
+  'valuation_method',
+  'conclusion1',
+  'conclusion2',
+  'authorship',
+  'table',
+  'glossary',
+  'value'         // Añadido
+];
 
-    const metadataPromises = metadataKeys.map(key => getPostMetadata(postId, key, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD));
-    const metadataValues = await Promise.all(metadataPromises);
+const metadataPromises = metadataKeys.map(key =>
+  getPostMetadata(postId, key, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD)
+);
+const metadataValues = await Promise.all(metadataPromises);
 
-    const metadata = {};
-    metadataKeys.forEach((key, index) => {
-      metadata[key] = metadataValues[index];
+const metadata = {};
+metadataKeys.forEach((key, index) => {
+  metadata[key] = metadataValues[index];
+});
+
+// Convertir el valor numérico a formato adecuado
+if (metadata.value) {
+  const numericValue = parseFloat(metadata.value);
+  if (!isNaN(numericValue)) {
+    metadata.appraisal_value = numericValue.toLocaleString('es-ES', {
+      style: 'currency',
+      currency: 'USD',
     });
+  } else {
+    metadata.appraisal_value = metadata.value; // Si no es un número, usar el valor tal cual
+  }
+} else {
+  metadata.appraisal_value = ''; // Si no hay valor, dejar vacío
+}
 
     // Obtener el título, la fecha y las URLs de las imágenes
     const [postTitle, postDate, ageImageUrl, signatureImageUrl, mainImageUrl] = await Promise.all([
@@ -911,13 +929,13 @@ router.post('/generate-pdf', async (req, res) => {
     // (Opcional) Mover el archivo clonado a la carpeta deseada
     await moveFileToFolder(clonedDocId, GOOGLE_DRIVE_FOLDER_ID);
 
-    // Paso 7: Reemplazar los marcadores de posición en el documento
-    const data = {
-      ...metadata,
-      appraisal_title: postTitle,
-      appraisal_date: postDate
-    };
-    await replacePlaceholders(clonedDocId, data);
+// Paso 7: Reemplazar los marcadores de posición en el documento
+const data = {
+  ...metadata,
+  appraisal_title: postTitle,
+  appraisal_date: postDate,
+};
+await replacePlaceholders(clonedDocId, data);
 
     // Paso 8: Ajustar el tamaño de la fuente del título
     await adjustTitleFontSize(clonedDocId, postTitle);
