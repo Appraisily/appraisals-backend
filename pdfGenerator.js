@@ -298,10 +298,10 @@ const replacePlaceholders = async (documentId, data) => {
       requests.push({
         replaceAllText: {
           containsText: {
-            text: {{${key}}},
+            text: `{{${key}}}`,
             matchCase: true,
           },
-          replaceText: value,
+          replaceText: value !== undefined && value !== null ? String(value) : '',
         },
       });
     }
@@ -313,12 +313,13 @@ const replacePlaceholders = async (documentId, data) => {
       },
     });
 
-    console.log(Marcadores de posición reemplazados en el documento ID: ${documentId});
+    console.log(`Marcadores de posición reemplazados en el documento ID: ${documentId}`);
   } catch (error) {
     console.error('Error reemplazando marcadores de posición en Google Docs:', error);
     throw new Error('Error reemplazando marcadores de posición en Google Docs.');
   }
 };
+
 
 // Función para obtener la galería de imágenes de un post de WordPress
 const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
