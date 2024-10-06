@@ -212,36 +212,7 @@ const getImageFieldUrlFromPost = async (postId, fieldName, WORDPRESS_API_URL, WO
   }
 };
 
-// Función para reemplazar marcadores de posición en el documento
-const replacePlaceholders = async (documentId, data) => {
-  try {
-    const requests = [];
 
-    for (const [key, value] of Object.entries(data)) {
-      requests.push({
-        replaceAllText: {
-          containsText: {
-            text: `{{${key}}}`,
-            matchCase: true,
-          },
-          replaceText: value,
-        },
-      });
-    }
-
-    await docs.documents.batchUpdate({
-      documentId: documentId,
-      requestBody: {
-        requests: requests,
-      },
-    });
-
-    console.log(`Marcadores de posición reemplazados en el documento ID: ${documentId}`);
-  } catch (error) {
-    console.error('Error reemplazando marcadores de posición en Google Docs:', error);
-    throw new Error('Error reemplazando marcadores de posición en Google Docs.');
-  }
-};
 
 // Función para obtener el título de un post de WordPress
 const getPostTitle = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
@@ -506,6 +477,7 @@ const replacePlaceholders = async (documentId, data) => {
     throw new Error('Error reemplazando marcadores de posición en Google Docs.');
   }
 };
+
 
 // Función para agregar imágenes de la galería (actualizada)
 const addGalleryImages = async (documentId, gallery) => {
