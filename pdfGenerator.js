@@ -371,6 +371,125 @@ const replacePlaceholdersInDocument = async (documentId, data) => {
   }
 };
 
+const insertFormattedMetadata = async (documentId, placeholder, tableData) => {
+  try {
+    const document = await docs.documents.get({ documentId: documentId });
+    const content = document.data.body.content;
+
+    let placeholderFound = false;
+    let placeholderIndex = -1;
+
+    // Buscar el placeholder en todo el contenido, incluyendo tablas
+    const findPlaceholder = (elements) => {
+      for (const element of elements) {
+        if (element.paragraph && element.paragraph.elements) {
+          for (const elem of element.paragraph.elements) {
+            if (elem.textRun && elem.textRun.content.includes(`{{${placeholder}}}`)) {
+              placeholderFound = true;
+              placeholderIndex = elem.startIndex;
+              return;
+            }
+          }
+        } else if (element.table) {
+          for (const row of element.table.tableRows) {
+            for (const cell of row.tableCells) {
+              findPlaceholder(cell.content);
+              if (placeholderFound) return;
+            }
+          }
+        }
+      }
+    };
+
+    findPlaceholder(content);
+
+    if (!placeholderFound) {
+      console.warn(`Placeholder "{{${placeholder}}}" no encontrado en el documento.`);
+      return;
+    }
+
+    // Eliminar el placeholder
+    await docs.documents.batchUpdate({
+      documentId: documentId,
+      requestBody: {
+        requests: [
+          {
+            deleteContentRange: {
+              range: {
+                startIndex: placeholderIndex,
+                endIndex: placeholderIndex + `{{${placeholder}}}`.length,
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    // Parsear el contenido de tableData y preparar los datos
+    const rows = tableData.split('-').map(item => item.trim()).filter(item => item);
+    const keyValuePairs = rows.map(row => {
+      const [key, value] = row.split(':').map(s => s.trim());
+      return { key: key || '', value: value || '' };
+    });
+
+    let currentIndex = placeholderIndex;
+    const requests = [];
+
+    for (const pair of keyValuePairs) {
+      // Insertar la clave
+      requests.push({
+        insertText: {
+          text: `${pair.key}: `,
+          location: {
+            index: currentIndex,
+          },
+        },
+      });
+
+      currentIndex += pair.key.length + 2; // Actualizar el índice
+
+      // Aplicar negrita a la clave
+      requests.push({
+        updateTextStyle: {
+          range: {
+            startIndex: currentIndex - pair.key.length - 2,
+            endIndex: currentIndex - 2,
+          },
+          textStyle: {
+            bold: true,
+          },
+          fields: 'bold',
+        },
+      });
+
+      // Insertar el valor
+      requests.push({
+        insertText: {
+          text: `${pair.value}\n`,
+          location: {
+            index: currentIndex,
+          },
+        },
+      });
+
+      currentIndex += pair.value.length + 1; // Actualizar el índice (incluye salto de línea)
+    }
+
+    // Enviar las solicitudes para insertar y formatear el texto
+    await docs.documents.batchUpdate({
+      documentId: documentId,
+      requestBody: {
+        requests: requests,
+      },
+    });
+
+    console.log('Metadato insertado y formateado en el documento.');
+  } catch (error) {
+    console.error('Error insertando y formateando el metadato en el documento:', error);
+    throw error;
+  }
+};
+
 
 // Función para actualizar campos ACF de un post
 const updatePostACFFields = async (postId, fields, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
@@ -489,6 +608,8 @@ const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
               const startIndex = textElement.startIndex + textElement.textRun.content.indexOf(`{{${placeholder}}}`);
               const endIndex = startIndex + `{{${placeholder}}}`.length;
 
+              console.log(`Placeholder '{{${placeholder}}}' encontrado en startIndex: ${startIndex}, endIndex: ${endIndex}`);
+
               return { startIndex, endIndex };
             }
           }
@@ -558,6 +679,7 @@ const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
     throw error;
   }
 };
+
 
 // Función para subir el PDF a Google Drive
 const uploadPDFToDrive = async (pdfBuffer, pdfFilename, folderId) => {
@@ -765,6 +887,7 @@ const addGalleryImages = async (documentId, gallery) => {
         const cell = row.tableCells[columnIndex];
         const cellStartIndex = cell.startIndex + 1; // +1 para dentro de la celda
         const placeholderText = `{{googlevision${placeholderNumber}}}`;
+    console.log(`Insertando placeholder '${placeholderText}' en la celda con startIndex ${cellStartIndex}`);
 
         requests.push({
           insertText: {
@@ -786,8 +909,12 @@ const addGalleryImages = async (documentId, gallery) => {
         requests: requests,
       },
     });
-
+  console.log('Placeholders de imágenes de la galería insertados en la tabla');
+} else {
+  console.warn('No se generaron requests para insertar placeholders en la galería.');
+}
     console.log('Placeholders de imágenes de la galería insertados en la tabla');
+await new Promise(resolve => setTimeout(resolve, 1000)); // Esperar 1 segundo
 
     // Reemplazar los placeholders por las imágenes
     for (let i = 0; i < gallery.length; i++) {
@@ -1066,9 +1193,9 @@ router.post('/generate-pdf', async (req, res) => {
     await adjustTitleFontSize(clonedDocId, postTitle);
 
     // Paso 9: Insertar el metadato "table" como tabla
-    if (metadata.table) {
-      await insertMetadataTable(clonedDocId, 'table', metadata.table);
-    }
+if (metadata.table) {
+  await insertFormattedMetadata(clonedDocId, 'table', metadata.table);
+}
 
     // Paso 10: Agregar las imágenes de la galería al documento
     if (gallery.length > 0) {
