@@ -559,6 +559,47 @@ const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
   }
 };
 
+// Función para subir el PDF a Google Drive
+const uploadPDFToDrive = async (pdfBuffer, pdfFilename, folderId) => {
+  try {
+    const fileMetadata = {
+      name: pdfFilename,
+      parents: [folderId],
+    };
+
+    const media = {
+      mimeType: 'application/pdf',
+      body: Readable.from(pdfBuffer),
+    };
+
+    const file = await drive.files.create({
+      resource: fileMetadata,
+      media: media,
+      fields: 'id, webViewLink, webContentLink',
+      supportsAllDrives: true, // Añade esto si usas Unidades Compartidas
+    });
+
+    const fileId = file.data.id;
+    const webViewLink = file.data.webViewLink;
+
+    // Hacer el archivo público
+    await drive.permissions.create({
+      fileId: fileId,
+      requestBody: {
+        role: 'reader',
+        type: 'anyone',
+      },
+      supportsAllDrives: true, // Añade esto si usas Unidades Compartidas
+    });
+
+    console.log(`PDF subido exitosamente a Google Drive con ID: ${fileId}`);
+    return webViewLink;
+  } catch (error) {
+    console.error('Error subiendo el PDF a Google Drive:', error);
+    throw new Error('Error subiendo el PDF a Google Drive.');
+  }
+};
+
 
 // Función para mover el archivo clonado a una carpeta específica en Google Drive
 const moveFileToFolder = async (fileId, folderId) => {
