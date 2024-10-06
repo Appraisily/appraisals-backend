@@ -364,7 +364,6 @@ const cloneTemplate = async (templateId) => {
   }
 };
 
-// Función para insertar imágenes en los placeholders (actualizada para manejar índices en tablas)
 const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
   try {
     // Obtener el contenido completo del documento
@@ -380,6 +379,8 @@ const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
               return {
                 startIndex: elem.startIndex,
                 endIndex: elem.endIndex,
+                paragraphElement: elem,
+                parent: element
               };
             }
           }
@@ -397,30 +398,15 @@ const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
       return null;
     };
 
-    const placeholderRange = findPlaceholder(content);
+    const placeholderInfo = findPlaceholder(content);
 
-    if (placeholderRange) {
-      // Asegurarse de que los índices sean válidos
-      if (placeholderRange.startIndex === undefined || placeholderRange.endIndex === undefined) {
+    if (placeholderInfo) {
+      const { startIndex, endIndex } = placeholderInfo;
+
+      // Verificar que los índices sean válidos
+      if (startIndex === undefined || endIndex === undefined) {
         throw new Error(`Índices inválidos para el placeholder {{${placeholder}}}.`);
       }
-
-      // Eliminar el placeholder
-      await docs.documents.batchUpdate({
-        documentId: documentId,
-        requestBody: {
-          requests: [
-            {
-              deleteContentRange: {
-                range: {
-                  startIndex: placeholderRange.startIndex,
-                  endIndex: placeholderRange.endIndex,
-                },
-              },
-            },
-          ],
-        },
-      });
 
       // Insertar la imagen en el índice del placeholder
       await docs.documents.batchUpdate({
@@ -431,12 +417,45 @@ const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
               insertInlineImage: {
                 uri: imageUrl,
                 location: {
-                  index: placeholderRange.startIndex,
+                  index: startIndex,
                 },
                 objectSize: {
                   height: { magnitude: 150, unit: 'PT' },
                   width: { magnitude: 150, unit: 'PT' },
                 },
+              },
+            },
+          ],
+        },
+      });
+
+      // Luego, ocultar el texto del placeholder ajustando su estilo
+      await docs.documents.batchUpdate({
+        documentId: documentId,
+        requestBody: {
+          requests: [
+            {
+              updateTextStyle: {
+                range: {
+                  startIndex: startIndex + 1, // +1 para después de la imagen
+                  endIndex: endIndex + 1, // Ajustado por la inserción de la imagen
+                },
+                textStyle: {
+                  foregroundColor: {
+                    color: {
+                      rgbColor: {
+                        red: 1,
+                        green: 1,
+                        blue: 1,
+                      },
+                    },
+                  },
+                  fontSize: {
+                    magnitude: 1,
+                    unit: 'PT',
+                  },
+                },
+                fields: 'foregroundColor,fontSize',
               },
             },
           ],
@@ -453,36 +472,6 @@ const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
   }
 };
 
-
-const replacePlaceholders = async (documentId, data) => {
-  try {
-    const requests = [];
-
-    for (const [key, value] of Object.entries(data)) {
-      requests.push({
-        replaceAllText: {
-          containsText: {
-            text: `{{${key}}}`,
-            matchCase: true,
-          },
-          replaceText: value !== undefined && value !== null ? String(value) : '',
-        },
-      });
-    }
-
-    await docs.documents.batchUpdate({
-      documentId: documentId,
-      requestBody: {
-        requests: requests,
-      },
-    });
-
-    console.log(`Marcadores de posición reemplazados en el documento ID: ${documentId}`);
-  } catch (error) {
-    console.error('Error reemplazando marcadores de posición en Google Docs:', error);
-    throw new Error('Error reemplazando marcadores de posición en Google Docs.');
-  }
-};
 
 // Función para mover el archivo clonado a una carpeta específica en Google Drive
 const moveFileToFolder = async (fileId, folderId) => {
@@ -513,7 +502,6 @@ const moveFileToFolder = async (fileId, folderId) => {
   }
 };
 
-// Función para agregar imágenes de la galería (actualizada)
 const addGalleryImages = async (documentId, gallery) => {
   try {
     console.log('Iniciando addGalleryImages');
@@ -607,39 +595,41 @@ const addGalleryImages = async (documentId, gallery) => {
     // Esperar para que la tabla se inserte correctamente
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Insertar placeholders en las celdas
-    let placeholderNumber = 1;
-    const requests = [];
-
-    // Obtener el documento actualizado nuevamente
+    // Obtener el documento actualizado
     document = await docs.documents.get({ documentId: documentId });
     content = document.data.body.content;
 
     // Encontrar la tabla recién insertada
     let tableElement = null;
-    const findTableAtIndex = (elements) => {
+
+    const findTableAtIndex = (elements, index) => {
       for (const element of elements) {
-        if (element.table && element.startIndex === galleryPlaceholderIndex) {
+        if (element.table && element.startIndex === index) {
           tableElement = element;
           return;
         } else if (element.table) {
           for (const row of element.table.tableRows) {
             for (const cell of row.tableCells) {
-              findTableAtIndex(cell.content);
+              findTableAtIndex(cell.content, index);
               if (tableElement) return;
             }
           }
         }
       }
     };
-    findTableAtIndex(content);
+
+    findTableAtIndex(content, galleryPlaceholderIndex);
 
     if (!tableElement) {
       console.warn('No se encontró la tabla insertada para la galería.');
       return;
     }
 
-    // Recorrer las celdas de la tabla e insertar los placeholders
+    // Continuar con la inserción de placeholders e imágenes
+    // Insertar placeholders en las celdas
+    let placeholderNumber = 1;
+    const requests = [];
+
     for (let rowIndex = 0; rowIndex < tableElement.table.tableRows.length; rowIndex++) {
       const row = tableElement.table.tableRows[rowIndex];
       for (let columnIndex = 0; columnIndex < row.tableCells.length; columnIndex++) {
@@ -684,6 +674,7 @@ const addGalleryImages = async (documentId, gallery) => {
     throw new Error(`Error agregando imágenes de la galería a Google Docs: ${error.message}`);
   }
 };
+
 
 // Función para insertar el metadato "table" como una tabla en el documento
 const insertMetadataTable = async (documentId, placeholder, tableData) => {
