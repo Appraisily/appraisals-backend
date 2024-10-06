@@ -447,7 +447,6 @@ const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
   }
 };
 
-// Función para reemplazar marcadores de posición en el documento (actualizada para manejar tablas)
 const replacePlaceholders = async (documentId, data) => {
   try {
     const requests = [];
@@ -459,7 +458,7 @@ const replacePlaceholders = async (documentId, data) => {
             text: `{{${key}}}`,
             matchCase: true,
           },
-          replaceText: value,
+          replaceText: value !== undefined && value !== null ? String(value) : '',
         },
       });
     }
