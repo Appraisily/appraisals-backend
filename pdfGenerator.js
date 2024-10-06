@@ -367,11 +367,10 @@ const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WOR
   }
 };
 
-// Función para clonar una plantilla de Google Docs
 const cloneTemplate = async (templateId) => {
   try {
-    // Sanitizar el templateId eliminando espacios y caracteres no válidos
-    const sanitizedTemplateId = templateId.trim().replace(/[^a-zA-Z0-9-_]/g, '');
+    // Remover solo espacios en blanco al inicio y al final
+    const sanitizedTemplateId = templateId.trim();
 
     // Log para verificar el ID sanitizado
     console.log(`Clonando plantilla con ID: '${sanitizedTemplateId}'`);
