@@ -264,6 +264,27 @@ const getPostDate = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPR
   }
 };
 
+// Función para exportar un documento de Google Docs a PDF
+const exportDocumentToPDF = async (documentId) => {
+  try {
+    const response = await drive.files.export(
+      {
+        fileId: documentId,
+        mimeType: 'application/pdf',
+      },
+      { responseType: 'arraybuffer' }
+    );
+
+    const pdfBuffer = Buffer.from(response.data);
+    console.log('Documento exportado a PDF exitosamente.');
+    return pdfBuffer;
+  } catch (error) {
+    console.error('Error exportando el documento a PDF:', error);
+    throw new Error('Error exportando el documento a PDF.');
+  }
+};
+
+
 // Función auxiliar para obtener la URL de una imagen dado su ID de media
 const getImageUrl = async (mediaId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
   try {
@@ -289,36 +310,67 @@ const getImageUrl = async (mediaId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDP
   }
 };
 
-// Función para reemplazar marcadores de posición en el documento
-const replacePlaceholders = async (documentId, data) => {
+// Función para reemplazar marcadores de posición en todo el documento, incluyendo tablas
+const replacePlaceholdersInDocument = async (documentId, data) => {
   try {
+    const document = await docs.documents.get({ documentId });
+    const content = document.data.body.content;
+
     const requests = [];
 
-    for (const [key, value] of Object.entries(data)) {
-      requests.push({
-        replaceAllText: {
-          containsText: {
-            text: `{{${key}}}`,
-            matchCase: true,
-          },
-          replaceText: value !== undefined && value !== null ? String(value) : '',
+    const findAndReplace = (elements) => {
+      for (const element of elements) {
+        if (element.paragraph && element.paragraph.elements) {
+          for (const textElement of element.paragraph.elements) {
+            if (textElement.textRun && textElement.textRun.content) {
+              for (const [key, value] of Object.entries(data)) {
+                const placeholder = `{{${key}}}`;
+                if (textElement.textRun.content.includes(placeholder)) {
+                  const startIndex = textElement.startIndex + textElement.textRun.content.indexOf(placeholder);
+                  const endIndex = startIndex + placeholder.length;
+
+                  requests.push({
+                    replaceAllText: {
+                      containsText: {
+                        text: placeholder,
+                        matchCase: true,
+                      },
+                      replaceText: value !== undefined && value !== null ? String(value) : '',
+                    },
+                  });
+                }
+              }
+            }
+          }
+        } else if (element.table) {
+          for (const row of element.table.tableRows) {
+            for (const cell of row.tableCells) {
+              findAndReplace(cell.content);
+            }
+          }
+        }
+      }
+    };
+
+    findAndReplace(content);
+
+    if (requests.length > 0) {
+      await docs.documents.batchUpdate({
+        documentId: documentId,
+        requestBody: {
+          requests: requests,
         },
       });
+      console.log(`Marcadores de posición reemplazados en el documento ID: ${documentId}`);
+    } else {
+      console.log('No se encontraron marcadores de posición para reemplazar.');
     }
-
-    await docs.documents.batchUpdate({
-      documentId: documentId,
-      requestBody: {
-        requests: requests,
-      },
-    });
-
-    console.log(`Marcadores de posición reemplazados en el documento ID: ${documentId}`);
   } catch (error) {
     console.error('Error reemplazando marcadores de posición en Google Docs:', error);
     throw new Error('Error reemplazando marcadores de posición en Google Docs.');
   }
 };
+
 
 // Función para actualizar campos ACF de un post
 const updatePostACFFields = async (postId, fields, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
@@ -425,22 +477,19 @@ const cloneTemplate = async (templateId) => {
 
 const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
   try {
-    // Obtener el contenido completo del documento
-    const document = await docs.documents.get({ documentId: documentId });
+    const document = await docs.documents.get({ documentId });
     const content = document.data.body.content;
 
     // Función recursiva para buscar el placeholder
     const findPlaceholder = (elements) => {
       for (const element of elements) {
         if (element.paragraph && element.paragraph.elements) {
-          for (const elem of element.paragraph.elements) {
-            if (elem.textRun && elem.textRun.content.includes(`{{${placeholder}}}`)) {
-              return {
-                startIndex: elem.startIndex,
-                endIndex: elem.endIndex,
-                paragraphElement: elem,
-                parent: element
-              };
+          for (const textElement of element.paragraph.elements) {
+            if (textElement.textRun && textElement.textRun.content.includes(`{{${placeholder}}}`)) {
+              const startIndex = textElement.startIndex + textElement.textRun.content.indexOf(`{{${placeholder}}}`);
+              const endIndex = startIndex + `{{${placeholder}}}`.length;
+
+              return { startIndex, endIndex };
             }
           }
         } else if (element.table) {
@@ -462,12 +511,24 @@ const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
     if (placeholderInfo) {
       const { startIndex, endIndex } = placeholderInfo;
 
-      // Verificar que los índices sean válidos
-      if (startIndex === undefined || endIndex === undefined) {
-        throw new Error(`Índices inválidos para el placeholder {{${placeholder}}}.`);
-      }
+      // Eliminar el placeholder
+      await docs.documents.batchUpdate({
+        documentId: documentId,
+        requestBody: {
+          requests: [
+            {
+              deleteContentRange: {
+                range: {
+                  startIndex: startIndex,
+                  endIndex: endIndex,
+                },
+              },
+            },
+          ],
+        },
+      });
 
-      // Insertar la imagen en el índice del placeholder
+      // Insertar la imagen en el índice donde estaba el placeholder
       await docs.documents.batchUpdate({
         documentId: documentId,
         requestBody: {
@@ -482,39 +543,6 @@ const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
                   height: { magnitude: 150, unit: 'PT' },
                   width: { magnitude: 150, unit: 'PT' },
                 },
-              },
-            },
-          ],
-        },
-      });
-
-      // Luego, ocultar el texto del placeholder ajustando su estilo
-      await docs.documents.batchUpdate({
-        documentId: documentId,
-        requestBody: {
-          requests: [
-            {
-              updateTextStyle: {
-                range: {
-                  startIndex: startIndex + 1, // +1 para después de la imagen
-                  endIndex: endIndex + 1, // Ajustado por la inserción de la imagen
-                },
-                textStyle: {
-                  foregroundColor: {
-                    color: {
-                      rgbColor: {
-                        red: 1,
-                        green: 1,
-                        blue: 1,
-                      },
-                    },
-                  },
-                  fontSize: {
-                    magnitude: 1,
-                    unit: 'PT',
-                  },
-                },
-                fields: 'foregroundColor,fontSize',
               },
             },
           ],
