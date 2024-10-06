@@ -364,9 +364,10 @@ const cloneTemplate = async (templateId) => {
   }
 };
 
-// Función para insertar imágenes en los placeholders (actualizada para buscar en tablas)
+// Función para insertar imágenes en los placeholders (actualizada para manejar índices en tablas)
 const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
   try {
+    // Obtener el contenido completo del documento
     const document = await docs.documents.get({ documentId: documentId });
     const content = document.data.body.content;
 
@@ -399,6 +400,11 @@ const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
     const placeholderRange = findPlaceholder(content);
 
     if (placeholderRange) {
+      // Asegurarse de que los índices sean válidos
+      if (placeholderRange.startIndex === undefined || placeholderRange.endIndex === undefined) {
+        throw new Error(`Índices inválidos para el placeholder {{${placeholder}}}.`);
+      }
+
       // Eliminar el placeholder
       await docs.documents.batchUpdate({
         documentId: documentId,
@@ -446,6 +452,7 @@ const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
     throw error;
   }
 };
+
 
 const replacePlaceholders = async (documentId, data) => {
   try {
