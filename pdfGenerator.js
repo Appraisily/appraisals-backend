@@ -858,17 +858,17 @@ const addGalleryImages = async (documentId, gallery) => {
     }
 
     // Enviar las solicitudes para insertar los placeholders
-    await docs.documents.batchUpdate({
-      documentId: documentId,
-      requestBody: {
-        requests: requests,
-      },
-    });
+if (requests.length > 0) {
+  await docs.documents.batchUpdate({
+    documentId: documentId,
+    requestBody: {
+      requests: requests,
+    },
+  });
   console.log('Placeholders de imágenes de la galería insertados en la tabla');
 } else {
   console.warn('No se generaron requests para insertar placeholders en la galería.');
 }
-    console.log('Placeholders de imágenes de la galería insertados en la tabla');
 await new Promise(resolve => setTimeout(resolve, 1000)); // Esperar 1 segundo
 
     // Reemplazar los placeholders por las imágenes
