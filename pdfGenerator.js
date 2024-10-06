@@ -493,16 +493,20 @@ const insertFormattedMetadata = async (documentId, placeholder, tableData) => {
 
 // Función para actualizar campos ACF de un post
 const updatePostACFFields = async (postId, fields, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
+  const updateWpEndpoint = `${WORDPRESS_API_URL}/appraisals/${postId}`;
+
+  const updateData = {
+    acf: fields
+  };
+
   try {
-    const response = await fetch(`${WORDPRESS_API_URL}/acf/v3/appraisals/${postId}`, {
-      method: 'POST', // O 'PATCH' dependiendo de tu configuración
+    const response = await fetch(updateWpEndpoint, {
+      method: 'POST', // Puedes usar 'PUT' o 'PATCH' si es necesario
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
       },
-      body: JSON.stringify({
-        fields: fields
-      })
+      body: JSON.stringify(updateData)
     });
 
     if (!response.ok) {
@@ -511,59 +515,10 @@ const updatePostACFFields = async (postId, fields, WORDPRESS_API_URL, WORDPRESS_
       throw new Error('Error actualizando campos ACF en WordPress.');
     }
 
-    const postData = await response.json();
-    return postData;
+    console.log(`Campos ACF actualizados correctamente en el post ID ${postId}.`);
+    return;
   } catch (error) {
     console.error(`Error actualizando campos ACF para el post ID ${postId}:`, error);
-    throw error;
-  }
-};
-
-// Función para obtener la galería de imágenes de un post de WordPress
-const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
-  try {
-    const response = await fetch(`${WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
-      }
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Error obteniendo post de WordPress:`, errorText);
-      throw new Error('Error obteniendo post de WordPress.');
-    }
-
-    const postData = await response.json();
-
-    // Log completo para inspeccionar la estructura
-    console.log(`postData:`, JSON.stringify(postData, null, 2));
-
-    // Acceder al campo de galería ACF (asegurándose de usar el nombre correcto del campo)
-    const galleryField = postData.acf && postData.acf.googlevision ? postData.acf.googlevision : [];
-
-    // Verificar la estructura de la galería
-    console.log(`Galería de imágenes obtenida (IDs de medios):`, galleryField);
-
-    if (Array.isArray(galleryField) && galleryField.length > 0) {
-      // Obtener las URLs de las imágenes usando getImageUrl
-      const imageUrls = await Promise.all(galleryField.map(async (mediaId) => {
-        return await getImageUrl(mediaId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
-      }));
-
-      // Filtrar URLs nulas
-      const validImageUrls = imageUrls.filter(url => url !== null);
-
-      console.log(`URLs de imágenes procesadas:`, validImageUrls);
-      return validImageUrls;
-    }
-
-    console.log(`No se encontraron imágenes en la galería.`);
-    return [];
-  } catch (error) {
-    console.error(`Error obteniendo la galería del post ID ${postId}:`, error);
     throw error;
   }
 };
