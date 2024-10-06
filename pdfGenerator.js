@@ -1019,7 +1019,7 @@ router.post('/generate-pdf', async (req, res) => {
       appraisal_title: postTitle,
       appraisal_date: postDate,
     };
-    await replacePlaceholders(clonedDocId, data);
+    await replacePlaceholdersInDocument(clonedDocId, data);
 
     // Paso 8: Ajustar el tamaño de la fuente del título
     await adjustTitleFontSize(clonedDocId, postTitle);
