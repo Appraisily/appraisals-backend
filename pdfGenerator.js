@@ -320,6 +320,33 @@ const replacePlaceholders = async (documentId, data) => {
   }
 };
 
+// Función para actualizar campos ACF de un post
+const updatePostACFFields = async (postId, fields, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
+  try {
+    const response = await fetch(`${WORDPRESS_API_URL}/acf/v3/appraisals/${postId}`, {
+      method: 'POST', // O 'PATCH' dependiendo de tu configuración
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      },
+      body: JSON.stringify({
+        fields: fields
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Error actualizando campos ACF en WordPress:`, errorText);
+      throw new Error('Error actualizando campos ACF en WordPress.');
+    }
+
+    const postData = await response.json();
+    return postData;
+  } catch (error) {
+    console.error(`Error actualizando campos ACF para el post ID ${postId}:`, error);
+    throw error;
+  }
+};
 
 // Función para obtener la galería de imágenes de un post de WordPress
 const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
@@ -885,49 +912,49 @@ router.post('/generate-pdf', async (req, res) => {
     const WORDPRESS_USERNAME = process.env.WORDPRESS_USERNAME;
     const WORDPRESS_APP_PASSWORD = process.env.WORDPRESS_APP_PASSWORD;
 
-// Paso 2: Obtener los metadatos adicionales del post
-const metadataKeys = [
-  'test',
-  'ad_copy',
-  'age_text',
-  'age1',
-  'condition',
-  'signature1',
-  'signature2',
-  'style',
-  'valuation_method',
-  'conclusion1',
-  'conclusion2',
-  'authorship',
-  'table',
-  'glossary',
-  'value'         // Añadido
-];
+    // Paso 2: Obtener los metadatos adicionales del post
+    const metadataKeys = [
+      'test',
+      'ad_copy',
+      'age_text',
+      'age1',
+      'condition',
+      'signature1',
+      'signature2',
+      'style',
+      'valuation_method',
+      'conclusion1',
+      'conclusion2',
+      'authorship',
+      'table',
+      'glossary',
+      'value'         // Añadido
+    ];
 
-const metadataPromises = metadataKeys.map(key =>
-  getPostMetadata(postId, key, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD)
-);
-const metadataValues = await Promise.all(metadataPromises);
+    const metadataPromises = metadataKeys.map(key =>
+      getPostMetadata(postId, key, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD)
+    );
+    const metadataValues = await Promise.all(metadataPromises);
 
-const metadata = {};
-metadataKeys.forEach((key, index) => {
-  metadata[key] = metadataValues[index];
-});
-
-// Convertir el valor numérico a formato adecuado
-if (metadata.value) {
-  const numericValue = parseFloat(metadata.value);
-  if (!isNaN(numericValue)) {
-    metadata.appraisal_value = numericValue.toLocaleString('es-ES', {
-      style: 'currency',
-      currency: 'USD',
+    const metadata = {};
+    metadataKeys.forEach((key, index) => {
+      metadata[key] = metadataValues[index];
     });
-  } else {
-    metadata.appraisal_value = metadata.value; // Si no es un número, usar el valor tal cual
-  }
-} else {
-  metadata.appraisal_value = ''; // Si no hay valor, dejar vacío
-}
+
+    // Convertir el valor numérico a formato adecuado
+    if (metadata.value) {
+      const numericValue = parseFloat(metadata.value);
+      if (!isNaN(numericValue)) {
+        metadata.appraisal_value = numericValue.toLocaleString('es-ES', {
+          style: 'currency',
+          currency: 'USD',
+        });
+      } else {
+        metadata.appraisal_value = metadata.value; // Si no es un número, usar el valor tal cual
+      }
+    } else {
+      metadata.appraisal_value = ''; // Si no hay valor, dejar vacío
+    }
 
     // Obtener el título, la fecha y las URLs de las imágenes
     const [postTitle, postDate, ageImageUrl, signatureImageUrl, mainImageUrl] = await Promise.all([
@@ -958,13 +985,13 @@ if (metadata.value) {
     // (Opcional) Mover el archivo clonado a la carpeta deseada
     await moveFileToFolder(clonedDocId, GOOGLE_DRIVE_FOLDER_ID);
 
-// Paso 7: Reemplazar los marcadores de posición en el documento
-const data = {
-  ...metadata,
-  appraisal_title: postTitle,
-  appraisal_date: postDate,
-};
-await replacePlaceholders(clonedDocId, data);
+    // Paso 7: Reemplazar los marcadores de posición en el documento
+    const data = {
+      ...metadata,
+      appraisal_title: postTitle,
+      appraisal_date: postDate,
+    };
+    await replacePlaceholders(clonedDocId, data);
 
     // Paso 8: Ajustar el tamaño de la fuente del título
     await adjustTitleFontSize(clonedDocId, postTitle);
@@ -1003,6 +1030,9 @@ await replacePlaceholders(clonedDocId, data);
 
     // Paso 14: Subir el PDF a Google Drive
     const pdfLink = await uploadPDFToDrive(pdfBuffer, pdfFilename, GOOGLE_DRIVE_FOLDER_ID);
+
+    // Paso 15: Actualizar los campos ACF del post con los enlaces
+    await updatePostACFFields(postId, { pdflink: pdfLink, doclink: clonedDocLink }, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
 
     // Devolver el enlace al PDF y al documento de Google Docs
     res.json({
