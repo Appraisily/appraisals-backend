@@ -1021,7 +1021,7 @@ router.post('/generate-pdf', async (req, res) => {
 
     // Paso 12: Reemplazar los placeholders de la galería con las imágenes
     if (gallery.length > 0) {
-      await replacePlaceholdersWithImages(clonedDocId, gallery);
+      await insertImageAtAllPlaceholders(clonedDocId, gallery);
     }
 
     // Paso 13: Insertar imágenes en placeholders específicos si es necesario
