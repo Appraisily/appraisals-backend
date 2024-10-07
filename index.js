@@ -65,7 +65,7 @@ let visionClient;
 
 function initializeVisionClient() {
   try {
-    const credentials = JSON.parse(GOOGLE_VISION_CREDENTIALS);
+    const credentials = JSON.parse(config.GOOGLE_VISION_CREDENTIALS);
     visionClient = new vision.ImageAnnotatorClient({
       credentials: {
         client_email: credentials.client_email,
@@ -79,6 +79,7 @@ function initializeVisionClient() {
     process.exit(1);
   }
 }
+
 
 // Función para obtener la URL de la imagen desde WordPress
 const getImageUrl = async (imageField) => {
@@ -598,12 +599,7 @@ app.use('/', pdfRouter);
 loadSecrets().then(async () => {
   initializeVisionClient(); // Inicializar el cliente de Vision
   await initializeGoogleApis(); // Inicializar las APIs de Google
-    // Asignar los secretos al módulo config
-  config.config.WORDPRESS_API_URL = config.WORDPRESS_API_URL;
-  config.config.WORDPRESS_USERNAME = config.WORDPRESS_USERNAME;
-  config.config.WORDPRESS_APP_PASSWORD = config.WORDPRESS_APP_PASSWORD;
-  config.OPENAI_API_KEY = OPENAI_API_KEY;
-  config.GOOGLE_VISION_CREDENTIALS = GOOGLE_VISION_CREDENTIALS;
+
   
   const PORT = process.env.PORT || 8080;
   app.listen(PORT, () => {
