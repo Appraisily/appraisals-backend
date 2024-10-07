@@ -34,33 +34,15 @@ async function getSecret(secretName) {
 
 
 
-
-
-// Función para obtener un secreto de Secret Manager
-async function getGoogleDocsCredentials() {
-  const secretName = 'GOOGLE_DOCS_CREDENTIALS'; // Nombre del secreto que almacena las credenciales de la cuenta de servicio
-  try {
-    const projectId = 'civil-forge-403609'; // Asegúrate de que este Project ID sea correcto
-    const secretPath = `projects/${projectId}/secrets/${secretName}/versions/latest`;
-
-    const [version] = await secretClient.accessSecretVersion({ name: secretPath });
-    const payload = version.payload.data.toString('utf8');
-    console.log(`Secreto '${secretName}' obtenido exitosamente.`);
-    return JSON.parse(payload);
-  } catch (error) {
-    console.error(`Error obteniendo el secreto '${secretName}':`, error);
-    throw new Error(`No se pudo obtener el secreto '${secretName}'.`);
-  }
-}
-
-
 // Inicializar el cliente de Google APIs
 let docs;
 let drive;
 
+// pdfGenerator.js
+
 async function initializeGoogleApis() {
   try {
-    const credentials = await getGoogleDocsCredentials();
+    const credentials = JSON.parse(config.GOOGLE_DOCS_CREDENTIALS);
 
     const auth = new google.auth.GoogleAuth({
       credentials: credentials,
@@ -81,6 +63,7 @@ async function initializeGoogleApis() {
     throw error;
   }
 }
+
 
 const adjustTitleFontSize = async (documentId, titleText) => {
   try {
