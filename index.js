@@ -39,8 +39,8 @@ async function getSecret(secretName) {
 
 // Variables para almacenar los secretos
 let config.WORDPRESS_API_URL;
-let WORDPRESS_USERNAME;
-let WORDPRESS_APP_PASSWORD;
+let config.WORDPRESS_USERNAME;
+let config.WORDPRESS_APP_PASSWORD;
 let OPENAI_API_KEY;
 let GOOGLE_VISION_CREDENTIALS; // Nuevo secreto para Vision API
 
@@ -48,8 +48,8 @@ let GOOGLE_VISION_CREDENTIALS; // Nuevo secreto para Vision API
 async function loadSecrets() {
   try {
     config.WORDPRESS_API_URL = await getSecret('config.WORDPRESS_API_URL');
-    WORDPRESS_USERNAME = await getSecret('wp_username');
-    WORDPRESS_APP_PASSWORD = await getSecret('wp_app_password');
+    config.WORDPRESS_USERNAME = await getSecret('wp_username');
+    config.WORDPRESS_APP_PASSWORD = await getSecret('wp_app_password');
     OPENAI_API_KEY = await getSecret('OPENAI_API_KEY');
     GOOGLE_VISION_CREDENTIALS = await getSecret('GOOGLE_VISION_CREDENTIALS'); // Cargar las credenciales de Vision
     console.log('Todos los secretos han sido cargados exitosamente.');
@@ -91,7 +91,7 @@ const getImageUrl = async (imageField) => {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+          'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(config.WORDPRESS_USERNAME)}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
         }
       });
 
@@ -200,7 +200,7 @@ const updateWordPressMetadata = async (wpPostId, metadataKey, metadataValue) => 
       method: 'POST', // Puedes usar 'PUT' o 'PATCH' si es necesario
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(config.WORDPRESS_USERNAME)}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
       },
       body: JSON.stringify(updateData)
     });
@@ -273,7 +273,7 @@ const uploadImageToWordPress = async (imageUrl) => {
     const uploadResponse = await fetch(`${config.WORDPRESS_API_URL}/media`, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`,
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(config.WORDPRESS_USERNAME)}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`,
         // 'Content-Type' será manejado automáticamente por FormData
         ...form.getHeaders()
       },
@@ -305,7 +305,7 @@ const processMainImageWithGoogleVision = async (postId) => {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(config.WORDPRESS_USERNAME)}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
       }
     });
 
@@ -406,7 +406,7 @@ app.post('/update-metadata', async (req, res) => {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(config.WORDPRESS_USERNAME)}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
       }
     });
 
@@ -465,7 +465,7 @@ app.post('/complete-appraisal-report', async (req, res) => {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(config.WORDPRESS_USERNAME)}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
       }
     });
 
@@ -599,8 +599,8 @@ loadSecrets().then(async () => {
   await initializeGoogleApis(); // Inicializar las APIs de Google
     // Asignar los secretos al módulo config
   config.config.WORDPRESS_API_URL = config.WORDPRESS_API_URL;
-  config.WORDPRESS_USERNAME = WORDPRESS_USERNAME;
-  config.WORDPRESS_APP_PASSWORD = WORDPRESS_APP_PASSWORD;
+  config.config.WORDPRESS_USERNAME = config.WORDPRESS_USERNAME;
+  config.config.WORDPRESS_APP_PASSWORD = config.WORDPRESS_APP_PASSWORD;
   config.OPENAI_API_KEY = OPENAI_API_KEY;
   config.GOOGLE_VISION_CREDENTIALS = GOOGLE_VISION_CREDENTIALS;
   
