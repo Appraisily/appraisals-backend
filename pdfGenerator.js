@@ -766,7 +766,6 @@ const moveFileToFolder = async (fileId, folderId) => {
     throw new Error('Error moviendo el archivo.');
   }
 };
-
 const addGalleryImages = async (documentId, gallery) => {
   try {
     console.log('Iniciando addGalleryImages');
@@ -900,9 +899,10 @@ const addGalleryImages = async (documentId, gallery) => {
       for (let columnIndex = 0; columnIndex < row.tableCells.length; columnIndex++) {
         if (placeholderNumber > gallery.length) break;
         const cell = row.tableCells[columnIndex];
-        const cellStartIndex = cell.startIndex + 1; // +1 para dentro de la celda
+        // Cambiar a cell.endIndex - 1 para insertar al final de la celda
+        const cellStartIndex = cell.endIndex - 1;
         const placeholderText = `{{googlevision${placeholderNumber}}}`;
-    console.log(`Insertando placeholder '${placeholderText}' en la celda con startIndex ${cellStartIndex}`);
+        console.log(`Insertando placeholder '${placeholderText}' en la celda con startIndex ${cellStartIndex}`);
 
         requests.push({
           insertText: {
@@ -918,18 +918,19 @@ const addGalleryImages = async (documentId, gallery) => {
     }
 
     // Enviar las solicitudes para insertar los placeholders
-if (requests.length > 0) {
-  await docs.documents.batchUpdate({
-    documentId: documentId,
-    requestBody: {
-      requests: requests,
-    },
-  });
-  console.log('Placeholders de imágenes de la galería insertados en la tabla');
-} else {
-  console.warn('No se generaron requests para insertar placeholders en la galería.');
-}
-await new Promise(resolve => setTimeout(resolve, 1000)); // Esperar 1 segundo
+    if (requests.length > 0) {
+      await docs.documents.batchUpdate({
+        documentId: documentId,
+        requestBody: {
+          requests: requests,
+        },
+      });
+      console.log('Placeholders de imágenes de la galería insertados en la tabla');
+    } else {
+      console.warn('No se generaron requests para insertar placeholders en la galería.');
+    }
+
+    await new Promise(resolve => setTimeout(resolve, 1000)); // Esperar 1 segundo
 
     // Reemplazar los placeholders por las imágenes
     for (let i = 0; i < gallery.length; i++) {
