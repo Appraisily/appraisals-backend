@@ -8,6 +8,7 @@ const { v4: uuidv4 } = require('uuid'); // Para generar nombres de archivos úni
 const { Readable } = require('stream'); // Importar Readable desde stream
 const he = require('he'); // Librería para decodificar HTML cloneT
 const { format } = require('date-fns'); // Librería para formatear fechas
+const config = require('./config');
 
 const router = express.Router();
 
@@ -31,17 +32,14 @@ async function getSecret(secretName) {
   }
 }
 
-// Variables para almacenar los secretos
-let WORDPRESS_API_URL;
-let WORDPRESS_USERNAME;
-let WORDPRESS_APP_PASSWORD;
+
 
 // Función para cargar todos los secretos al iniciar la aplicación
 async function loadSecrets() {
   try {
-    WORDPRESS_API_URL = await getSecret('WORDPRESS_API_URL');
-    WORDPRESS_USERNAME = await getSecret('WORDPRESS_USERNAME');
-    WORDPRESS_APP_PASSWORD = await getSecret('WORDPRESS_APP_PASSWORD');
+    config.WORDPRESS_API_URL = await getSecret('config.WORDPRESS_API_URL');
+    config.WORDPRESS_USERNAME = await getSecret('config.WORDPRESS_USERNAME');
+    config.WORDPRESS_APP_PASSWORD = await getSecret('config.WORDPRESS_APP_PASSWORD');
     console.log('Todos los secretos han sido cargados exitosamente.');
   } catch (error) {
     console.error('Error cargando los secretos:', error);
@@ -168,13 +166,13 @@ const adjustTitleFontSize = async (documentId, titleText) => {
 };
 
 // Función para obtener metadatos de un post de WordPress
-const getPostMetadata = async (postId, metadataKey, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
+const getPostMetadata = async (postId, metadataKey, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD) => {
   try {
-    const response = await fetch(`${WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
+    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(config.WORDPRESS_USERNAME)}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
       }
     });
 
@@ -203,13 +201,13 @@ const getPostMetadata = async (postId, metadataKey, WORDPRESS_API_URL, WORDPRESS
 };
 
 // Función para obtener la URL de un campo de imagen ACF
-const getImageFieldUrlFromPost = async (postId, fieldName, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
+const getImageFieldUrlFromPost = async (postId, fieldName, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD) => {
   try {
-    const response = await fetch(`${WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
+    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(config.WORDPRESS_USERNAME)}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
       }
     });
 
@@ -229,7 +227,7 @@ const getImageFieldUrlFromPost = async (postId, fieldName, WORDPRESS_API_URL, WO
         return imageField;
       } else if (typeof imageField === 'number') {
         // ID de media
-        const imageUrl = await getImageUrl(imageField, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
+        const imageUrl = await getImageUrl(imageField, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD);
         return imageUrl;
       } else if (typeof imageField === 'object' && imageField.url) {
         // Objeto de imagen con URL
@@ -251,13 +249,13 @@ const getImageFieldUrlFromPost = async (postId, fieldName, WORDPRESS_API_URL, WO
 
 
 // Función para obtener el título de un post de WordPress
-const getPostTitle = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
+const getPostTitle = async (postId, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD) => {
   try {
-    const response = await fetch(`${WORDPRESS_API_URL}/appraisals/${postId}?_fields=title`, {
+    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=title`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(config.WORDPRESS_USERNAME)}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
       }
     });
 
@@ -276,13 +274,13 @@ const getPostTitle = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDP
 };
 
 // Función para obtener la fecha de publicación de un post de WordPress
-const getPostDate = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
+const getPostDate = async (postId, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD) => {
   try {
-    const response = await fetch(`${WORDPRESS_API_URL}/appraisals/${postId}?_fields=date`, {
+    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=date`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(config.WORDPRESS_USERNAME)}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
       }
     });
 
@@ -322,13 +320,13 @@ const exportDocumentToPDF = async (documentId) => {
 
 
 // Función auxiliar para obtener la URL de una imagen dado su ID de media
-const getImageUrl = async (mediaId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
+const getImageUrl = async (mediaId, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD) => {
   try {
-    const response = await fetch(`${WORDPRESS_API_URL}/media/${mediaId}?_fields=source_url`, {
+    const response = await fetch(`${config.WORDPRESS_API_URL}/media/${mediaId}?_fields=source_url`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(config.WORDPRESS_USERNAME)}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
       }
     });
 
@@ -553,8 +551,8 @@ throw new Error(`Error clonando la plantilla de Google Docs: ${error.message}`);
 
 
 // Función para actualizar el campo ACF 'pdflink' de un post
-const updatePostACFFields = async (postId, pdfLink, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
-  const updateWpEndpoint = `${WORDPRESS_API_URL}/appraisals/${postId}`;
+const updatePostACFFields = async (postId, pdfLink, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD) => {
+  const updateWpEndpoint = `${config.WORDPRESS_API_URL}/appraisals/${postId}`;
 
   const updateData = {
     acf: {
@@ -567,7 +565,7 @@ const updatePostACFFields = async (postId, pdfLink, WORDPRESS_API_URL, WORDPRESS
       method: 'POST', // Si 'POST' funciona en tu caso
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(config.WORDPRESS_USERNAME)}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
       },
       body: JSON.stringify(updateData)
     });
@@ -588,13 +586,13 @@ const updatePostACFFields = async (postId, pdfLink, WORDPRESS_API_URL, WORDPRESS
 
 
 // Función para obtener la galería de imágenes de un post de WordPress
-const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
+const getPostGallery = async (postId, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD) => {
   try {
-    const response = await fetch(`${WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
+    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(config.WORDPRESS_USERNAME)}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
       }
     });
 
@@ -618,7 +616,7 @@ const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WOR
     if (Array.isArray(galleryField) && galleryField.length > 0) {
       // Obtener las URLs de las imágenes usando getImageUrl
       const imageUrls = await Promise.all(galleryField.map(async (mediaId) => {
-        return await getImageUrl(mediaId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
+        return await getImageUrl(mediaId, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD);
       }));
 
       // Filtrar URLs nulas
@@ -1147,9 +1145,9 @@ router.post('/generate-pdf', async (req, res) => {
       throw new Error('GOOGLE_DOCS_TEMPLATE_ID y GOOGLE_DRIVE_FOLDER_ID deben estar definidos en las variables de entorno.');
     }
 
-    const WORDPRESS_API_URL = process.env.WORDPRESS_API_URL;
-    const WORDPRESS_USERNAME = process.env.WORDPRESS_USERNAME;
-    const WORDPRESS_APP_PASSWORD = process.env.WORDPRESS_APP_PASSWORD;
+    const config.WORDPRESS_API_URL = process.env.config.WORDPRESS_API_URL;
+    const config.WORDPRESS_USERNAME = process.env.config.WORDPRESS_USERNAME;
+    const config.WORDPRESS_APP_PASSWORD = process.env.config.WORDPRESS_APP_PASSWORD;
 
     // Paso 2: Obtener los metadatos adicionales del post
     const metadataKeys = [
@@ -1171,7 +1169,7 @@ router.post('/generate-pdf', async (req, res) => {
     ];
 
     const metadataPromises = metadataKeys.map(key =>
-      getPostMetadata(postId, key, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD)
+      getPostMetadata(postId, key, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD)
     );
     const metadataValues = await Promise.all(metadataPromises);
 
@@ -1197,15 +1195,15 @@ router.post('/generate-pdf', async (req, res) => {
 
     // Obtener el título, la fecha y las URLs de las imágenes
     const [postTitle, postDate, ageImageUrl, signatureImageUrl, mainImageUrl] = await Promise.all([
-      getPostTitle(postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD),
-      getPostDate(postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD),
-      getImageFieldUrlFromPost(postId, 'age', WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD),
-      getImageFieldUrlFromPost(postId, 'signature', WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD),
-      getImageFieldUrlFromPost(postId, 'main', WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD),
+      getPostTitle(postId, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD),
+      getPostDate(postId, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD),
+      getImageFieldUrlFromPost(postId, 'age', config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD),
+      getImageFieldUrlFromPost(postId, 'signature', config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD),
+      getImageFieldUrlFromPost(postId, 'main', config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD),
     ]);
 
     // Obtener la galería de imágenes del post
-    const gallery = await getPostGallery(postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
+    const gallery = await getPostGallery(postId, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD);
 
     // Log para verificar los metadatos, el título, la fecha y la galería obtenidos
     console.log(`Metadatos obtenidos:`, metadata);
@@ -1271,10 +1269,10 @@ if (metadata.table) {
     const pdfLink = await uploadPDFToDrive(pdfBuffer, pdfFilename, GOOGLE_DRIVE_FOLDER_ID);
 
     // Paso 15: Actualizar los campos ACF del post con los enlaces
-    console.log(`WORDPRESS_USERNAME: ${WORDPRESS_USERNAME}`);
-console.log(`WORDPRESS_APP_PASSWORD: ${WORDPRESS_APP_PASSWORD ? '***' : 'No definido'}`);
+    console.log(`config.WORDPRESS_USERNAME: ${config.WORDPRESS_USERNAME}`);
+console.log(`config.WORDPRESS_APP_PASSWORD: ${config.WORDPRESS_APP_PASSWORD ? '***' : 'No definido'}`);
 
-await updatePostACFFields(postId, pdfLink, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
+await updatePostACFFields(postId, pdfLink, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD);
 
     // Devolver el enlace al PDF y al documento de Google Docs
     res.json({
