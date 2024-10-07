@@ -378,6 +378,7 @@ const replacePlaceholdersInDocument = async (documentId, data) => {
   }
 };
 
+// Función para insertar el metadato "table" como una tabla formateada en el documento
 const insertFormattedMetadata = async (documentId, placeholder, tableData) => {
   try {
     const document = await docs.documents.get({ documentId: documentId });
@@ -415,6 +416,8 @@ const insertFormattedMetadata = async (documentId, placeholder, tableData) => {
       return;
     }
 
+    console.log(`Placeholder "{{${placeholder}}}" encontrado en el índice ${placeholderIndex}`);
+
     // Eliminar el placeholder
     await docs.documents.batchUpdate({
       documentId: documentId,
@@ -432,70 +435,196 @@ const insertFormattedMetadata = async (documentId, placeholder, tableData) => {
       },
     });
 
-    // Parsear el contenido de tableData y preparar los datos
+    console.log('Placeholder "{{table}}" eliminado del documento');
+
+    // Parsear el contenido de tableData y preparar los datos para la tabla
     const rows = tableData.split('-').map(item => item.trim()).filter(item => item);
-    const keyValuePairs = rows.map(row => {
+    const tableRows = rows.map(row => {
       const [key, value] = row.split(':').map(s => s.trim());
-      return { key: key || '', value: value || '' };
+      return [key || '', value || ''];
     });
 
-    let currentIndex = placeholderIndex;
-    const requests = [];
+    // Insertar la tabla en el documento
+    const numRows = tableRows.length;
+    const numCols = 2; // Clave y Valor
 
-    for (const pair of keyValuePairs) {
-      // Insertar la clave
-      requests.push({
-        insertText: {
-          text: `${pair.key}: `,
-          location: {
-            index: currentIndex,
-          },
-        },
-      });
-
-      currentIndex += pair.key.length + 2; // Actualizar el índice
-
-      // Aplicar negrita a la clave
-      requests.push({
-        updateTextStyle: {
-          range: {
-            startIndex: currentIndex - pair.key.length - 2,
-            endIndex: currentIndex - 2,
-          },
-          textStyle: {
-            bold: true,
-          },
-          fields: 'bold',
-        },
-      });
-
-      // Insertar el valor
-      requests.push({
-        insertText: {
-          text: `${pair.value}\n`,
-          location: {
-            index: currentIndex,
-          },
-        },
-      });
-
-      currentIndex += pair.value.length + 1; // Actualizar el índice (incluye salto de línea)
-    }
-
-    // Enviar las solicitudes para insertar y formatear el texto
     await docs.documents.batchUpdate({
       documentId: documentId,
       requestBody: {
-        requests: requests,
+        requests: [
+          {
+            insertTable: {
+              rows: numRows,
+              columns: numCols,
+              location: {
+                index: placeholderIndex,
+              },
+            },
+          },
+        ],
       },
     });
 
-    console.log('Metadato insertado y formateado en el documento.');
+    console.log(`Tabla insertada con ${numRows} filas y ${numCols} columnas`);
+
+    // Esperar para que la tabla se inserte correctamente
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Obtener el documento actualizado
+    const updatedDocument = await docs.documents.get({ documentId: documentId });
+    const updatedContent = updatedDocument.data.body.content;
+
+    // Encontrar la tabla insertada
+    let tableElement = null;
+
+    const findTableAtIndex = (elements) => {
+      for (const element of elements) {
+        if (element.table && element.startIndex === placeholderIndex) {
+          tableElement = element;
+          return;
+        } else if (element.table) {
+          for (const row of element.table.tableRows) {
+            for (const cell of row.tableCells) {
+              findTableAtIndex(cell.content);
+              if (tableElement) return;
+            }
+          }
+        }
+      }
+    };
+
+    findTableAtIndex(updatedContent);
+
+    if (!tableElement) {
+      console.warn('No se encontró la tabla insertada para el metadato "table".');
+      return;
+    }
+
+    console.log('Tabla encontrada correctamente.');
+
+    // Preparar las solicitudes para insertar el texto en las celdas
+    const requests = [];
+
+    for (let i = 0; i < tableRows.length; i++) {
+      const row = tableElement.table.tableRows[i];
+      for (let j = 0; j < numCols; j++) {
+        const cell = row.tableCells[j];
+        const cellStartIndex = cell.startIndex + 1; // +1 para dentro de la celda
+        const text = tableRows[i][j];
+
+        requests.push({
+          insertText: {
+            text: text,
+            location: {
+              index: cellStartIndex,
+            },
+          },
+        });
+
+        // Si es la primera columna, aplicar negrita
+        if (j === 0 && text) {
+          requests.push({
+            updateTextStyle: {
+              range: {
+                startIndex: cellStartIndex,
+                endIndex: cellStartIndex + text.length,
+              },
+              textStyle: {
+                bold: true,
+              },
+              fields: 'bold',
+            },
+          });
+        }
+      }
+    }
+
+    // Enviar las solicitudes para insertar el texto y aplicar estilos
+    if (requests.length > 0) {
+      await docs.documents.batchUpdate({
+        documentId: documentId,
+        requestBody: {
+          requests: requests,
+        },
+      });
+      console.log('Metadato "table" insertado y formateado como tabla en el documento.');
+    } else {
+      console.warn('No se generaron requests para insertar el metadato "table".');
+    }
+
+    // Aplicar estilos a la tabla (bordes y padding)
+    const tableId = tableElement.table.tableRows[0].tableCells[0].startIndex; // Obtenemos un identificador de la tabla
+    const tablePropertiesRequests = [
+      {
+        updateTableProperties: {
+          tableStartLocation: {
+            index: tableElement.startIndex,
+          },
+          tableProperties: {
+            borderWidth: {
+              magnitude: 1,
+              unit: 'PT',
+            },
+            borderColor: {
+              color: {
+                rgbColor: {
+                  red: 0,
+                  green: 0,
+                  blue: 0,
+                },
+              },
+            },
+          },
+          fields: 'tableBorderProperties',
+        },
+      },
+      {
+        updateTableCellStyle: {
+          tableRange: {
+            tableStartLocation: {
+              index: tableElement.startIndex,
+            },
+            rowSpan: numRows,
+            columnSpan: numCols,
+          },
+          tableCellStyle: {
+            paddingTop: {
+              magnitude: 5,
+              unit: 'PT',
+            },
+            paddingBottom: {
+              magnitude: 5,
+              unit: 'PT',
+            },
+            paddingLeft: {
+              magnitude: 5,
+              unit: 'PT',
+            },
+            paddingRight: {
+              magnitude: 5,
+              unit: 'PT',
+            },
+          },
+          fields: 'paddingTop,paddingBottom,paddingLeft,paddingRight',
+        },
+      },
+    ];
+
+    await docs.documents.batchUpdate({
+      documentId: documentId,
+      requestBody: {
+        requests: tablePropertiesRequests,
+      },
+    });
+
+    console.log('Estilos de tabla aplicados correctamente.');
+
   } catch (error) {
-    console.error('Error insertando y formateando el metadato en el documento:', error);
+    console.error('Error insertando el metadato "table" como tabla en el documento:', error);
     throw error;
   }
 };
+
 
 // Función para clonar una plantilla de Google Docs y obtener el enlace al documento clonado
 const cloneTemplate = async (templateId) => {
