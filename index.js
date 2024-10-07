@@ -8,6 +8,7 @@ const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const { v4: uuidv4 } = require('uuid'); // Para generar nombres de archivos únicos
 const vision = require('@google-cloud/vision'); // Importar el cliente de Vision
 const FormData = require('form-data'); // Para subir imágenes a WordPress
+const config = require('./config');
 
 // Importar el router de pdfGenerator
 const { router: pdfRouter, initializeGoogleApis } = require('./pdfGenerator');
@@ -596,6 +597,13 @@ app.use('/', pdfRouter);
 loadSecrets().then(async () => {
   initializeVisionClient(); // Inicializar el cliente de Vision
   await initializeGoogleApis(); // Inicializar las APIs de Google
+    // Asignar los secretos al módulo config
+  config.WORDPRESS_API_URL = WORDPRESS_API_URL;
+  config.WORDPRESS_USERNAME = WORDPRESS_USERNAME;
+  config.WORDPRESS_APP_PASSWORD = WORDPRESS_APP_PASSWORD;
+  config.OPENAI_API_KEY = OPENAI_API_KEY;
+  config.GOOGLE_VISION_CREDENTIALS = GOOGLE_VISION_CREDENTIALS;
+  
   const PORT = process.env.PORT || 8080;
   app.listen(PORT, () => {
     console.log(`Servidor backend corriendo en el puerto ${PORT}`);
