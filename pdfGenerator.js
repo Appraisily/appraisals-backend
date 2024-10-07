@@ -1270,6 +1270,9 @@ if (metadata.table) {
     const pdfLink = await uploadPDFToDrive(pdfBuffer, pdfFilename, GOOGLE_DRIVE_FOLDER_ID);
 
     // Paso 15: Actualizar los campos ACF del post con los enlaces
+    console.log(`WORDPRESS_USERNAME: ${WORDPRESS_USERNAME}`);
+console.log(`WORDPRESS_APP_PASSWORD: ${WORDPRESS_APP_PASSWORD ? '***' : 'No definido'}`);
+
 await updatePostACFFields(postId, pdfLink, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
 
     // Devolver el enlace al PDF y al documento de Google Docs
