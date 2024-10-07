@@ -38,7 +38,7 @@ async function getSecret(secretName) {
 }
 
 // Variables para almacenar los secretos
-let WORDPRESS_API_URL;
+let config.WORDPRESS_API_URL;
 let WORDPRESS_USERNAME;
 let WORDPRESS_APP_PASSWORD;
 let OPENAI_API_KEY;
@@ -47,7 +47,7 @@ let GOOGLE_VISION_CREDENTIALS; // Nuevo secreto para Vision API
 // Función para cargar todos los secretos al iniciar la aplicación
 async function loadSecrets() {
   try {
-    WORDPRESS_API_URL = await getSecret('WORDPRESS_API_URL');
+    config.WORDPRESS_API_URL = await getSecret('config.WORDPRESS_API_URL');
     WORDPRESS_USERNAME = await getSecret('wp_username');
     WORDPRESS_APP_PASSWORD = await getSecret('wp_app_password');
     OPENAI_API_KEY = await getSecret('OPENAI_API_KEY');
@@ -87,7 +87,7 @@ const getImageUrl = async (imageField) => {
   if (typeof imageField === 'number' || (typeof imageField === 'string' && /^\d+$/.test(imageField))) {
     const mediaId = imageField;
     try {
-      const mediaResponse = await fetch(`${WORDPRESS_API_URL}/media/${mediaId}`, {
+      const mediaResponse = await fetch(`${config.WORDPRESS_API_URL}/media/${mediaId}`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
@@ -187,7 +187,7 @@ const generateTextWithOpenAI = async (prompt, title, imageUrls) => {
 
 // Función para actualizar metadatos en WordPress
 const updateWordPressMetadata = async (wpPostId, metadataKey, metadataValue) => {
-  const updateWpEndpoint = `${WORDPRESS_API_URL}/appraisals/${wpPostId}`;
+  const updateWpEndpoint = `${config.WORDPRESS_API_URL}/appraisals/${wpPostId}`;
 
   const updateData = {
     acf: {
@@ -270,7 +270,7 @@ const uploadImageToWordPress = async (imageUrl) => {
 
     // Subir la imagen a WordPress
     console.log(`Subiendo la imagen a WordPress: ${filename}`);
-    const uploadResponse = await fetch(`${WORDPRESS_API_URL}/media`, {
+    const uploadResponse = await fetch(`${config.WORDPRESS_API_URL}/media`, {
       method: 'POST',
       headers: {
         'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`,
@@ -298,7 +298,7 @@ const uploadImageToWordPress = async (imageUrl) => {
 const processMainImageWithGoogleVision = async (postId) => {
   try {
     // Obtener detalles del post desde WordPress
-    const getPostEndpoint = `${WORDPRESS_API_URL}/appraisals/${postId}`;
+    const getPostEndpoint = `${config.WORDPRESS_API_URL}/appraisals/${postId}`;
 
     console.log(`Obteniendo detalles del post ID: ${postId}`);
     const postResponse = await fetch(getPostEndpoint, {
@@ -399,7 +399,7 @@ app.post('/update-metadata', async (req, res) => {
 
   try {
     // Obtener detalles del post desde WordPress
-    const getPostEndpoint = `${WORDPRESS_API_URL}/appraisals/${postId}`;
+    const getPostEndpoint = `${config.WORDPRESS_API_URL}/appraisals/${postId}`;
 
     console.log(`Obteniendo detalles del post ID: ${postId}`);
     const postResponse = await fetch(getPostEndpoint, {
@@ -458,7 +458,7 @@ app.post('/complete-appraisal-report', async (req, res) => {
 
   try {
     // Obtener detalles del post desde WordPress
-    const getPostEndpoint = `${WORDPRESS_API_URL}/appraisals/${postId}`;
+    const getPostEndpoint = `${config.WORDPRESS_API_URL}/appraisals/${postId}`;
 
     console.log(`Obteniendo detalles del post ID: ${postId}`);
     const postResponse = await fetch(getPostEndpoint, {
@@ -598,7 +598,7 @@ loadSecrets().then(async () => {
   initializeVisionClient(); // Inicializar el cliente de Vision
   await initializeGoogleApis(); // Inicializar las APIs de Google
     // Asignar los secretos al módulo config
-  config.WORDPRESS_API_URL = WORDPRESS_API_URL;
+  config.config.WORDPRESS_API_URL = config.WORDPRESS_API_URL;
   config.WORDPRESS_USERNAME = WORDPRESS_USERNAME;
   config.WORDPRESS_APP_PASSWORD = WORDPRESS_APP_PASSWORD;
   config.OPENAI_API_KEY = OPENAI_API_KEY;
