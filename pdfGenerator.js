@@ -15,7 +15,6 @@ const router = express.Router();
 // Inicializar el cliente de Secret Manager
 const secretClient = new SecretManagerServiceClient();
 
-
 // Función genérica para obtener un secreto de Secret Manager
 async function getSecret(secretName) {
   try {
@@ -32,14 +31,11 @@ async function getSecret(secretName) {
   }
 }
 
-
-
 // Inicializar el cliente de Google APIs
 let docs;
 let drive;
 
-// pdfGenerator.js
-
+// Función para inicializar las APIs de Google
 async function initializeGoogleApis() {
   try {
     const credentials = JSON.parse(config.GOOGLE_DOCS_CREDENTIALS);
@@ -64,10 +60,9 @@ async function initializeGoogleApis() {
   }
 }
 
-
+// Función para ajustar el tamaño de la fuente del título
 const adjustTitleFontSize = async (documentId, titleText) => {
   try {
-    // Obtener el contenido completo del documento después de reemplazar los placeholders
     const document = await docs.documents.get({ documentId: documentId });
     const content = document.data.body.content;
 
@@ -137,6 +132,7 @@ const adjustTitleFontSize = async (documentId, titleText) => {
   }
 };
 
+// Función para obtener metadatos de WordPress
 const getPostMetadata = async (postId, metadataKey) => {
   try {
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
@@ -217,9 +213,6 @@ const getImageFieldUrlFromPost = async (postId, fieldName) => {
   }
 };
 
-
-
-
 // Función para obtener el título de un post de WordPress
 const getPostTitle = async (postId) => {
   try {
@@ -245,7 +238,6 @@ const getPostTitle = async (postId) => {
   }
 };
 
-
 // Función para obtener la fecha de publicación de un post de WordPress
 const getPostDate = async (postId) => {
   try {
@@ -270,7 +262,6 @@ const getPostDate = async (postId) => {
     throw error;
   }
 };
-
 
 // Función para exportar un documento de Google Docs a PDF
 const exportDocumentToPDF = async (documentId) => {
@@ -503,7 +494,7 @@ const insertFormattedMetadata = async (documentId, placeholder, tableData) => {
     console.log('Tabla encontrada correctamente.');
 
     // Preparar las solicitudes para insertar el texto en las celdas
-    const requests = [];
+    const requestsInsertText = [];
 
     for (let i = 0; i < tableRows.length; i++) {
       const row = tableElement.table.tableRows[i];
@@ -512,7 +503,7 @@ const insertFormattedMetadata = async (documentId, placeholder, tableData) => {
         const cellStartIndex = cell.startIndex + 1; // +1 para dentro de la celda
         const text = tableRows[i][j];
 
-        requests.push({
+        requestsInsertText.push({
           insertText: {
             text: text,
             location: {
@@ -523,7 +514,7 @@ const insertFormattedMetadata = async (documentId, placeholder, tableData) => {
 
         // Si es la primera columna, aplicar negrita
         if (j === 0 && text) {
-          requests.push({
+          requestsInsertText.push({
             updateTextStyle: {
               range: {
                 startIndex: cellStartIndex,
@@ -540,11 +531,11 @@ const insertFormattedMetadata = async (documentId, placeholder, tableData) => {
     }
 
     // Enviar las solicitudes para insertar el texto y aplicar estilos
-    if (requests.length > 0) {
+    if (requestsInsertText.length > 0) {
       await docs.documents.batchUpdate({
         documentId: documentId,
         requestBody: {
-          requests: requests,
+          requests: requestsInsertText,
         },
       });
       console.log('Metadato "table" insertado y formateado como tabla en el documento.');
@@ -553,7 +544,6 @@ const insertFormattedMetadata = async (documentId, placeholder, tableData) => {
     }
 
     // Aplicar estilos a la tabla (bordes y padding)
-    const tableId = tableElement.table.tableRows[0].tableCells[0].startIndex; // Obtenemos un identificador de la tabla
     const tablePropertiesRequests = [
       {
         updateTableProperties: {
@@ -561,17 +551,36 @@ const insertFormattedMetadata = async (documentId, placeholder, tableData) => {
             index: tableElement.startIndex,
           },
           tableProperties: {
-            borderWidth: {
-              magnitude: 1,
-              unit: 'PT',
-            },
-            borderColor: {
-              color: {
-                rgbColor: {
-                  red: 0,
-                  green: 0,
-                  blue: 0,
-                },
+            tableBorderProperties: {
+              borderTop: {
+                color: { color: { rgbColor: { red: 0, green: 0, blue: 0 } } },
+                width: { magnitude: 1, unit: 'PT' },
+                dashStyle: 'SOLID',
+              },
+              borderBottom: {
+                color: { color: { rgbColor: { red: 0, green: 0, blue: 0 } } },
+                width: { magnitude: 1, unit: 'PT' },
+                dashStyle: 'SOLID',
+              },
+              borderLeft: {
+                color: { color: { rgbColor: { red: 0, green: 0, blue: 0 } } },
+                width: { magnitude: 1, unit: 'PT' },
+                dashStyle: 'SOLID',
+              },
+              borderRight: {
+                color: { color: { rgbColor: { red: 0, green: 0, blue: 0 } } },
+                width: { magnitude: 1, unit: 'PT' },
+                dashStyle: 'SOLID',
+              },
+              borderInsideHorizontal: {
+                color: { color: { rgbColor: { red: 0, green: 0, blue: 0 } } },
+                width: { magnitude: 1, unit: 'PT' },
+                dashStyle: 'SOLID',
+              },
+              borderInsideVertical: {
+                color: { color: { rgbColor: { red: 0, green: 0, blue: 0 } } },
+                width: { magnitude: 1, unit: 'PT' },
+                dashStyle: 'SOLID',
               },
             },
           },
@@ -625,32 +634,30 @@ const insertFormattedMetadata = async (documentId, placeholder, tableData) => {
   }
 };
 
-
 // Función para clonar una plantilla de Google Docs y obtener el enlace al documento clonado
 const cloneTemplate = async (templateId) => {
   try {
     const sanitizedTemplateId = templateId.trim();
 
     // Log para verificar el ID sanitizado
-console.log(`Clonando plantilla con ID: '${sanitizedTemplateId}'`);
+    console.log(`Clonando plantilla con ID: '${sanitizedTemplateId}'`);
 
     const copiedFile = await drive.files.copy({
       fileId: sanitizedTemplateId,
       requestBody: {
-name: `Informe_Tasacion_${uuidv4()}`,
+        name: `Informe_Tasacion_${uuidv4()}`,
       },
       fields: 'id, webViewLink', // Solicitamos el webViewLink
       supportsAllDrives: true, // Soporte para Unidades Compartidas
     });
 
-console.log(`Plantilla clonada con ID: ${copiedFile.data.id}`);
+    console.log(`Plantilla clonada con ID: ${copiedFile.data.id}`);
     return { id: copiedFile.data.id, link: copiedFile.data.webViewLink };
   } catch (error) {
     console.error('Error clonando la plantilla de Google Docs:', error);
-throw new Error(`Error clonando la plantilla de Google Docs: ${error.message}`);
+    throw new Error(`Error clonando la plantilla de Google Docs: ${error.message}`);
   }
 };
-
 
 // Función para actualizar el campo ACF 'pdflink' de un post
 const updatePostACFFields = async (postId, pdfLink) => {
@@ -685,8 +692,6 @@ const updatePostACFFields = async (postId, pdfLink) => {
     throw error;
   }
 };
-
-
 
 // Función para obtener la galería de imágenes de un post de WordPress
 const getPostGallery = async (postId) => {
@@ -824,92 +829,6 @@ const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
   }
 };
 
-// Función para eliminar placeholders sobrantes
-const removeExtraPlaceholders = async (documentId, totalPlaceholders) => {
-  try {
-    console.log('Iniciando eliminación de placeholders sobrantes.');
-
-    // Obtener el contenido completo del documento
-    const document = await docs.documents.get({ documentId });
-    const content = document.data.body.content;
-
-    // Recorrer todos los posibles placeholders y eliminar los que excedan
-    for (let i = totalPlaceholders + 1; ; i++) {
-      const placeholder = `googlevision${i}`;
-      const found = await findAndRemovePlaceholder(documentId, placeholder);
-      if (!found) break; // Si no se encuentra el placeholder, detener el bucle
-    }
-
-    console.log('Eliminación de placeholders sobrantes completada.');
-  } catch (error) {
-    console.error('Error eliminando placeholders sobrantes:', error);
-    throw error;
-  }
-};
-
-// Función auxiliar para encontrar y eliminar un placeholder específico
-const findAndRemovePlaceholder = async (documentId, placeholder) => {
-  try {
-    const document = await docs.documents.get({ documentId });
-    const content = document.data.body.content;
-
-    // Función recursiva para buscar el placeholder
-    const findPlaceholder = (elements) => {
-      for (const element of elements) {
-        if (element.paragraph && element.paragraph.elements) {
-          for (const elem of element.paragraph.elements) {
-            if (elem.textRun && elem.textRun.content.includes(`{{${placeholder}}}`)) {
-              const startIndex = elem.startIndex + elem.textRun.content.indexOf(`{{${placeholder}}}`);
-              const endIndex = startIndex + `{{${placeholder}}}`.length;
-              return { startIndex, endIndex };
-            }
-          }
-        } else if (element.table) {
-          for (const row of element.table.tableRows) {
-            for (const cell of row.tableCells) {
-              const result = findPlaceholder(cell.content);
-              if (result) return result;
-            }
-          }
-        }
-      }
-      return null;
-    };
-
-    const placeholderInfo = findPlaceholder(content);
-
-    if (placeholderInfo) {
-      const { startIndex, endIndex } = placeholderInfo;
-
-      // Eliminar el placeholder
-      await docs.documents.batchUpdate({
-        documentId: documentId,
-        requestBody: {
-          requests: [
-            {
-              deleteContentRange: {
-                range: {
-                  startIndex: startIndex,
-                  endIndex: endIndex,
-                },
-              },
-            },
-          ],
-        },
-      });
-
-      console.log(`Placeholder '{{${placeholder}}}' eliminado del documento.`);
-      return true;
-    } else {
-      return false;
-    }
-  } catch (error) {
-    console.error(`Error buscando y eliminando placeholder '{{${placeholder}}}':`, error);
-    throw error;
-  }
-};
-
-
 // Función para reemplazar placeholders con imágenes del array 'gallery'
 const replacePlaceholdersWithImages = async (documentId, gallery) => {
   try {
@@ -930,7 +849,6 @@ const replacePlaceholdersWithImages = async (documentId, gallery) => {
     throw error;
   }
 };
-
 
 // Función para subir el PDF a Google Drive
 const uploadPDFToDrive = async (pdfBuffer, pdfFilename, folderId) => {
@@ -972,7 +890,6 @@ const uploadPDFToDrive = async (pdfBuffer, pdfFilename, folderId) => {
     throw new Error('Error subiendo el PDF a Google Drive.');
   }
 };
-
 
 // Función para mover el archivo clonado a una carpeta específica en Google Drive
 const moveFileToFolder = async (fileId, folderId) => {
@@ -1131,7 +1048,7 @@ const addGalleryImages = async (documentId, gallery) => {
 
     // Insertar placeholders en las celdas de la tabla
     let placeholderNumber = 1;
-    const requests = [];
+    const requestsInsertPlaceholders = [];
 
     for (let rowIndex = 0; rowIndex < tableElement.table.tableRows.length; rowIndex++) {
       const row = tableElement.table.tableRows[rowIndex];
@@ -1143,7 +1060,7 @@ const addGalleryImages = async (documentId, gallery) => {
         const placeholderText = `{{googlevision${placeholderNumber}}}`;
         console.log(`Insertando placeholder '${placeholderText}' en la celda con startIndex ${cellStartIndex}`);
 
-        requests.push({
+        requestsInsertPlaceholders.push({
           insertText: {
             text: placeholderText,
             location: {
@@ -1157,14 +1074,14 @@ const addGalleryImages = async (documentId, gallery) => {
     }
 
     // Ordenar las solicitudes por index descendente para evitar conflictos de índices
-    requests.sort((a, b) => b.insertText.location.index - a.insertText.location.index);
+    requestsInsertPlaceholders.sort((a, b) => b.insertText.location.index - a.insertText.location.index);
 
     // Enviar las solicitudes para insertar los placeholders
-    if (requests.length > 0) {
+    if (requestsInsertPlaceholders.length > 0) {
       await docs.documents.batchUpdate({
         documentId: documentId,
         requestBody: {
-          requests: requests,
+          requests: requestsInsertPlaceholders,
         },
       });
       console.log('Placeholders de imágenes de la galería insertados en la tabla');
@@ -1180,160 +1097,6 @@ const addGalleryImages = async (documentId, gallery) => {
   } catch (error) {
     console.error('Error agregando imágenes de la galería a Google Docs:', error);
     throw new Error(`Error agregando imágenes de la galería a Google Docs: ${error.message}`);
-  }
-};
-
-
-// Función para insertar el metadato "table" como una tabla en el documento
-const insertMetadataTable = async (documentId, placeholder, tableData) => {
-  try {
-    const document = await docs.documents.get({ documentId: documentId });
-    const content = document.data.body.content;
-
-    let placeholderFound = false;
-    let placeholderIndex = -1;
-
-    // Buscar el placeholder en todo el contenido, incluyendo tablas
-    const findPlaceholder = (elements) => {
-      for (const element of elements) {
-        if (element.paragraph && element.paragraph.elements) {
-          for (const elem of element.paragraph.elements) {
-            if (elem.textRun && elem.textRun.content.includes(`{{${placeholder}}}`)) {
-              placeholderFound = true;
-              placeholderIndex = elem.startIndex;
-              return;
-            }
-          }
-        } else if (element.table) {
-          for (const row of element.table.tableRows) {
-            for (const cell of row.tableCells) {
-              findPlaceholder(cell.content);
-              if (placeholderFound) return;
-            }
-          }
-        }
-      }
-    };
-
-    findPlaceholder(content);
-
-    if (!placeholderFound) {
-      console.warn(`Placeholder "{{${placeholder}}}" no encontrado en el documento.`);
-      return;
-    }
-
-    // Eliminar el placeholder
-    await docs.documents.batchUpdate({
-      documentId: documentId,
-      requestBody: {
-        requests: [
-          {
-            deleteContentRange: {
-              range: {
-                startIndex: placeholderIndex,
-                endIndex: placeholderIndex + `{{${placeholder}}}`.length,
-              },
-            },
-          },
-        ],
-      },
-    });
-
-    // Parsear el contenido de tableData y preparar los datos para la tabla
-    const rows = tableData.split('-').map(item => item.trim()).filter(item => item);
-    const tableRows = rows.map(row => {
-      const [key, value] = row.split(':').map(s => s.trim());
-      return [key || '', value || ''];
-    });
-
-    // Insertar la tabla en el documento
-    const numRows = tableRows.length;
-    const numCols = 2; // Clave y Valor
-
-    await docs.documents.batchUpdate({
-      documentId: documentId,
-      requestBody: {
-        requests: [
-          {
-            insertTable: {
-              rows: numRows,
-              columns: numCols,
-              location: {
-                index: placeholderIndex,
-              },
-            },
-          },
-        ],
-      },
-    });
-
-    // Esperar para que la tabla se inserte correctamente
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Obtener el documento actualizado
-    const updatedDocument = await docs.documents.get({ documentId: documentId });
-    const updatedContent = updatedDocument.data.body.content;
-
-    // Encontrar la tabla insertada
-    let tableElement = null;
-
-    const findTableAtIndex = (elements) => {
-      for (const element of elements) {
-        if (element.table && element.startIndex === placeholderIndex) {
-          tableElement = element;
-          return;
-        } else if (element.table) {
-          for (const row of element.table.tableRows) {
-            for (const cell of row.tableCells) {
-              findTableAtIndex(cell.content);
-              if (tableElement) return;
-            }
-          }
-        }
-      }
-    };
-
-    findTableAtIndex(updatedContent);
-
-    if (!tableElement) {
-      console.warn('No se encontró la tabla insertada para el metadato "table".');
-      return;
-    }
-
-    // Preparar las solicitudes para insertar el texto en las celdas
-    const requests = [];
-    let cellIndex = 0;
-
-    for (let i = 0; i < tableRows.length; i++) {
-      const row = tableElement.table.tableRows[i];
-      for (let j = 0; j < numCols; j++) {
-        const cell = row.tableCells[j];
-        const cellStartIndex = cell.startIndex + 1; // +1 para dentro de la celda
-        const text = tableRows[i][j];
-
-        requests.push({
-          insertText: {
-            text: text,
-            location: {
-              index: cellStartIndex,
-            },
-          },
-        });
-      }
-    }
-
-    // Enviar las solicitudes para insertar el texto
-    await docs.documents.batchUpdate({
-      documentId: documentId,
-      requestBody: {
-        requests: requests,
-      },
-    });
-
-    console.log('Metadato "table" insertado como tabla en el documento.');
-  } catch (error) {
-    console.error('Error insertando el metadato "table" como tabla en el documento:', error);
-    throw error;
   }
 };
 
@@ -1501,4 +1264,4 @@ router.post('/generate-pdf', async (req, res) => {
   }
 });
 
-
+module.exports = { router, initializeGoogleApis };
