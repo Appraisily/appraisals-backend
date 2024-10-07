@@ -598,155 +598,101 @@ const getPostGallery = async (postId) => {
   }
 };
 
-// Función para insertar una imagen en el lugar de un placeholder específico
-const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
+
+// Función para insertar una imagen en todas las ocurrencias de un placeholder específico
+const insertImageAtAllPlaceholders = async (documentId, placeholder, imageUrl) => {
   try {
     const document = await docs.documents.get({ documentId });
     const content = document.data.body.content;
 
-    // Función recursiva para buscar el placeholder
-    const findPlaceholder = (elements) => {
+    const placeholderFull = `{{${placeholder}}}`;
+    const placeholderLength = placeholderFull.length;
+    const occurrences = []; // Array para almacenar las ubicaciones de los placeholders
+
+    // Función recursiva para buscar todas las ocurrencias del placeholder
+    const findAllPlaceholders = (elements) => {
       for (const element of elements) {
         if (element.paragraph && element.paragraph.elements) {
           for (const textElement of element.paragraph.elements) {
-            if (textElement.textRun && textElement.textRun.content.includes(`{{${placeholder}}}`)) {
-              const startIndex = textElement.startIndex + textElement.textRun.content.indexOf(`{{${placeholder}}}`);
-              const endIndex = startIndex + `{{${placeholder}}}`.length;
+            if (textElement.textRun && textElement.textRun.content.includes(placeholderFull)) {
+              const textContent = textElement.textRun.content;
+              let startIndex = textElement.startIndex;
+              let index = textContent.indexOf(placeholderFull);
 
-              console.log(`Placeholder '{{${placeholder}}}' encontrado en startIndex: ${startIndex}, endIndex: ${endIndex}`);
+              while (index !== -1) {
+                const placeholderStart = startIndex + index;
+                const placeholderEnd = placeholderStart + placeholderLength;
+                occurrences.push({ startIndex: placeholderStart, endIndex: placeholderEnd });
 
-              return { startIndex, endIndex };
+                index = textContent.indexOf(placeholderFull, index + placeholderLength);
+              }
             }
           }
         } else if (element.table) {
           for (const row of element.table.tableRows) {
             for (const cell of row.tableCells) {
-              const result = findPlaceholder(cell.content);
-              if (result) return result;
+              findAllPlaceholders(cell.content);
             }
           }
         }
       }
-      return null;
     };
 
-    const placeholderInfo = findPlaceholder(content);
+    findAllPlaceholders(content);
 
-    if (placeholderInfo) {
-      const { startIndex, endIndex } = placeholderInfo;
+    if (occurrences.length === 0) {
+      console.warn(`No se encontraron ocurrencias del placeholder '{{${placeholder}}}'.`);
+      return;
+    }
 
+    console.log(`Se encontraron ${occurrences.length} ocurrencias del placeholder '{{${placeholder}}}'.`);
+
+    // Ordenar las ocurrencias de mayor a menor startIndex para evitar conflictos de índices al modificar el documento
+    occurrences.sort((a, b) => b.startIndex - a.startIndex);
+
+    // Preparar las solicitudes de batchUpdate
+    const requests = [];
+
+    for (const occ of occurrences) {
       // Eliminar el placeholder
-      await docs.documents.batchUpdate({
-        documentId: documentId,
-        requestBody: {
-          requests: [
-            {
-              deleteContentRange: {
-                range: {
-                  startIndex: startIndex,
-                  endIndex: endIndex,
-                },
-              },
-            },
-          ],
+      requests.push({
+        deleteContentRange: {
+          range: {
+            startIndex: occ.startIndex,
+            endIndex: occ.endIndex,
+          },
         },
       });
 
-      console.log(`Placeholder '{{${placeholder}}}' eliminado del documento.`);
-
-      // Insertar la imagen en el índice donde estaba el placeholder
-      await docs.documents.batchUpdate({
-        documentId: documentId,
-        requestBody: {
-          requests: [
-            {
-              insertInlineImage: {
-                uri: imageUrl,
-                location: {
-                  index: startIndex,
-                },
-                objectSize: {
-                  height: { magnitude: 150, unit: 'PT' }, // Puedes ajustar el tamaño según tus necesidades
-                  width: { magnitude: 150, unit: 'PT' },
-                },
-              },
-            },
-          ],
+      // Insertar la imagen en la ubicación del placeholder
+      requests.push({
+        insertInlineImage: {
+          uri: imageUrl,
+          location: {
+            index: occ.startIndex,
+          },
+          objectSize: {
+            height: { magnitude: 150, unit: 'PT' }, // Ajusta el tamaño según tus necesidades
+            width: { magnitude: 150, unit: 'PT' },
+          },
         },
       });
-
-      console.log(`Imagen insertada en el placeholder '{{${placeholder}}}'.`);
-    } else {
-      console.warn(`No se encontró el placeholder '{{${placeholder}}}' en el documento.`);
-    }
-  } catch (error) {
-    console.error(`Error insertando imagen en el placeholder '{{${placeholder}}}':`, error);
-    throw error;
-  }
-};
-
-// Función para reemplazar placeholders con imágenes del array 'gallery'
-const replacePlaceholdersWithImages = async (documentId, gallery) => {
-  try {
-    console.log('Iniciando reemplazo de placeholders con imágenes.');
-
-    for (let i = 0; i < gallery.length; i++) {
-      const placeholder = `googlevision${i + 1}`; // Genera el nombre del placeholder
-      const imageUrl = gallery[i];
-
-      console.log(`Reemplazando placeholder '{{${placeholder}}}' con la imagen: ${imageUrl}`);
-
-      await insertImageAtPlaceholder(documentId, placeholder, imageUrl);
     }
 
-    console.log('Reemplazo de placeholders completado.');
-  } catch (error) {
-    console.error('Error reemplazando placeholders con imágenes:', error);
-    throw error;
-  }
-};
-
-// Función para subir el PDF a Google Drive
-const uploadPDFToDrive = async (pdfBuffer, pdfFilename, folderId) => {
-  try {
-    const fileMetadata = {
-      name: pdfFilename,
-      parents: [folderId],
-    };
-
-    const media = {
-      mimeType: 'application/pdf',
-      body: Readable.from(pdfBuffer),
-    };
-
-    const file = await drive.files.create({
-      resource: fileMetadata,
-      media: media,
-      fields: 'id, webViewLink, webContentLink',
-      supportsAllDrives: true, // Añade esto si usas Unidades Compartidas
-    });
-
-    const fileId = file.data.id;
-    const webViewLink = file.data.webViewLink;
-
-    // Hacer el archivo público
-    await drive.permissions.create({
-      fileId: fileId,
+    // Enviar todas las solicitudes en un solo batchUpdate
+    await docs.documents.batchUpdate({
+      documentId: documentId,
       requestBody: {
-        role: 'reader',
-        type: 'anyone',
+        requests: requests,
       },
-      supportsAllDrives: true, // Añade esto si usas Unidades Compartidas
     });
 
-    console.log(`PDF subido exitosamente a Google Drive con ID: ${fileId}`);
-    return webViewLink;
+    console.log(`Todas las ocurrencias del placeholder '{{${placeholder}}}' han sido reemplazadas con la imagen.`);
   } catch (error) {
-    console.error('Error subiendo el PDF a Google Drive:', error);
-    throw new Error('Error subiendo el PDF a Google Drive.');
+    console.error(`Error insertando imágenes en todas las ocurrencias del placeholder '{{${placeholder}}}':`, error);
+    throw error;
   }
 };
-
 // Función para mover el archivo clonado a una carpeta específica en Google Drive
 const moveFileToFolder = async (fileId, folderId) => {
   try {
