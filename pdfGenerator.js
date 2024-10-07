@@ -526,30 +526,30 @@ const updatePostACFFields = async (postId, fields, WORDPRESS_API_URL, WORDPRESS_
 // Función para obtener la galería de imágenes de un post de WordPress
 const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
   try {
-    const response = await fetch(${WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf, {
+    const response = await fetch(`${WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': Basic ${Buffer.from(${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}).toString('base64')}
+        'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
       }
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(Error obteniendo post de WordPress:, errorText);
+      console.error('Error obteniendo post de WordPress:', errorText);
       throw new Error('Error obteniendo post de WordPress.');
     }
 
     const postData = await response.json();
 
     // Log completo para inspeccionar la estructura
-    console.log(postData:, JSON.stringify(postData, null, 2));
+    console.log('postData:', JSON.stringify(postData, null, 2));
 
     // Acceder al campo de galería ACF (asegurándose de usar el nombre correcto del campo)
     const galleryField = postData.acf && postData.acf.googlevision ? postData.acf.googlevision : [];
 
     // Verificar la estructura de la galería
-    console.log(Galería de imágenes obtenida (IDs de medios):, galleryField);
+    console.log('Galería de imágenes obtenida (IDs de medios):', galleryField);
 
     if (Array.isArray(galleryField) && galleryField.length > 0) {
       // Obtener las URLs de las imágenes usando getImageUrl
@@ -560,42 +560,18 @@ const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WOR
       // Filtrar URLs nulas
       const validImageUrls = imageUrls.filter(url => url !== null);
 
-      console.log(URLs de imágenes procesadas:, validImageUrls);
+      console.log('URLs de imágenes procesadas:', validImageUrls);
       return validImageUrls;
     }
 
-    console.log(No se encontraron imágenes en la galería.);
+    console.log('No se encontraron imágenes en la galería.');
     return [];
   } catch (error) {
-    console.error(Error obteniendo la galería del post ID ${postId}:, error);
+    console.error(`Error obteniendo la galería del post ID ${postId}:`, error);
     throw error;
   }
 };
 
-// Función para clonar una plantilla de Google Docs y obtener el enlace al documento clonado
-const cloneTemplate = async (templateId) => {
-  try {
-    const sanitizedTemplateId = templateId.trim();
-
-    // Log para verificar el ID sanitizado
-    console.log(`Clonando plantilla con ID: '${sanitizedTemplateId}'`);
-
-    const copiedFile = await drive.files.copy({
-      fileId: sanitizedTemplateId,
-      requestBody: {
-        name: `Informe_Tasacion_${uuidv4()}`,
-      },
-      fields: 'id, webViewLink', // Solicitamos el webViewLink
-      supportsAllDrives: true, // Soporte para Unidades Compartidas
-    });
-
-    console.log(`Plantilla clonada con ID: ${copiedFile.data.id}`);
-    return { id: copiedFile.data.id, link: copiedFile.data.webViewLink };
-  } catch (error) {
-    console.error('Error clonando la plantilla de Google Docs:', error);
-    throw new Error(`Error clonando la plantilla de Google Docs: ${error.message}`);
-  }
-};
 
 const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
   try {
