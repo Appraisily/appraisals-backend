@@ -515,19 +515,20 @@ const cloneTemplate = async (templateId) => {
   }
 };
 
-// Función para actualizar el campo ACF 'pdflink' de un post
-const updatePostACFFields = async (postId, pdfLink) => {
+// Función para actualizar los campos ACF 'pdflink' y 'doclink' de un post
+const updatePostACFFields = async (postId, pdfLink, docLink) => {
   const updateWpEndpoint = `${config.WORDPRESS_API_URL}/appraisals/${postId}`;
 
   const updateData = {
     acf: {
-      pdflink: pdfLink
+      pdflink: pdfLink,
+      doclink: docLink // Añadido para almacenar el enlace al documento de Google Docs
     }
   };
 
   try {
     const response = await fetch(updateWpEndpoint, {
-      method: 'POST', // Si 'POST' funciona en tu caso
+      method: 'POST', // Asegúrate de que 'POST' es el método correcto para actualizar
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(config.WORDPRESS_USERNAME)}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
@@ -537,17 +538,18 @@ const updatePostACFFields = async (postId, pdfLink) => {
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Error actualizando campo ACF 'pdflink' en WordPress:`, errorText);
-      throw new Error('Error actualizando campo ACF en WordPress.');
+      console.error(`Error actualizando campos ACF en WordPress:`, errorText);
+      throw new Error('Error actualizando campos ACF en WordPress.');
     }
 
-    console.log(`Campo ACF 'pdflink' actualizado correctamente en el post ID ${postId}.`);
+    console.log(`Campos ACF 'pdflink' y 'doclink' actualizados correctamente en el post ID ${postId}.`);
     return;
   } catch (error) {
-    console.error(`Error actualizando campo ACF 'pdflink' para el post ID ${postId}:`, error);
+    console.error(`Error actualizando campos ACF para el post ID ${postId}:`, error);
     throw error;
   }
 };
+
 
 // Función para obtener la galería de imágenes de un post de WordPress
 const getPostGallery = async (postId) => {
