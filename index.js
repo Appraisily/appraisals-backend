@@ -38,9 +38,9 @@ async function getSecret(secretName) {
 }
 
 // Variables para almacenar los secretos
-let config.WORDPRESS_API_URL;
-let config.WORDPRESS_USERNAME;
-let config.WORDPRESS_APP_PASSWORD;
+config.WORDPRESS_API_URL;
+config.WORDPRESS_USERNAME;
+config.WORDPRESS_APP_PASSWORD;
 let OPENAI_API_KEY;
 let GOOGLE_VISION_CREDENTIALS; // Nuevo secreto para Vision API
 
