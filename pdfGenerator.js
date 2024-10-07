@@ -34,18 +34,7 @@ async function getSecret(secretName) {
 
 
 
-// Función para cargar todos los secretos al iniciar la aplicación
-async function loadSecrets() {
-  try {
-    config.WORDPRESS_API_URL = await getSecret('config.WORDPRESS_API_URL');
-    config.WORDPRESS_USERNAME = await getSecret('config.WORDPRESS_USERNAME');
-    config.WORDPRESS_APP_PASSWORD = await getSecret('config.WORDPRESS_APP_PASSWORD');
-    console.log('Todos los secretos han sido cargados exitosamente.');
-  } catch (error) {
-    console.error('Error cargando los secretos:', error);
-    process.exit(1); // Salir si no se pudieron cargar los secretos
-  }
-}
+
 
 // Función para obtener un secreto de Secret Manager
 async function getGoogleDocsCredentials() {
