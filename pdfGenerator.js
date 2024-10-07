@@ -137,8 +137,7 @@ const adjustTitleFontSize = async (documentId, titleText) => {
   }
 };
 
-// Función para obtener metadatos de un post de WordPress
-const getPostMetadata = async (postId, metadataKey, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD) => {
+const getPostMetadata = async (postId, metadataKey) => {
   try {
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
       method: 'GET',
