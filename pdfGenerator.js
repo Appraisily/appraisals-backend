@@ -526,7 +526,7 @@ const updatePostACFFields = async (postId, fields, WORDPRESS_API_URL, WORDPRESS_
 
   try {
     const response = await fetch(updateWpEndpoint, {
-      method: 'POST', // Puedes usar 'PUT' o 'PATCH' si es necesario
+      method: 'POST', // Si 'POST' funciona en tu caso
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Basic ${Buffer.from(`${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}`).toString('base64')}`
