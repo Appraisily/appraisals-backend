@@ -172,7 +172,7 @@ const getPostMetadata = async (postId, metadataKey) => {
 };
 
 // Función para obtener la URL de un campo de imagen ACF
-const getImageFieldUrlFromPost = async (postId, fieldName, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD) => {
+const getImageFieldUrlFromPost = async (postId, fieldName) => {
   try {
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
       method: 'GET',
@@ -198,7 +198,7 @@ const getImageFieldUrlFromPost = async (postId, fieldName, config.WORDPRESS_API_
         return imageField;
       } else if (typeof imageField === 'number') {
         // ID de media
-        const imageUrl = await getImageUrl(imageField, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD);
+        const imageUrl = await getImageUrl(imageField);
         return imageUrl;
       } else if (typeof imageField === 'object' && imageField.url) {
         // Objeto de imagen con URL
@@ -219,8 +219,9 @@ const getImageFieldUrlFromPost = async (postId, fieldName, config.WORDPRESS_API_
 
 
 
+
 // Función para obtener el título de un post de WordPress
-const getPostTitle = async (postId, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD) => {
+const getPostTitle = async (postId) => {
   try {
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=title`, {
       method: 'GET',
@@ -244,8 +245,9 @@ const getPostTitle = async (postId, config.WORDPRESS_API_URL, config.WORDPRESS_U
   }
 };
 
+
 // Función para obtener la fecha de publicación de un post de WordPress
-const getPostDate = async (postId, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD) => {
+const getPostDate = async (postId) => {
   try {
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=date`, {
       method: 'GET',
@@ -268,6 +270,7 @@ const getPostDate = async (postId, config.WORDPRESS_API_URL, config.WORDPRESS_US
     throw error;
   }
 };
+
 
 // Función para exportar un documento de Google Docs a PDF
 const exportDocumentToPDF = async (documentId) => {
@@ -522,7 +525,7 @@ throw new Error(`Error clonando la plantilla de Google Docs: ${error.message}`);
 
 
 // Función para actualizar el campo ACF 'pdflink' de un post
-const updatePostACFFields = async (postId, pdfLink, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD) => {
+const updatePostACFFields = async (postId, pdfLink) => {
   const updateWpEndpoint = `${config.WORDPRESS_API_URL}/appraisals/${postId}`;
 
   const updateData = {
@@ -556,8 +559,9 @@ const updatePostACFFields = async (postId, pdfLink, config.WORDPRESS_API_URL, co
 };
 
 
+
 // Función para obtener la galería de imágenes de un post de WordPress
-const getPostGallery = async (postId, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD) => {
+const getPostGallery = async (postId) => {
   try {
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
       method: 'GET',
@@ -587,7 +591,7 @@ const getPostGallery = async (postId, config.WORDPRESS_API_URL, config.WORDPRESS
     if (Array.isArray(galleryField) && galleryField.length > 0) {
       // Obtener las URLs de las imágenes usando getImageUrl
       const imageUrls = await Promise.all(galleryField.map(async (mediaId) => {
-        return await getImageUrl(mediaId, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD);
+        return await getImageUrl(mediaId);
       }));
 
       // Filtrar URLs nulas
