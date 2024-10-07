@@ -47,11 +47,12 @@ let GOOGLE_VISION_CREDENTIALS; // Nuevo secreto para Vision API
 // Función para cargar todos los secretos al iniciar la aplicación
 async function loadSecrets() {
   try {
-    config.WORDPRESS_API_URL = await getSecret('config.WORDPRESS_API_URL');
+    config.WORDPRESS_API_URL = await getSecret('WORDPRESS_API_URL');
     config.WORDPRESS_USERNAME = await getSecret('wp_username');
     config.WORDPRESS_APP_PASSWORD = await getSecret('wp_app_password');
-    OPENAI_API_KEY = await getSecret('OPENAI_API_KEY');
-    GOOGLE_VISION_CREDENTIALS = await getSecret('GOOGLE_VISION_CREDENTIALS'); // Cargar las credenciales de Vision
+    config.OPENAI_API_KEY = await getSecret('OPENAI_API_KEY');
+    config.GOOGLE_VISION_CREDENTIALS = await getSecret('GOOGLE_VISION_CREDENTIALS'); // Cargar las credenciales de Vision
+    config.GOOGLE_DOCS_CREDENTIALS = await getSecret('GOOGLE_DOCS_CREDENTIALS'); // Si es necesario
     console.log('Todos los secretos han sido cargados exitosamente.');
   } catch (error) {
     console.error('Error cargando los secretos:', error);
