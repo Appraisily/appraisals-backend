@@ -1346,7 +1346,10 @@ router.post('/generate-pdf', async (req, res) => {
   }
 
   try {
-    // Paso 1: Obtener los secretos y variables de entorno necesarios
+    // Paso 1: Inicializar las APIs de Google
+    await initializeGoogleApis();
+
+    // Paso 2: Obtener los secretos y variables de entorno necesarios
     const GOOGLE_DOCS_TEMPLATE_ID = process.env.GOOGLE_DOCS_TEMPLATE_ID;
     const GOOGLE_DRIVE_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
@@ -1357,7 +1360,7 @@ router.post('/generate-pdf', async (req, res) => {
       throw new Error('GOOGLE_DOCS_TEMPLATE_ID y GOOGLE_DRIVE_FOLDER_ID deben estar definidos en las variables de entorno.');
     }
 
-    // Paso 2: Obtener los metadatos adicionales del post
+    // Paso 3: Obtener los metadatos adicionales del post
     const metadataKeys = [
       'test',
       'ad_copy',
@@ -1373,12 +1376,10 @@ router.post('/generate-pdf', async (req, res) => {
       'authorship',
       'table',
       'glossary',
-      'value'         // Añadido
+      'value' // Añadido
     ];
 
-    const metadataPromises = metadataKeys.map(key =>
-      getPostMetadata(postId, key)
-    );
+    const metadataPromises = metadataKeys.map(key => getPostMetadata(postId, key));
     const metadataValues = await Promise.all(metadataPromises);
 
     const metadata = {};
@@ -1401,7 +1402,7 @@ router.post('/generate-pdf', async (req, res) => {
       metadata.appraisal_value = ''; // Si no hay valor, dejar vacío
     }
 
-    // Obtener el título, la fecha y las URLs de las imágenes
+    // Paso 4: Obtener el título, la fecha y las URLs de las imágenes
     const [postTitle, postDate, ageImageUrl, signatureImageUrl, mainImageUrl] = await Promise.all([
       getPostTitle(postId),
       getPostDate(postId),
@@ -1410,7 +1411,7 @@ router.post('/generate-pdf', async (req, res) => {
       getImageFieldUrlFromPost(postId, 'main'),
     ]);
 
-    // Obtener la galería de imágenes del post
+    // Paso 5: Obtener la galería de imágenes del post
     const gallery = await getPostGallery(postId);
 
     // Log para verificar los metadatos, el título, la fecha y la galería obtenidos
@@ -1427,10 +1428,10 @@ router.post('/generate-pdf', async (req, res) => {
     const clonedDocId = clonedDoc.id;
     const clonedDocLink = clonedDoc.link;
 
-    // (Opcional) Mover el archivo clonado a la carpeta deseada
+    // Paso 7: Mover el archivo clonado a la carpeta deseada
     await moveFileToFolder(clonedDocId, GOOGLE_DRIVE_FOLDER_ID);
 
-    // Paso 7: Reemplazar los marcadores de posición en el documento
+    // Paso 8: Reemplazar los marcadores de posición en el documento
     const data = {
       ...metadata,
       appraisal_title: postTitle,
@@ -1438,35 +1439,25 @@ router.post('/generate-pdf', async (req, res) => {
     };
     await replacePlaceholdersInDocument(clonedDocId, data);
 
-    // Paso 8: Ajustar el tamaño de la fuente del título
+    // Paso 9: Ajustar el tamaño de la fuente del título
     await adjustTitleFontSize(clonedDocId, postTitle);
 
-    // Paso 9: Insertar el metadato "table" como tabla
+    // Paso 10: Insertar el metadato "table" como tabla
     if (metadata.table) {
       await insertFormattedMetadata(clonedDocId, 'table', metadata.table);
     }
 
-    // Paso 10: Agregar las imágenes de la galería al documento
+    // Paso 11: Agregar la galería de imágenes al documento
     if (gallery.length > 0) {
       await addGalleryImages(clonedDocId, gallery);
     }
 
-    // Paso 11: Insertar imágenes en los placeholders
-  // Paso 10: Agregar las imágenes de la galería al documento
-    if (gallery.length > 0) {
-      await addGalleryImages(clonedDocId, gallery);
-    }
-
-    // Paso 11: Insertar imágenes en los placeholders
-    // Primero, reemplazar los placeholders de la tabla con las imágenes
+    // Paso 12: Reemplazar los placeholders de la galería con las imágenes
     if (gallery.length > 0) {
       await replacePlaceholdersWithImages(clonedDocId, gallery);
     }
 
-    // Paso 12: Eliminar cualquier placeholder sobrante
-    await removeExtraPlaceholders(clonedDocId, gallery.length);
-
-    // Paso 13: Insertar otras imágenes en placeholders específicos si es necesario
+    // Paso 13: Insertar imágenes en placeholders específicos si es necesario
     if (ageImageUrl) {
       await insertImageAtPlaceholder(clonedDocId, 'age_image', ageImageUrl);
     }
@@ -1477,11 +1468,10 @@ router.post('/generate-pdf', async (req, res) => {
       await insertImageAtPlaceholder(clonedDocId, 'main_image', mainImageUrl);
     }
 
-
-    // Paso 12: Exportar el documento a PDF
+    // Paso 14: Exportar el documento a PDF
     const pdfBuffer = await exportDocumentToPDF(clonedDocId);
 
-    // Paso 13: Determinar el nombre del archivo PDF
+    // Paso 15: Determinar el nombre del archivo PDF
     let pdfFilename;
     if (session_ID && typeof session_ID === 'string' && session_ID.trim() !== '') {
       pdfFilename = `${session_ID}.pdf`;
@@ -1489,10 +1479,10 @@ router.post('/generate-pdf', async (req, res) => {
       pdfFilename = `Informe_Tasacion_Post_${postId}_${uuidv4()}.pdf`;
     }
 
-    // Paso 14: Subir el PDF a Google Drive
+    // Paso 16: Subir el PDF a Google Drive
     const pdfLink = await uploadPDFToDrive(pdfBuffer, pdfFilename, GOOGLE_DRIVE_FOLDER_ID);
 
-    // Paso 15: Actualizar los campos ACF del post con los enlaces
+    // Paso 17: Actualizar los campos ACF del post con los enlaces
     console.log(`config.WORDPRESS_USERNAME: ${config.WORDPRESS_USERNAME}`);
     console.log(`config.WORDPRESS_APP_PASSWORD: ${config.WORDPRESS_APP_PASSWORD ? '***' : 'No definido'}`);
 
@@ -1511,5 +1501,4 @@ router.post('/generate-pdf', async (req, res) => {
   }
 });
 
-module.exports = { router, initializeGoogleApis };
 
