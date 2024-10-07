@@ -292,9 +292,8 @@ const exportDocumentToPDF = async (documentId) => {
   }
 };
 
-
 // Función auxiliar para obtener la URL de una imagen dado su ID de media
-const getImageUrl = async (mediaId, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD) => {
+const getImageUrl = async (mediaId) => {
   try {
     const response = await fetch(`${config.WORDPRESS_API_URL}/media/${mediaId}?_fields=source_url`, {
       method: 'GET',
