@@ -490,6 +490,31 @@ const insertFormattedMetadata = async (documentId, placeholder, tableData) => {
   }
 };
 
+// Función para clonar una plantilla de Google Docs y obtener el enlace al documento clonado
+const cloneTemplate = async (templateId) => {
+  try {
+    const sanitizedTemplateId = templateId.trim();
+
+    // Log para verificar el ID sanitizado
+    console.log(Clonando plantilla con ID: '${sanitizedTemplateId}');
+
+    const copiedFile = await drive.files.copy({
+      fileId: sanitizedTemplateId,
+      requestBody: {
+        name: Informe_Tasacion_${uuidv4()},
+      },
+      fields: 'id, webViewLink', // Solicitamos el webViewLink
+      supportsAllDrives: true, // Soporte para Unidades Compartidas
+    });
+
+    console.log(Plantilla clonada con ID: ${copiedFile.data.id});
+    return { id: copiedFile.data.id, link: copiedFile.data.webViewLink };
+  } catch (error) {
+    console.error('Error clonando la plantilla de Google Docs:', error);
+    throw new Error(Error clonando la plantilla de Google Docs: ${error.message});
+  }
+};
+
 
 // Función para actualizar campos ACF de un post
 const updatePostACFFields = async (postId, fields, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
