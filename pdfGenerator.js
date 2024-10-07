@@ -766,6 +766,8 @@ const moveFileToFolder = async (fileId, folderId) => {
     throw new Error('Error moviendo el archivo.');
   }
 };
+
+// Función para agregar imágenes de la galería al documento
 const addGalleryImages = async (documentId, gallery) => {
   try {
     console.log('Iniciando addGalleryImages');
@@ -866,15 +868,15 @@ const addGalleryImages = async (documentId, gallery) => {
     // Encontrar la tabla recién insertada
     let tableElement = null;
 
-    const findTableAtIndex = (elements, index) => {
+    const findFirstTableAfterIndex = (elements, index) => {
       for (const element of elements) {
-        if (element.table && element.startIndex === index) {
+        if (element.table && element.startIndex >= index) {
           tableElement = element;
           return;
         } else if (element.table) {
           for (const row of element.table.tableRows) {
             for (const cell of row.tableCells) {
-              findTableAtIndex(cell.content, index);
+              findFirstTableAfterIndex(cell.content, index);
               if (tableElement) return;
             }
           }
@@ -882,15 +884,16 @@ const addGalleryImages = async (documentId, gallery) => {
       }
     };
 
-    findTableAtIndex(content, galleryPlaceholderIndex);
+    findFirstTableAfterIndex(content, galleryPlaceholderIndex);
 
     if (!tableElement) {
       console.warn('No se encontró la tabla insertada para la galería.');
       return;
     }
 
-    // Continuar con la inserción de placeholders e imágenes
-    // Insertar placeholders en las celdas
+    console.log('Tabla encontrada correctamente.');
+
+    // Insertar placeholders en las celdas de la tabla
     let placeholderNumber = 1;
     const requests = [];
 
@@ -899,7 +902,7 @@ const addGalleryImages = async (documentId, gallery) => {
       for (let columnIndex = 0; columnIndex < row.tableCells.length; columnIndex++) {
         if (placeholderNumber > gallery.length) break;
         const cell = row.tableCells[columnIndex];
-        // Cambiar a cell.endIndex - 1 para insertar al final de la celda
+        // Insertar al final de la celda
         const cellStartIndex = cell.endIndex - 1;
         const placeholderText = `{{googlevision${placeholderNumber}}}`;
         console.log(`Insertando placeholder '${placeholderText}' en la celda con startIndex ${cellStartIndex}`);
@@ -932,14 +935,9 @@ const addGalleryImages = async (documentId, gallery) => {
 
     await new Promise(resolve => setTimeout(resolve, 1000)); // Esperar 1 segundo
 
-    // Reemplazar los placeholders por las imágenes
-    for (let i = 0; i < gallery.length; i++) {
-      const placeholder = `googlevision${i + 1}`;
-      const imageUrl = gallery[i];
-      await insertImageAtPlaceholder(documentId, placeholder, imageUrl);
-    }
+    console.log('Tabla con placeholders insertada correctamente. Puedes verificar el documento ahora.');
 
-    console.log('Imágenes de la galería insertadas en el documento.');
+    // Aquí no se reemplazan los placeholders por imágenes aún, como lo deseas.
   } catch (error) {
     console.error('Error agregando imágenes de la galería a Google Docs:', error);
     throw new Error(`Error agregando imágenes de la galería a Google Docs: ${error.message}`);
