@@ -608,7 +608,7 @@ const getPostGallery = async (postId) => {
   }
 };
 
-
+// Función para insertar una imagen en el lugar de un placeholder específico
 const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
   try {
     const document = await docs.documents.get({ documentId });
@@ -632,9 +632,7 @@ const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
           for (const row of element.table.tableRows) {
             for (const cell of row.tableCells) {
               const result = findPlaceholder(cell.content);
-              if (result) {
-                return result;
-              }
+              if (result) return result;
             }
           }
         }
@@ -664,6 +662,8 @@ const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
         },
       });
 
+      console.log(`Placeholder '{{${placeholder}}}' eliminado del documento.`);
+
       // Insertar la imagen en el índice donde estaba el placeholder
       await docs.documents.batchUpdate({
         documentId: documentId,
@@ -676,7 +676,7 @@ const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
                   index: startIndex,
                 },
                 objectSize: {
-                  height: { magnitude: 150, unit: 'PT' },
+                  height: { magnitude: 150, unit: 'PT' }, // Puedes ajustar el tamaño según tus necesidades
                   width: { magnitude: 150, unit: 'PT' },
                 },
               },
@@ -685,12 +685,119 @@ const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
         },
       });
 
-      console.log(`Imagen insertada en el placeholder {{${placeholder}}}`);
+      console.log(`Imagen insertada en el placeholder '{{${placeholder}}}'.`);
     } else {
-      console.warn(`No se encontró el placeholder {{${placeholder}}} en el documento.`);
+      console.warn(`No se encontró el placeholder '{{${placeholder}}}' en el documento.`);
     }
   } catch (error) {
-    console.error(`Error insertando imagen en el placeholder {{${placeholder}}}:`, error);
+    console.error(`Error insertando imagen en el placeholder '{{${placeholder}}}':`, error);
+    throw error;
+  }
+};
+
+// Función para eliminar placeholders sobrantes
+const removeExtraPlaceholders = async (documentId, totalPlaceholders) => {
+  try {
+    console.log('Iniciando eliminación de placeholders sobrantes.');
+
+    // Obtener el contenido completo del documento
+    const document = await docs.documents.get({ documentId });
+    const content = document.data.body.content;
+
+    // Recorrer todos los posibles placeholders y eliminar los que excedan
+    for (let i = totalPlaceholders + 1; ; i++) {
+      const placeholder = `googlevision${i}`;
+      const found = await findAndRemovePlaceholder(documentId, placeholder);
+      if (!found) break; // Si no se encuentra el placeholder, detener el bucle
+    }
+
+    console.log('Eliminación de placeholders sobrantes completada.');
+  } catch (error) {
+    console.error('Error eliminando placeholders sobrantes:', error);
+    throw error;
+  }
+};
+
+// Función auxiliar para encontrar y eliminar un placeholder específico
+const findAndRemovePlaceholder = async (documentId, placeholder) => {
+  try {
+    const document = await docs.documents.get({ documentId });
+    const content = document.data.body.content;
+
+    // Función recursiva para buscar el placeholder
+    const findPlaceholder = (elements) => {
+      for (const element of elements) {
+        if (element.paragraph && element.paragraph.elements) {
+          for (const elem of element.paragraph.elements) {
+            if (elem.textRun && elem.textRun.content.includes(`{{${placeholder}}}`)) {
+              const startIndex = elem.startIndex + elem.textRun.content.indexOf(`{{${placeholder}}}`);
+              const endIndex = startIndex + `{{${placeholder}}}`.length;
+              return { startIndex, endIndex };
+            }
+          }
+        } else if (element.table) {
+          for (const row of element.table.tableRows) {
+            for (const cell of row.tableCells) {
+              const result = findPlaceholder(cell.content);
+              if (result) return result;
+            }
+          }
+        }
+      }
+      return null;
+    };
+
+    const placeholderInfo = findPlaceholder(content);
+
+    if (placeholderInfo) {
+      const { startIndex, endIndex } = placeholderInfo;
+
+      // Eliminar el placeholder
+      await docs.documents.batchUpdate({
+        documentId: documentId,
+        requestBody: {
+          requests: [
+            {
+              deleteContentRange: {
+                range: {
+                  startIndex: startIndex,
+                  endIndex: endIndex,
+                },
+              },
+            },
+          ],
+        },
+      });
+
+      console.log(`Placeholder '{{${placeholder}}}' eliminado del documento.`);
+      return true;
+    } else {
+      return false;
+    }
+  } catch (error) {
+    console.error(`Error buscando y eliminando placeholder '{{${placeholder}}}':`, error);
+    throw error;
+  }
+};
+
+
+// Función para reemplazar placeholders con imágenes del array 'gallery'
+const replacePlaceholdersWithImages = async (documentId, gallery) => {
+  try {
+    console.log('Iniciando reemplazo de placeholders con imágenes.');
+
+    for (let i = 0; i < gallery.length; i++) {
+      const placeholder = `googlevision${i + 1}`; // Genera el nombre del placeholder
+      const imageUrl = gallery[i];
+
+      console.log(`Reemplazando placeholder '{{${placeholder}}}' con la imagen: ${imageUrl}`);
+
+      await insertImageAtPlaceholder(documentId, placeholder, imageUrl);
+    }
+
+    console.log('Reemplazo de placeholders completado.');
+  } catch (error) {
+    console.error('Error reemplazando placeholders con imágenes:', error);
     throw error;
   }
 };
@@ -1216,6 +1323,21 @@ router.post('/generate-pdf', async (req, res) => {
     }
 
     // Paso 11: Insertar imágenes en los placeholders
+  // Paso 10: Agregar las imágenes de la galería al documento
+    if (gallery.length > 0) {
+      await addGalleryImages(clonedDocId, gallery);
+    }
+
+    // Paso 11: Insertar imágenes en los placeholders
+    // Primero, reemplazar los placeholders de la tabla con las imágenes
+    if (gallery.length > 0) {
+      await replacePlaceholdersWithImages(clonedDocId, gallery);
+    }
+
+    // Paso 12: Eliminar cualquier placeholder sobrante
+    await removeExtraPlaceholders(clonedDocId, gallery.length);
+
+    // Paso 13: Insertar otras imágenes en placeholders específicos si es necesario
     if (ageImageUrl) {
       await insertImageAtPlaceholder(clonedDocId, 'age_image', ageImageUrl);
     }
@@ -1225,6 +1347,7 @@ router.post('/generate-pdf', async (req, res) => {
     if (mainImageUrl) {
       await insertImageAtPlaceholder(clonedDocId, 'main_image', mainImageUrl);
     }
+
 
     // Paso 12: Exportar el documento a PDF
     const pdfBuffer = await exportDocumentToPDF(clonedDocId);
