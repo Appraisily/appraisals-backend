@@ -523,6 +523,54 @@ const updatePostACFFields = async (postId, fields, WORDPRESS_API_URL, WORDPRESS_
   }
 };
 
+// Función para obtener la galería de imágenes de un post de WordPress
+const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
+  try {
+    const response = await fetch(${WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': Basic ${Buffer.from(${encodeURIComponent(WORDPRESS_USERNAME)}:${WORDPRESS_APP_PASSWORD}).toString('base64')}
+      }
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(Error obteniendo post de WordPress:, errorText);
+      throw new Error('Error obteniendo post de WordPress.');
+    }
+
+    const postData = await response.json();
+
+    // Log completo para inspeccionar la estructura
+    console.log(postData:, JSON.stringify(postData, null, 2));
+
+    // Acceder al campo de galería ACF (asegurándose de usar el nombre correcto del campo)
+    const galleryField = postData.acf && postData.acf.googlevision ? postData.acf.googlevision : [];
+
+    // Verificar la estructura de la galería
+    console.log(Galería de imágenes obtenida (IDs de medios):, galleryField);
+
+    if (Array.isArray(galleryField) && galleryField.length > 0) {
+      // Obtener las URLs de las imágenes usando getImageUrl
+      const imageUrls = await Promise.all(galleryField.map(async (mediaId) => {
+        return await getImageUrl(mediaId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
+      }));
+
+      // Filtrar URLs nulas
+      const validImageUrls = imageUrls.filter(url => url !== null);
+
+      console.log(URLs de imágenes procesadas:, validImageUrls);
+      return validImageUrls;
+    }
+
+    console.log(No se encontraron imágenes en la galería.);
+    return [];
+  } catch (error) {
+    console.error(Error obteniendo la galería del post ID ${postId}:, error);
+    throw error;
+  }
+};
 
 // Función para clonar una plantilla de Google Docs y obtener el enlace al documento clonado
 const cloneTemplate = async (templateId) => {
