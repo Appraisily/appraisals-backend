@@ -496,22 +496,22 @@ const cloneTemplate = async (templateId) => {
     const sanitizedTemplateId = templateId.trim();
 
     // Log para verificar el ID sanitizado
-    console.log(Clonando plantilla con ID: '${sanitizedTemplateId}');
+console.log(`Clonando plantilla con ID: '${sanitizedTemplateId}'`);
 
     const copiedFile = await drive.files.copy({
       fileId: sanitizedTemplateId,
       requestBody: {
-        name: Informe_Tasacion_${uuidv4()},
+name: `Informe_Tasacion_${uuidv4()}`,
       },
       fields: 'id, webViewLink', // Solicitamos el webViewLink
       supportsAllDrives: true, // Soporte para Unidades Compartidas
     });
 
-    console.log(Plantilla clonada con ID: ${copiedFile.data.id});
+console.log(`Plantilla clonada con ID: ${copiedFile.data.id}`);
     return { id: copiedFile.data.id, link: copiedFile.data.webViewLink };
   } catch (error) {
     console.error('Error clonando la plantilla de Google Docs:', error);
-    throw new Error(Error clonando la plantilla de Google Docs: ${error.message});
+throw new Error(`Error clonando la plantilla de Google Docs: ${error.message}`);
   }
 };
 
