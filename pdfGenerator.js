@@ -1120,10 +1120,6 @@ router.post('/generate-pdf', async (req, res) => {
       throw new Error('GOOGLE_DOCS_TEMPLATE_ID y GOOGLE_DRIVE_FOLDER_ID deben estar definidos en las variables de entorno.');
     }
 
-    const config.WORDPRESS_API_URL = process.env.config.WORDPRESS_API_URL;
-    const config.WORDPRESS_USERNAME = process.env.config.WORDPRESS_USERNAME;
-    const config.WORDPRESS_APP_PASSWORD = process.env.config.WORDPRESS_APP_PASSWORD;
-
     // Paso 2: Obtener los metadatos adicionales del post
     const metadataKeys = [
       'test',
@@ -1144,7 +1140,7 @@ router.post('/generate-pdf', async (req, res) => {
     ];
 
     const metadataPromises = metadataKeys.map(key =>
-      getPostMetadata(postId, key, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD)
+      getPostMetadata(postId, key)
     );
     const metadataValues = await Promise.all(metadataPromises);
 
@@ -1170,15 +1166,15 @@ router.post('/generate-pdf', async (req, res) => {
 
     // Obtener el título, la fecha y las URLs de las imágenes
     const [postTitle, postDate, ageImageUrl, signatureImageUrl, mainImageUrl] = await Promise.all([
-      getPostTitle(postId, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD),
-      getPostDate(postId, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD),
-      getImageFieldUrlFromPost(postId, 'age', config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD),
-      getImageFieldUrlFromPost(postId, 'signature', config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD),
-      getImageFieldUrlFromPost(postId, 'main', config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD),
+      getPostTitle(postId),
+      getPostDate(postId),
+      getImageFieldUrlFromPost(postId, 'age'),
+      getImageFieldUrlFromPost(postId, 'signature'),
+      getImageFieldUrlFromPost(postId, 'main'),
     ]);
 
     // Obtener la galería de imágenes del post
-    const gallery = await getPostGallery(postId, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD);
+    const gallery = await getPostGallery(postId);
 
     // Log para verificar los metadatos, el título, la fecha y la galería obtenidos
     console.log(`Metadatos obtenidos:`, metadata);
@@ -1209,9 +1205,9 @@ router.post('/generate-pdf', async (req, res) => {
     await adjustTitleFontSize(clonedDocId, postTitle);
 
     // Paso 9: Insertar el metadato "table" como tabla
-if (metadata.table) {
-  await insertFormattedMetadata(clonedDocId, 'table', metadata.table);
-}
+    if (metadata.table) {
+      await insertFormattedMetadata(clonedDocId, 'table', metadata.table);
+    }
 
     // Paso 10: Agregar las imágenes de la galería al documento
     if (gallery.length > 0) {
@@ -1245,9 +1241,9 @@ if (metadata.table) {
 
     // Paso 15: Actualizar los campos ACF del post con los enlaces
     console.log(`config.WORDPRESS_USERNAME: ${config.WORDPRESS_USERNAME}`);
-console.log(`config.WORDPRESS_APP_PASSWORD: ${config.WORDPRESS_APP_PASSWORD ? '***' : 'No definido'}`);
+    console.log(`config.WORDPRESS_APP_PASSWORD: ${config.WORDPRESS_APP_PASSWORD ? '***' : 'No definido'}`);
 
-await updatePostACFFields(postId, pdfLink, config.WORDPRESS_API_URL, config.WORDPRESS_USERNAME, config.WORDPRESS_APP_PASSWORD);
+    await updatePostACFFields(postId, pdfLink);
 
     // Devolver el enlace al PDF y al documento de Google Docs
     res.json({
@@ -1262,5 +1258,5 @@ await updatePostACFFields(postId, pdfLink, config.WORDPRESS_API_URL, config.WORD
   }
 });
 
-module.exports = { router, initializeGoogleApis, loadSecrets };
+module.exports = { router, initializeGoogleApis };
 
