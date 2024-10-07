@@ -14,6 +14,41 @@ const router = express.Router();
 // Inicializar el cliente de Secret Manager
 const secretClient = new SecretManagerServiceClient();
 
+
+// Función genérica para obtener un secreto de Secret Manager
+async function getSecret(secretName) {
+  try {
+    const projectId = 'civil-forge-403609'; // Asegúrate de que este Project ID sea correcto
+    const secretPath = `projects/${projectId}/secrets/${secretName}/versions/latest`;
+
+    const [version] = await secretClient.accessSecretVersion({ name: secretPath });
+    const payload = version.payload.data.toString('utf8');
+    console.log(`Secreto '${secretName}' obtenido exitosamente.`);
+    return payload;
+  } catch (error) {
+    console.error(`Error obteniendo el secreto '${secretName}':`, error);
+    throw new Error(`No se pudo obtener el secreto '${secretName}'.`);
+  }
+}
+
+// Variables para almacenar los secretos
+let WORDPRESS_API_URL;
+let WORDPRESS_USERNAME;
+let WORDPRESS_APP_PASSWORD;
+
+// Función para cargar todos los secretos al iniciar la aplicación
+async function loadSecrets() {
+  try {
+    WORDPRESS_API_URL = await getSecret('WORDPRESS_API_URL');
+    WORDPRESS_USERNAME = await getSecret('WORDPRESS_USERNAME');
+    WORDPRESS_APP_PASSWORD = await getSecret('WORDPRESS_APP_PASSWORD');
+    console.log('Todos los secretos han sido cargados exitosamente.');
+  } catch (error) {
+    console.error('Error cargando los secretos:', error);
+    process.exit(1); // Salir si no se pudieron cargar los secretos
+  }
+}
+
 // Función para obtener un secreto de Secret Manager
 async function getGoogleDocsCredentials() {
   const secretName = 'GOOGLE_DOCS_CREDENTIALS'; // Nombre del secreto que almacena las credenciales de la cuenta de servicio
@@ -1247,5 +1282,5 @@ if (metadata.table) {
   }
 });
 
-module.exports = { router, initializeGoogleApis };
+module.exports = { router, initializeGoogleApis, loadSecrets };
 
