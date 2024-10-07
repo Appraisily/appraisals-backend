@@ -551,12 +551,14 @@ throw new Error(`Error clonando la plantilla de Google Docs: ${error.message}`);
 };
 
 
-// Función para actualizar campos ACF de un post
-const updatePostACFFields = async (postId, fields, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
+// Función para actualizar el campo ACF 'pdflink' de un post
+const updatePostACFFields = async (postId, pdfLink, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
   const updateWpEndpoint = `${WORDPRESS_API_URL}/appraisals/${postId}`;
 
   const updateData = {
-    acf: fields
+    acf: {
+      pdflink: pdfLink
+    }
   };
 
   try {
@@ -571,17 +573,18 @@ const updatePostACFFields = async (postId, fields, WORDPRESS_API_URL, WORDPRESS_
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error(`Error actualizando campos ACF en WordPress:`, errorText);
-      throw new Error('Error actualizando campos ACF en WordPress.');
+      console.error(`Error actualizando campo ACF 'pdflink' en WordPress:`, errorText);
+      throw new Error('Error actualizando campo ACF en WordPress.');
     }
 
-    console.log(`Campos ACF actualizados correctamente en el post ID ${postId}.`);
+    console.log(`Campo ACF 'pdflink' actualizado correctamente en el post ID ${postId}.`);
     return;
   } catch (error) {
-    console.error(`Error actualizando campos ACF para el post ID ${postId}:`, error);
+    console.error(`Error actualizando campo ACF 'pdflink' para el post ID ${postId}:`, error);
     throw error;
   }
 };
+
 
 // Función para obtener la galería de imágenes de un post de WordPress
 const getPostGallery = async (postId, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD) => {
@@ -1267,7 +1270,7 @@ if (metadata.table) {
     const pdfLink = await uploadPDFToDrive(pdfBuffer, pdfFilename, GOOGLE_DRIVE_FOLDER_ID);
 
     // Paso 15: Actualizar los campos ACF del post con los enlaces
-    await updatePostACFFields(postId, { pdflink: pdfLink, doclink: clonedDocLink }, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
+await updatePostACFFields(postId, pdfLink, WORDPRESS_API_URL, WORDPRESS_USERNAME, WORDPRESS_APP_PASSWORD);
 
     // Devolver el enlace al PDF y al documento de Google Docs
     res.json({
