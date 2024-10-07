@@ -920,6 +920,9 @@ const addGalleryImages = async (documentId, gallery) => {
       }
     }
 
+    // Ordenar las solicitudes por index descendente para evitar conflictos de índices
+    requests.sort((a, b) => b.insertText.location.index - a.insertText.location.index);
+
     // Enviar las solicitudes para insertar los placeholders
     if (requests.length > 0) {
       await docs.documents.batchUpdate({
