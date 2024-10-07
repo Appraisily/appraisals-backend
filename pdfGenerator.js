@@ -66,6 +66,7 @@ async function getGoogleDocsCredentials() {
   }
 }
 
+
 // Inicializar el cliente de Google APIs
 let docs;
 let drive;
