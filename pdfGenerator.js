@@ -691,36 +691,7 @@ const insertImageAtAllPlaceholders = async (documentId, placeholder, imageUrl) =
   }
 };
 
-// Función para reemplazar placeholders de la galería con imágenes
-const replacePlaceholdersWithImages = async (documentId, gallery) => {
-  try {
-    for (let i = 0; i < gallery.length; i++) {
-      const placeholder = `googlevision${i + 1}`; // Asumiendo placeholders como {{googlevision1}}, {{googlevision2}}, etc.
-      const imageUrl = gallery[i];
 
-      if (imageUrl) {
-        await insertImageAtAllPlaceholders(documentId, placeholder, imageUrl);
-        console.log(`Placeholder '{{${placeholder}}}' reemplazado con la imagen: ${imageUrl}`);
-      } else {
-        console.warn(`URL de imagen inválida para el placeholder '{{${placeholder}}}'.`);
-      }
-    }
-  } catch (error) {
-    console.error('Error reemplazando los placeholders de la galería con imágenes:', error);
-    throw error;
-  }
-};
-
-// Función para insertar imágenes en placeholders específicos (e.g., {{age_image}})
-const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
-  try {
-    await insertImageAtAllPlaceholders(documentId, placeholder, imageUrl);
-    console.log(`Placeholder '{{${placeholder}}}' reemplazado con la imagen: ${imageUrl}`);
-  } catch (error) {
-    console.error(`Error insertando la imagen en el placeholder '{{${placeholder}}}':`, error);
-    throw error;
-  }
-};
 
 // Función para mover el archivo clonado a una carpeta específica en Google Drive
 const moveFileToFolder = async (fileId, folderId) => {
