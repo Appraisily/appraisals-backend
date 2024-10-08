@@ -6,7 +6,7 @@ const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const { google } = require('googleapis');
 const { v4: uuidv4 } = require('uuid'); // Para generar nombres de archivos únicos
 const { Readable } = require('stream'); // Importar Readable desde stream
-const he = require('he'); // Librería para decodificar HTML cloneT
+const he = require('he'); // Librería para decodificar HTML
 const { format } = require('date-fns'); // Librería para formatear fechas
 const config = require('./config');
 
@@ -324,9 +324,6 @@ const replacePlaceholdersInDocument = async (documentId, data) => {
               for (const [key, value] of Object.entries(data)) {
                 const placeholder = `{{${key}}}`;
                 if (textElement.textRun.content.includes(placeholder)) {
-                  const startIndex = textElement.startIndex + textElement.textRun.content.indexOf(placeholder);
-                  const endIndex = startIndex + placeholder.length;
-
                   requests.push({
                     replaceAllText: {
                       containsText: {
@@ -461,6 +458,7 @@ const insertFormattedMetadata = async (documentId, placeholder, tableData) => {
             const [key, ] = row.split(':').map(s => s.trim());
             if (key) {
               // Calcular el índice donde empieza la negrita
+              // Nota: Esta lógica puede necesitar ajustes según la estructura exacta del documento
               const beforeText = rows.slice(0, idx).join('- ').length + 2; // +2 para el '- ' inicial
               const keyStartIndex = placeholderIndex + beforeText + 1; // +1 para el primer carácter después del placeholder
               return {
@@ -488,7 +486,6 @@ const insertFormattedMetadata = async (documentId, placeholder, tableData) => {
     throw error;
   }
 };
-
 
 // Función para clonar una plantilla de Google Docs y obtener el enlace al documento clonado
 const cloneTemplate = async (templateId) => {
@@ -550,7 +547,6 @@ const updatePostACFFields = async (postId, pdfLink, docLink) => {
   }
 };
 
-
 // Función para obtener la galería de imágenes de un post de WordPress
 const getPostGallery = async (postId) => {
   try {
@@ -599,7 +595,6 @@ const getPostGallery = async (postId) => {
     throw error;
   }
 };
-
 
 // Función para insertar una imagen en todas las ocurrencias de un placeholder específico
 const insertImageAtAllPlaceholders = async (documentId, placeholder, imageUrl) => {
@@ -695,6 +690,38 @@ const insertImageAtAllPlaceholders = async (documentId, placeholder, imageUrl) =
     throw error;
   }
 };
+
+// Función para reemplazar placeholders de la galería con imágenes
+const replacePlaceholdersWithImages = async (documentId, gallery) => {
+  try {
+    for (let i = 0; i < gallery.length; i++) {
+      const placeholder = `googlevision${i + 1}`; // Asumiendo placeholders como {{googlevision1}}, {{googlevision2}}, etc.
+      const imageUrl = gallery[i];
+
+      if (imageUrl) {
+        await insertImageAtAllPlaceholders(documentId, placeholder, imageUrl);
+        console.log(`Placeholder '{{${placeholder}}}' reemplazado con la imagen: ${imageUrl}`);
+      } else {
+        console.warn(`URL de imagen inválida para el placeholder '{{${placeholder}}}'.`);
+      }
+    }
+  } catch (error) {
+    console.error('Error reemplazando los placeholders de la galería con imágenes:', error);
+    throw error;
+  }
+};
+
+// Función para insertar imágenes en placeholders específicos (e.g., {{age_image}})
+const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
+  try {
+    await insertImageAtAllPlaceholders(documentId, placeholder, imageUrl);
+    console.log(`Placeholder '{{${placeholder}}}' reemplazado con la imagen: ${imageUrl}`);
+  } catch (error) {
+    console.error(`Error insertando la imagen en el placeholder '{{${placeholder}}}':`, error);
+    throw error;
+  }
+};
+
 // Función para mover el archivo clonado a una carpeta específica en Google Drive
 const moveFileToFolder = async (fileId, folderId) => {
   try {
@@ -904,6 +931,65 @@ const addGalleryImages = async (documentId, gallery) => {
   }
 };
 
+// Función para reemplazar placeholders de la galería con imágenes
+const replacePlaceholdersWithImages = async (documentId, gallery) => {
+  try {
+    for (let i = 0; i < gallery.length; i++) {
+      const placeholder = `googlevision${i + 1}`; // Asumiendo placeholders como {{googlevision1}}, {{googlevision2}}, etc.
+      const imageUrl = gallery[i];
+
+      if (imageUrl) {
+        await insertImageAtAllPlaceholders(documentId, placeholder, imageUrl);
+        console.log(`Placeholder '{{${placeholder}}}' reemplazado con la imagen: ${imageUrl}`);
+      } else {
+        console.warn(`URL de imagen inválida para el placeholder '{{${placeholder}}}'.`);
+      }
+    }
+  } catch (error) {
+    console.error('Error reemplazando los placeholders de la galería con imágenes:', error);
+    throw error;
+  }
+};
+
+// Función para insertar imágenes en placeholders específicos (e.g., {{age_image}})
+const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
+  try {
+    await insertImageAtAllPlaceholders(documentId, placeholder, imageUrl);
+    console.log(`Placeholder '{{${placeholder}}}' reemplazado con la imagen: ${imageUrl}`);
+  } catch (error) {
+    console.error(`Error insertando la imagen en el placeholder '{{${placeholder}}}':`, error);
+    throw error;
+  }
+};
+
+// Función para subir el PDF a Google Drive (Asegúrate de que esta función esté definida)
+const uploadPDFToDrive = async (pdfBuffer, pdfFilename, folderId) => {
+  try {
+    const fileMetadata = {
+      name: pdfFilename,
+      parents: [folderId],
+      mimeType: 'application/pdf',
+    };
+
+    const media = {
+      mimeType: 'application/pdf',
+      body: Readable.from(pdfBuffer),
+    };
+
+    const file = await drive.files.create({
+      resource: fileMetadata,
+      media: media,
+      fields: 'id, webViewLink',
+    });
+
+    console.log(`PDF subido a Google Drive con ID: ${file.data.id}`);
+    return file.data.webViewLink;
+  } catch (error) {
+    console.error('Error subiendo el PDF a Google Drive:', error);
+    throw new Error('Error subiendo el PDF a Google Drive.');
+  }
+};
+
 // Endpoint para generar el PDF
 router.post('/generate-pdf', async (req, res) => {
   const { postId, session_ID } = req.body; // Aceptar session_ID como parámetro
@@ -1021,7 +1107,7 @@ router.post('/generate-pdf', async (req, res) => {
 
     // Paso 12: Reemplazar los placeholders de la galería con las imágenes
     if (gallery.length > 0) {
-      await insertImageAtAllPlaceholders(clonedDocId, gallery);
+      await replacePlaceholdersWithImages(clonedDocId, gallery);
     }
 
     // Paso 13: Insertar imágenes en placeholders específicos si es necesario
@@ -1053,7 +1139,7 @@ router.post('/generate-pdf', async (req, res) => {
     console.log(`config.WORDPRESS_USERNAME: ${config.WORDPRESS_USERNAME}`);
     console.log(`config.WORDPRESS_APP_PASSWORD: ${config.WORDPRESS_APP_PASSWORD ? '***' : 'No definido'}`);
 
-    await updatePostACFFields(postId, pdfLink);
+    await updatePostACFFields(postId, pdfLink, clonedDocLink); // Pasar ambos enlaces
 
     // Devolver el enlace al PDF y al documento de Google Docs
     res.json({
@@ -1068,4 +1154,5 @@ router.post('/generate-pdf', async (req, res) => {
   }
 });
 
+// Exporta el router y cualquier otra función si es necesario
 module.exports = { router, initializeGoogleApis };
