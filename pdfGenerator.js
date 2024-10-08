@@ -1112,6 +1112,11 @@ router.post('/generate-pdf', async (req, res) => {
 
     await updatePostACFFields(postId, pdfLink, clonedDocLink); // Pasar ambos enlaces
 
+
+    // Devolver el enlace al PDF y al documento de Google Docs
+    console.log(`Enlace al PDF: ${pdfLink}`);
+    console.log(`Enlace al Documento de Google Docs: ${clonedDocLink}`);
+    
     // Devolver el enlace al PDF y al documento de Google Docs
     res.json({
       success: true,
