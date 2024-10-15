@@ -9,6 +9,7 @@ const { Readable } = require('stream'); // Importar Readable desde stream
 const he = require('he'); // Librería para decodificar HTML
 const { format } = require('date-fns'); // Librería para formatear fechas
 const config = require('./config');
+const cors = require('cors');
 
 const router = express.Router();
 
