@@ -18,6 +18,15 @@ const app = express();
 // Middleware para parsear JSON
 app.use(express.json());
 
+// Apply CORS middleware to all routes
+app.use(cors({
+  origin: 'https://appraisers-frontend-856401495068.us-central1.run.app', // Replace with your frontend URL
+  credentials: true, // If you need to send cookies or authentication headers
+}));
+
+// Use the pdfRouter
+app.use('/', pdfRouter);
+
 // Inicializar el cliente de Secret Manager
 const client = new SecretManagerServiceClient();
 
