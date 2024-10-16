@@ -9,6 +9,7 @@ const { v4: uuidv4 } = require('uuid'); // Para generar nombres de archivos úni
 const vision = require('@google-cloud/vision'); // Importar el cliente de Vision
 const FormData = require('form-data'); // Para subir imágenes a WordPress
 const config = require('./config');
+const cors = require('cors'); // Import the cors package
 
 // Importar el router de pdfGenerator
 const { router: pdfRouter, initializeGoogleApis } = require('./pdfGenerator');
