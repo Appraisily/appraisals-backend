@@ -602,8 +602,7 @@ app.post('/complete-appraisal-report', async (req, res) => {
   }
 });
 
-// Montar el router de pdfGenerator en el path raíz
-app.use('/', pdfRouter);
+
 
 // Iniciar el servidor después de cargar los secretos, inicializar Vision Client y Google APIs
 loadSecrets().then(async () => {
