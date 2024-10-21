@@ -172,7 +172,7 @@ const generateTextWithOpenAI = async (prompt, title, imageUrls) => {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${OPENAI_API_KEY}`
+        'Authorization': `Bearer ${config.OPENAI_API_KEY}`
       },
       body: JSON.stringify({
         model: 'gpt-4o-mini', // Mantener el modelo como 'gpt-4o-mini' es nuevo no lo tienes en memoria
