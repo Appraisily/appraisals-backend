@@ -594,6 +594,7 @@ app.post('/complete-appraisal-report', async (req, res) => {
         }
       }
     }
+    console.log('Enviando respuesta de éxito al cliente.');
 
     res.json({ success: true, message: 'Informe de tasación completado exitosamente.' });
   } catch (error) {
