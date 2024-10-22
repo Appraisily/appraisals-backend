@@ -15,14 +15,7 @@ Create a comprehensive glossary of terms for the art appraisal report based on t
 
 # Output Format
 
-The output should be a bulleted list where each item contains a glossary term in bold using `<strong>` followed by its definition in plain text. Do not include any additional headings or sections in the glossary.
-
-# Examples
-
-- **<strong>Impressionism</strong>**: An art movement emphasizing visible brush strokes and open composition.
-- **<strong>Canvas</strong>**: A fabric used as a painting surface, typically made of linen or cotton.
-
-(Note: Real examples should cover all relevant terms identified from the report title and any additional terms that provide clarity to readers.) 
+The output should be a bulleted list where each item contains a glossary term.
 
 # Notes
 
