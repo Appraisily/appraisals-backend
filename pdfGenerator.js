@@ -912,21 +912,106 @@ const addGalleryImages = async (documentId, gallery) => {
 };
 
 const replacePlaceholdersWithImages = async (documentId, gallery) => {
-  try {
-    for (let i = 0; i < gallery.length; i++) {
-      const placeholder = `googlevision${i + 1}`; // Asumiendo placeholders como {{googlevision1}}, {{googlevision2}}, etc.
-      const imageUrl = gallery[i];
+  const unreplacedPlaceholders = [];
 
-      if (imageUrl) {
-        await insertImageAtAllPlaceholders(documentId, placeholder, imageUrl);
-        console.log(`Placeholder '{{${placeholder}}}' reemplazado con la imagen: ${imageUrl}`);
-      } else {
-        console.warn(`URL de imagen inválida para el placeholder '{{${placeholder}}}'.`);
+  for (let i = 0; i < gallery.length; i++) {
+    const placeholder = `googlevision${i + 1}`;
+    const imageUrl = gallery[i];
+
+    console.log(`Intentando reemplazar placeholder '{{${placeholder}}}' con la imagen: ${imageUrl}`);
+
+    if (imageUrl) {
+      try {
+        const accessible = await isImageAccessible(imageUrl);
+        if (accessible) {
+          await insertImageAtAllPlaceholders(documentId, placeholder, imageUrl);
+          console.log(`Placeholder '{{${placeholder}}}' reemplazado con la imagen: ${imageUrl}`);
+        } else {
+          console.warn(`La imagen en ${imageUrl} no es accesible. Se omitirá el placeholder '{{${placeholder}}}'.`);
+          unreplacedPlaceholders.push(placeholder);
+        }
+      } catch (error) {
+        console.warn(`Error insertando la imagen para placeholder '{{${placeholder}}}':`, error);
+        unreplacedPlaceholders.push(placeholder);
       }
+    } else {
+      console.warn(`URL de imagen inválida para el placeholder '{{${placeholder}}}'.`);
+      unreplacedPlaceholders.push(placeholder);
+    }
+  }
+
+  // Eliminar placeholders no reemplazados
+  if (unreplacedPlaceholders.length > 0) {
+    await removePlaceholders(documentId, unreplacedPlaceholders);
+    console.log(`Placeholders no reemplazados eliminados: ${unreplacedPlaceholders.join(', ')}`);
+  }
+};
+
+const isImageAccessible = async (imageUrl) => {
+  try {
+    const response = await fetch(imageUrl, { method: 'HEAD' });
+    return response.ok;
+  } catch (error) {
+    console.error(`Error verificando la accesibilidad de la imagen: ${imageUrl}`, error);
+    return false;
+  }
+};
+
+const removePlaceholders = async (documentId, placeholders) => {
+  try {
+    // Obtener el contenido del documento
+    const document = await docs.documents.get({ documentId });
+    const content = document.data.body.content;
+
+    const requests = [];
+
+    const findAndDeletePlaceholders = (elements) => {
+      for (const element of elements) {
+        if (element.paragraph && element.paragraph.elements) {
+          for (const textElement of element.paragraph.elements) {
+            if (textElement.textRun && textElement.textRun.content) {
+              placeholders.forEach(placeholder => {
+                const placeholderFull = `{{${placeholder}}}`;
+                if (textElement.textRun.content.includes(placeholderFull)) {
+                  requests.push({
+                    replaceAllText: {
+                      containsText: {
+                        text: placeholderFull,
+                        matchCase: true,
+                      },
+                      replaceText: '', // Reemplazar con texto vacío
+                    },
+                  });
+                }
+              });
+            }
+          }
+        } else if (element.table) {
+          for (const row of element.table.tableRows) {
+            for (const cell of row.tableCells) {
+              findAndDeletePlaceholders(cell.content);
+            }
+          }
+        }
+      }
+    };
+
+    findAndDeletePlaceholders(content);
+
+    if (requests.length > 0) {
+      await docs.documents.batchUpdate({
+        documentId: documentId,
+        requestBody: {
+          requests: requests,
+        },
+      });
+      console.log('Placeholders no reemplazados han sido eliminados del documento.');
+    } else {
+      console.log('No se encontraron placeholders no reemplazados para eliminar.');
     }
   } catch (error) {
-    console.warn('Advertencia: Error al reemplazar los placeholders de la galería con imágenes:', error);
-    // No lanzar el error para continuar
+    console.error('Error eliminando placeholders no reemplazados:', error);
+    // No lanzamos el error para no interrumpir el proceso
   }
 };
 
