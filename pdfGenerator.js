@@ -911,7 +911,6 @@ const addGalleryImages = async (documentId, gallery) => {
   }
 };
 
-// Función para reemplazar placeholders de la galería con imágenes
 const replacePlaceholdersWithImages = async (documentId, gallery) => {
   try {
     for (let i = 0; i < gallery.length; i++) {
@@ -926,21 +925,26 @@ const replacePlaceholdersWithImages = async (documentId, gallery) => {
       }
     }
   } catch (error) {
-    console.error('Error reemplazando los placeholders de la galería con imágenes:', error);
-    throw error;
+    console.warn('Advertencia: Error al reemplazar los placeholders de la galería con imágenes:', error);
+    // No lanzar el error para continuar
   }
 };
 
-// Función para insertar imágenes en placeholders específicos (e.g., {{age_image}})
+
 const insertImageAtPlaceholder = async (documentId, placeholder, imageUrl) => {
   try {
-    await insertImageAtAllPlaceholders(documentId, placeholder, imageUrl);
-    console.log(`Placeholder '{{${placeholder}}}' reemplazado con la imagen: ${imageUrl}`);
+    if (imageUrl) {
+      await insertImageAtAllPlaceholders(documentId, placeholder, imageUrl);
+      console.log(`Placeholder '{{${placeholder}}}' reemplazado con la imagen: ${imageUrl}`);
+    } else {
+      console.warn(`URL de imagen inválida para el placeholder '{{${placeholder}}}'.`);
+    }
   } catch (error) {
-    console.error(`Error insertando la imagen en el placeholder '{{${placeholder}}}':`, error);
-    throw error;
+    console.warn(`Advertencia: No se pudo insertar la imagen en el placeholder '{{${placeholder}}}'. Error: ${error.message}`);
+    // No lanzar el error para continuar
   }
 };
+
 
 // Función para subir el PDF a Google Drive (Asegúrate de que esta función esté definida)
 const uploadPDFToDrive = async (pdfBuffer, pdfFilename, folderId) => {
