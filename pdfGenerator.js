@@ -597,7 +597,6 @@ const getPostGallery = async (postId) => {
   }
 };
 
-// Función para insertar una imagen en todas las ocurrencias de un placeholder específico
 const insertImageAtAllPlaceholders = async (documentId, placeholder, imageUrl) => {
   try {
     const document = await docs.documents.get({ documentId });
@@ -678,19 +677,28 @@ const insertImageAtAllPlaceholders = async (documentId, placeholder, imageUrl) =
     }
 
     // Enviar todas las solicitudes en un solo batchUpdate
-    await docs.documents.batchUpdate({
-      documentId: documentId,
-      requestBody: {
-        requests: requests,
-      },
-    });
-
-    console.log(`Todas las ocurrencias del placeholder '{{${placeholder}}}' han sido reemplazadas con la imagen.`);
+    if (requests.length > 0) {
+      try {
+        await docs.documents.batchUpdate({
+          documentId: documentId,
+          requestBody: {
+            requests: requests,
+          },
+        });
+        console.log(`Todas las ocurrencias del placeholder '{{${placeholder}}}' han sido reemplazadas con la imagen.`);
+      } catch (error) {
+        console.warn(`Advertencia: No se pudo insertar la imagen para el placeholder '{{${placeholder}}}'. Error: ${error.message}`);
+        // Continuar sin lanzar el error
+      }
+    } else {
+      console.warn(`No se encontraron solicitudes para reemplazar el placeholder '{{${placeholder}}}'.`);
+    }
   } catch (error) {
-    console.error(`Error insertando imágenes en todas las ocurrencias del placeholder '{{${placeholder}}}':`, error);
-    throw error;
+    console.error(`Error procesando el placeholder '{{${placeholder}}}':`, error);
+    // No lanzar el error para continuar el proceso
   }
 };
+
 
 
 
