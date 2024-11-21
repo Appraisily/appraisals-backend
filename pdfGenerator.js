@@ -1,8 +1,47 @@
-// Previous imports remain the same
+const express = require('express');
+const fetch = require('node-fetch');
+const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
+const { google } = require('googleapis');
+const { v4: uuidv4 } = require('uuid');
+const { Readable } = require('stream');
+const he = require('he');
+const { format } = require('date-fns');
+const config = require('./config');
+const FormData = require('form-data');
 const { processImageUrl } = require('./imageProcessor');
 
-// ... (previous code remains the same until insertImageAtAllPlaceholders function)
+const router = express.Router();
 
+// Initialize clients
+let docs;
+let drive;
+
+// Function to initialize Google APIs
+async function initializeGoogleApis() {
+  try {
+    const credentials = JSON.parse(config.GOOGLE_DOCS_CREDENTIALS);
+
+    const auth = new google.auth.GoogleAuth({
+      credentials: credentials,
+      scopes: [
+        'https://www.googleapis.com/auth/documents',
+        'https://www.googleapis.com/auth/drive',
+      ],
+    });
+
+    const authClient = await auth.getClient();
+
+    docs = google.docs({ version: 'v1', auth: authClient });
+    drive = google.drive({ version: 'v3', auth: authClient });
+
+    console.log('Google Docs and Drive clients initialized successfully');
+  } catch (error) {
+    console.error('Error initializing Google APIs:', error);
+    throw error;
+  }
+}
+
+// Function to insert images with compression
 const insertImageAtAllPlaceholders = async (documentId, placeholder, imageUrl) => {
   try {
     const document = await docs.documents.get({ documentId });
@@ -12,6 +51,7 @@ const insertImageAtAllPlaceholders = async (documentId, placeholder, imageUrl) =
     const placeholderLength = placeholderFull.length;
     const occurrences = [];
 
+    // Find all placeholders in the document
     const findAllPlaceholders = (elements) => {
       for (const element of elements) {
         if (element.paragraph && element.paragraph.elements) {
@@ -25,7 +65,6 @@ const insertImageAtAllPlaceholders = async (documentId, placeholder, imageUrl) =
                 const placeholderStart = startIndex + index;
                 const placeholderEnd = placeholderStart + placeholderLength;
                 occurrences.push({ startIndex: placeholderStart, endIndex: placeholderEnd });
-
                 index = textContent.indexOf(placeholderFull, index + placeholderLength);
               }
             }
@@ -43,22 +82,18 @@ const insertImageAtAllPlaceholders = async (documentId, placeholder, imageUrl) =
     findAllPlaceholders(content);
 
     if (occurrences.length === 0) {
-      console.warn(`No se encontraron ocurrencias del placeholder '{{${placeholder}}}'.`);
+      console.warn(`No occurrences found for placeholder '{{${placeholder}}}'`);
       return;
     }
 
-    console.log(`Se encontraron ${occurrences.length} ocurrencias del placeholder '{{${placeholder}}}'.`);
-
-    // Process and compress the image before insertion
+    // Process and compress the image
     let processedImageUrl = imageUrl;
     try {
       const compressedBuffer = await processImageUrl(imageUrl);
       
-      // Create a temporary FormData to upload the compressed image
       const form = new FormData();
       form.append('file', compressedBuffer, `compressed-${uuidv4()}.jpg`);
 
-      // Upload the compressed image to WordPress
       const uploadResponse = await fetch(`${config.WORDPRESS_API_URL}/media`, {
         method: 'POST',
         headers: {
@@ -74,17 +109,15 @@ const insertImageAtAllPlaceholders = async (documentId, placeholder, imageUrl) =
 
       const uploadData = await uploadResponse.json();
       processedImageUrl = uploadData.source_url;
-      console.log(`Compressed image uploaded successfully: ${processedImageUrl}`);
+      console.log(`Compressed image uploaded: ${processedImageUrl}`);
     } catch (error) {
-      console.warn(`Warning: Could not compress/upload image. Using original URL. Error: ${error.message}`);
-      // Continue with original URL if compression fails
+      console.warn(`Warning: Using original image URL. Compression failed: ${error.message}`);
     }
 
-    // Sort occurrences from highest to lowest index
+    // Replace placeholders with compressed image
     occurrences.sort((a, b) => b.startIndex - a.startIndex);
 
     const requests = [];
-
     for (const occ of occurrences) {
       requests.push({
         deleteContentRange: {
@@ -102,31 +135,32 @@ const insertImageAtAllPlaceholders = async (documentId, placeholder, imageUrl) =
             index: occ.startIndex,
           },
           objectSize: {
-            height: { magnitude: 150, unit: 'PT' },
-            width: { magnitude: 150, unit: 'PT' },
+            height: { magnitude: 120, unit: 'PT' }, // Reduced from 150
+            width: { magnitude: 120, unit: 'PT' }, // Reduced from 150
           },
         },
       });
     }
 
     if (requests.length > 0) {
-      try {
-        await docs.documents.batchUpdate({
-          documentId: documentId,
-          requestBody: {
-            requests: requests,
-          },
-        });
-        console.log(`Todas las ocurrencias del placeholder '{{${placeholder}}}' han sido reemplazadas con la imagen.`);
-      } catch (error) {
-        console.warn(`Advertencia: No se pudo insertar la imagen para el placeholder '{{${placeholder}}}'. Error: ${error.message}`);
-      }
-    } else {
-      console.warn(`No se encontraron solicitudes para reemplazar el placeholder '{{${placeholder}}}'.`);
+      await docs.documents.batchUpdate({
+        documentId: documentId,
+        requestBody: {
+          requests: requests,
+        },
+      });
+      console.log(`All occurrences of placeholder '{{${placeholder}}}' replaced with compressed image`);
     }
   } catch (error) {
-    console.error(`Error procesando el placeholder '{{${placeholder}}}':`, error);
+    console.error(`Error processing placeholder '{{${placeholder}}}':`, error);
   }
 };
 
-// ... (rest of the file remains exactly the same)
+// Rest of your pdfGenerator.js code...
+// (Keep all other existing functions)
+
+// Export router and initialization function
+module.exports = {
+  router,
+  initializeGoogleApis
+};

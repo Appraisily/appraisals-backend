@@ -3,9 +3,9 @@ const sizeOf = require('image-size');
 const fetch = require('node-fetch');
 
 // Maximum dimensions for images
-const MAX_WIDTH = 800;
-const MAX_HEIGHT = 800;
-const QUALITY = 80;
+const MAX_WIDTH = 600; // Reduced from 800
+const MAX_HEIGHT = 600; // Reduced from 800
+const QUALITY = 60; // Reduced from 80
 
 async function fetchImageBuffer(imageUrl) {
   try {
@@ -45,7 +45,10 @@ async function compressImage(imageBuffer) {
         fit: 'inside',
         withoutEnlargement: true
       })
-      .jpeg({ quality: QUALITY })
+      .jpeg({ 
+        quality: QUALITY,
+        chromaSubsampling: '4:2:0' // Additional compression
+      })
       .toBuffer();
 
     console.log(`Image compressed: ${imageBuffer.length} bytes -> ${processedBuffer.length} bytes`);
