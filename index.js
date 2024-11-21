@@ -1,3 +1,4 @@
+// index.js
 const express = require('express');
 const fetch = require('node-fetch');
 const fs = require('fs').promises;
@@ -29,8 +30,58 @@ app.use('/', pdfGenerator.router);
 // Inicializar el cliente de Secret Manager
 const client = new SecretManagerServiceClient();
 
-// Rest of your index.js code...
-// (Keep all the existing functions and endpoints)
+// Función para obtener un secreto de Secret Manager
+async function getSecret(secretName) {
+  try {
+    const projectId = 'civil-forge-403609';
+    const secretPath = `projects/${projectId}/secrets/${secretName}/versions/latest`;
+
+    const [version] = await client.accessSecretVersion({ name: secretPath });
+    const payload = version.payload.data.toString('utf8');
+    console.log(`Secreto '${secretName}' obtenido exitosamente.`);
+    return payload;
+  } catch (error) {
+    console.error(`Error obteniendo el secreto '${secretName}':`, error);
+    throw new Error(`No se pudo obtener el secreto '${secretName}'.`);
+  }
+}
+
+// Variables para almacenar los secretos
+let visionClient;
+
+// Función para cargar todos los secretos al iniciar la aplicación
+async function loadSecrets() {
+  try {
+    config.WORDPRESS_API_URL = await getSecret('WORDPRESS_API_URL');
+    config.WORDPRESS_USERNAME = await getSecret('wp_username');
+    config.WORDPRESS_APP_PASSWORD = await getSecret('wp_app_password');
+    config.OPENAI_API_KEY = await getSecret('OPENAI_API_KEY');
+    config.GOOGLE_VISION_CREDENTIALS = await getSecret('GOOGLE_VISION_CREDENTIALS');
+    config.GOOGLE_DOCS_CREDENTIALS = await getSecret('GOOGLE_DOCS_CREDENTIALS');
+    console.log('Todos los secretos han sido cargados exitosamente.');
+  } catch (error) {
+    console.error('Error cargando los secretos:', error);
+    throw error;
+  }
+}
+
+// Inicializar el cliente de Google Vision
+function initializeVisionClient() {
+  try {
+    const credentials = JSON.parse(config.GOOGLE_VISION_CREDENTIALS);
+    visionClient = new vision.ImageAnnotatorClient({
+      credentials: {
+        client_email: credentials.client_email,
+        private_key: credentials.private_key,
+      },
+      projectId: 'civil-forge-403609',
+    });
+    console.log('Cliente de Google Vision inicializado correctamente.');
+  } catch (error) {
+    console.error('Error inicializando el cliente de Google Vision:', error);
+    throw error;
+  }
+}
 
 // Iniciar el servidor después de cargar los secretos
 const startServer = async () => {
