@@ -1,14 +1,11 @@
-# Appraisals Backend Service
-
-Backend service for automating art appraisal reports using Google Vision AI and OpenAI GPT-4.
+# Appraisals Backend Service - Project Structure
 
 ## Overview
 
-This service automates the process of generating comprehensive art appraisal reports by:
-1. Analyzing artwork images using Google Vision AI
-2. Finding and storing similar images
-3. Generating expert art descriptions using GPT-4
-4. Managing PDF report generation
+Backend service for automating art appraisal reports using:
+- Google Vision AI for image analysis
+- OpenAI GPT-4 Vision for content generation
+- Google Docs/Drive for PDF generation
 
 ## Project Structure
 
@@ -77,6 +74,12 @@ Response:
 }
 ```
 
+Process:
+1. Retrieves post title and images from WordPress
+2. Processes main image with Google Vision AI to find similar images
+3. Generates metadata content using OpenAI GPT-4 Vision
+4. Updates WordPress post with generated content
+
 ### POST /generate-pdf
 
 Generates a PDF report from the appraisal data.
@@ -97,12 +100,17 @@ Response:
 }
 ```
 
+Process:
+1. Clones template from Google Docs
+2. Replaces placeholders with content and images
+3. Exports to PDF and uploads to Google Drive
+4. Returns links to both PDF and source Doc
+
 ## Requirements
 
 ### Environment Variables
 
-The following secrets must be configured in Google Cloud Secret Manager:
-
+Required secrets in Google Cloud Secret Manager:
 - `WORDPRESS_API_URL`: WordPress REST API endpoint
 - `wp_username`: WordPress username
 - `wp_app_password`: WordPress application password
@@ -116,23 +124,35 @@ Additional environment variables:
 
 ### WordPress Configuration
 
-The WordPress site must have:
-
-1. Custom post type: `appraisals`
-2. ACF fields:
-   - `main`: Main artwork image
-   - `age`: Age-related image
-   - `signature`: Signature image
-   - `googlevision`: Gallery field for similar images
-   - Various text fields for metadata (e.g., `age1`, `age2`, `style`, etc.)
+Required ACF fields:
+- `main`: Main artwork image
+- `age`: Age-related image
+- `signature`: Signature image
+- `googlevision`: Gallery field for similar images
+- Various text fields for metadata (e.g., `age1`, `age2`, `style`, etc.)
 
 ### Image Requirements
 
-Images are automatically resized while preserving aspect ratio:
+Maximum dimensions (preserving aspect ratio):
+- Main image: 400x300 pts
+- Signature image: 200x150 pts
+- Age image: 300x200 pts
 
-- Main image: Max dimensions 400x300 pts
-- Signature image: Max dimensions 200x150 pts
-- Age image: Max dimensions 300x200 pts
+### Content Generation
+
+Each prompt file should:
+1. Analyze provided images (main, age, signature)
+2. Consider report title information
+3. Generate specific content based on prompt type
+4. Return well-structured, professional content
+
+### Response Format
+
+All generated content should be:
+- Professional and formal in tone
+- Well-structured and coherent
+- Free of technical jargon unless necessary
+- Focused on the specific aspect being analyzed
 
 ## Testing
 

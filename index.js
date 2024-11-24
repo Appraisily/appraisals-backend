@@ -2,8 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const config = require('./config');
-const { router: pdfRouter, initializeGoogleApis } = require('./pdfGenerator');
 const appraisalRouter = require('./routes/appraisal');
+const pdfRouter = require('./routes/pdf');
 
 const app = express();
 
@@ -19,8 +19,8 @@ app.use(cors({
 }));
 
 // Use routers
-app.use('/', pdfRouter);
 app.use('/', appraisalRouter);
+app.use('/', pdfRouter);
 
 // Initialize Secret Manager client
 const secretClient = new SecretManagerServiceClient();
@@ -58,6 +58,7 @@ async function getSecret(secretName) {
 async function startServer() {
   try {
     await loadSecrets();
+    const { initializeGoogleApis } = require('./services/pdf');
     await initializeGoogleApis();
 
     const PORT = process.env.PORT || 8080;
