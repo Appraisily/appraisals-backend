@@ -4,13 +4,13 @@ const fetch = require('node-fetch');
 const fs = require('fs').promises;
 const path = require('path');
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
-const { v4: uuidv4 } = require('uuid');
 const vision = require('@google-cloud/vision');
-const FormData = require('form-data');
 const config = require('./config');
 const cors = require('cors');
 
 const { router: pdfRouter, initializeGoogleApis } = require('./pdfGenerator');
+const { processMainImageWithGoogleVision } = require('./services/vision');
+const { updateWordPressMetadata } = require('./services/wordpress');
 
 const app = express();
 
@@ -37,6 +37,7 @@ app.use(cors({
 app.use('/', pdfRouter);
 
 const client = new SecretManagerServiceClient();
+let visionClient;
 
 async function getSecret(secretName) {
   try {
@@ -51,8 +52,6 @@ async function getSecret(secretName) {
     throw new Error(`No se pudo obtener el secreto '${secretName}'.`);
   }
 }
-
-let visionClient;
 
 async function loadSecrets() {
   try {
@@ -86,7 +85,6 @@ function initializeVisionClient() {
   }
 }
 
-// Helper function to get post details
 async function getPostDetails(postId) {
   try {
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}`, {
@@ -115,7 +113,6 @@ async function getPostDetails(postId) {
   }
 }
 
-// Helper function to generate content with OpenAI
 async function generateContent(prompt, postTitle, images) {
   try {
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -178,7 +175,7 @@ app.post('/complete-appraisal-report', async (req, res) => {
     console.log(`Processing appraisal report for post: ${postDetails.title}`);
 
     // Process with Google Vision
-    const visionResults = await processMainImageWithGoogleVision(postId);
+    const visionResults = await processMainImageWithGoogleVision(visionClient, postId);
     console.log('Google Vision analysis completed');
 
     // Get all prompt files
