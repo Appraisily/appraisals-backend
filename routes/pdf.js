@@ -1,9 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
-const { format } = require('date-fns');
-const { getPostMetadata, getPostTitle, getPostDate, getImageFieldUrlFromPost, getPostGallery, updatePostACFFields } = require('../services/wordpress');
 const pdfService = require('../services/pdf');
+const { getPostMetadata, getPostTitle, getPostDate, getImageFieldUrlFromPost, getPostGallery, updatePostACFFields } = require('../services/wordpress');
 
 router.post('/generate-pdf', async (req, res) => {
   const { postId, session_ID } = req.body;
@@ -67,19 +66,51 @@ router.post('/generate-pdf', async (req, res) => {
       metadata.appraisal_value = '';
     }
 
-    // Get Google API clients
-    const docs = pdfService.docs();
-    const drive = pdfService.drive();
+    // Clone template and move to folder
+    const clonedDoc = await pdfService.cloneTemplate(GOOGLE_DOCS_TEMPLATE_ID);
+    await pdfService.moveFileToFolder(clonedDoc.id, GOOGLE_DRIVE_FOLDER_ID);
 
-    // Generate PDF logic here...
-    // Use the docs and drive clients from pdfService
+    // Insert images
+    if (mainImageUrl) {
+      await pdfService.insertImageAtPlaceholder(clonedDoc.id, 'main_image', mainImageUrl);
+    }
+    if (signatureImageUrl) {
+      await pdfService.insertImageAtPlaceholder(clonedDoc.id, 'signature_image', signatureImageUrl);
+    }
+    if (ageImageUrl) {
+      await pdfService.insertImageAtPlaceholder(clonedDoc.id, 'age_image', ageImageUrl);
+    }
+
+    // Process gallery images if present
+    if (gallery?.length > 0) {
+      for (let i = 0; i < gallery.length; i++) {
+        const imageUrl = gallery[i];
+        if (imageUrl) {
+          await pdfService.insertImageAtPlaceholder(clonedDoc.id, `googlevision${i + 1}`, imageUrl);
+        }
+      }
+    }
+
+    // Export to PDF
+    const pdfBuffer = await pdfService.exportToPDF(clonedDoc.id);
+
+    // Generate filename
+    const pdfFilename = session_ID?.trim()
+      ? `${session_ID}.pdf`
+      : `Informe_Tasacion_Post_${postId}_${uuidv4()}.pdf`;
+
+    // Upload PDF
+    const pdfLink = await pdfService.uploadPDFToDrive(pdfBuffer, pdfFilename, GOOGLE_DRIVE_FOLDER_ID);
+
+    // Update WordPress
+    await updatePostACFFields(postId, pdfLink, clonedDoc.link);
 
     // Return response
     res.json({
       success: true,
-      message: 'PDF generated successfully',
-      pdfLink: 'pdfLink',
-      docLink: 'docLink'
+      message: 'PDF generated successfully.',
+      pdfLink,
+      docLink: clonedDoc.link
     });
 
   } catch (error) {
