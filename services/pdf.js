@@ -7,7 +7,7 @@ const config = require('../config');
 let docs;
 let drive;
 
-// Function to initialize Google APIs
+// Initialize Google APIs
 async function initializeGoogleApis() {
   try {
     const credentials = JSON.parse(config.GOOGLE_DOCS_CREDENTIALS);
@@ -32,7 +32,7 @@ async function initializeGoogleApis() {
   }
 }
 
-// Function to calculate dimensions preserving aspect ratio
+// Calculate dimensions preserving aspect ratio
 async function calculateDimensions(imageUrl, maxDimensions) {
   try {
     const response = await fetch(imageUrl, { method: 'HEAD' });
@@ -66,130 +66,174 @@ async function calculateDimensions(imageUrl, maxDimensions) {
   }
 }
 
-// Function to insert image at placeholder
-async function insertImageAtPlaceholder(documentId, placeholder, imageUrl) {
-  try {
-    if (!imageUrl) {
-      console.warn(`Invalid image URL for placeholder '{{${placeholder}}}'.`);
-      return;
-    }
-
-    // Define maximum dimensions for different image types
-    const maxDimensions = {
-      main_image: { width: 400, height: 300 },
-      signature_image: { width: 200, height: 150 },
-      age_image: { width: 300, height: 200 }
-    };
-
-    // Determine dimensions based on placeholder type
-    let dimensions = { width: 200, height: 150 }; // Default
-    const placeholderType = placeholder.toLowerCase();
-    
-    if (placeholderType.includes('main')) {
-      dimensions = await calculateDimensions(imageUrl, maxDimensions.main_image);
-    } else if (placeholderType.includes('signature')) {
-      dimensions = await calculateDimensions(imageUrl, maxDimensions.signature_image);
-    } else if (placeholderType.includes('age')) {
-      dimensions = await calculateDimensions(imageUrl, maxDimensions.age_image);
-    } else {
-      dimensions = await calculateDimensions(imageUrl, dimensions);
-    }
-
-    await insertImageAtAllPlaceholders(documentId, placeholder, imageUrl, dimensions);
-    console.log(`Placeholder '{{${placeholder}}}' replaced with resized image: ${imageUrl}`);
-  } catch (error) {
-    console.warn(`Warning: Could not insert image for placeholder '{{${placeholder}}}'. Error: ${error.message}`);
-  }
-}
-
-// Function to insert image at all occurrences of a placeholder
-async function insertImageAtAllPlaceholders(documentId, placeholder, imageUrl, dimensions) {
+// Replace placeholders in document
+async function replacePlaceholdersInDocument(documentId, data) {
   try {
     const document = await docs.documents.get({ documentId });
     const content = document.data.body.content;
 
-    const placeholderFull = `{{${placeholder}}}`;
-    const placeholderLength = placeholderFull.length;
-    const occurrences = [];
+    const requests = [];
 
-    // Find all placeholder occurrences
-    const findAllPlaceholders = (elements) => {
+    const findAndReplace = (elements) => {
       for (const element of elements) {
         if (element.paragraph && element.paragraph.elements) {
           for (const textElement of element.paragraph.elements) {
-            if (textElement.textRun && textElement.textRun.content.includes(placeholderFull)) {
-              const textContent = textElement.textRun.content;
-              let startIndex = textElement.startIndex;
-              let index = textContent.indexOf(placeholderFull);
-
-              while (index !== -1) {
-                occurrences.push({
-                  startIndex: startIndex + index,
-                  endIndex: startIndex + index + placeholderLength
-                });
-                index = textContent.indexOf(placeholderFull, index + placeholderLength);
+            if (textElement.textRun && textElement.textRun.content) {
+              for (const [key, value] of Object.entries(data)) {
+                const placeholder = `{{${key}}}`;
+                if (textElement.textRun.content.includes(placeholder)) {
+                  requests.push({
+                    replaceAllText: {
+                      containsText: {
+                        text: placeholder,
+                        matchCase: true,
+                      },
+                      replaceText: value !== undefined && value !== null ? String(value) : '',
+                    },
+                  });
+                }
               }
             }
           }
         } else if (element.table) {
           for (const row of element.table.tableRows) {
             for (const cell of row.tableCells) {
-              findAllPlaceholders(cell.content);
+              findAndReplace(cell.content);
             }
           }
         }
       }
     };
 
-    findAllPlaceholders(content);
+    findAndReplace(content);
 
-    if (occurrences.length === 0) {
-      console.warn(`No occurrences found for placeholder '{{${placeholder}}}'.`);
-      return;
-    }
-
-    // Sort occurrences in reverse order to avoid index conflicts
-    occurrences.sort((a, b) => b.startIndex - a.startIndex);
-
-    // Prepare batch update requests
-    const requests = occurrences.flatMap(occ => [
-      {
-        deleteContentRange: {
-          range: {
-            startIndex: occ.startIndex,
-            endIndex: occ.endIndex,
-          },
-        },
-      },
-      {
-        insertInlineImage: {
-          uri: imageUrl,
-          location: {
-            index: occ.startIndex,
-          },
-          objectSize: {
-            height: { magnitude: dimensions.height, unit: 'PT' },
-            width: { magnitude: dimensions.width, unit: 'PT' },
-          },
-        },
-      }
-    ]);
-
-    // Execute batch update
     if (requests.length > 0) {
       await docs.documents.batchUpdate({
         documentId: documentId,
-        requestBody: { requests },
+        requestBody: {
+          requests: requests,
+        },
       });
-      console.log(`All occurrences of placeholder '{{${placeholder}}}' replaced with the resized image.`);
+      console.log(`Placeholders replaced in document ID: ${documentId}`);
+    } else {
+      console.log('No placeholders found to replace.');
     }
   } catch (error) {
-    console.error(`Error processing placeholder '{{${placeholder}}}':`, error);
+    console.error('Error replacing placeholders in Google Docs:', error);
     throw error;
   }
 }
 
-// Function to clone template and get document link
+// Insert formatted metadata
+async function insertFormattedMetadata(documentId, placeholder, tableData) {
+  try {
+    const document = await docs.documents.get({ documentId });
+    const content = document.data.body.content;
+
+    let placeholderFound = false;
+    let placeholderIndex = -1;
+
+    const findPlaceholder = (elements) => {
+      for (const element of elements) {
+        if (element.paragraph && element.paragraph.elements) {
+          for (const elem of element.paragraph.elements) {
+            if (elem.textRun && elem.textRun.content.includes(`{{${placeholder}}}`)) {
+              placeholderFound = true;
+              placeholderIndex = elem.startIndex;
+              return;
+            }
+          }
+        } else if (element.table) {
+          for (const row of element.table.tableRows) {
+            for (const cell of row.tableCells) {
+              findPlaceholder(cell.content);
+              if (placeholderFound) return;
+            }
+          }
+        }
+      }
+    };
+
+    findPlaceholder(content);
+
+    if (!placeholderFound) {
+      console.warn(`Placeholder "{{${placeholder}}}" not found in document.`);
+      return;
+    }
+
+    // Delete placeholder
+    await docs.documents.batchUpdate({
+      documentId: documentId,
+      requestBody: {
+        requests: [
+          {
+            deleteContentRange: {
+              range: {
+                startIndex: placeholderIndex,
+                endIndex: placeholderIndex + `{{${placeholder}}}`.length,
+              },
+            },
+          },
+        ],
+      },
+    });
+
+    // Parse and format table data
+    const rows = tableData.split('-').map(item => item.trim()).filter(item => item);
+    const formattedText = rows.map(row => {
+      const [key, value] = row.split(':').map(s => s.trim());
+      if (key && value) {
+        return `**${key}:** ${value}`;
+      } else if (key) {
+        return `**${key}:**`;
+      } else {
+        return value;
+      }
+    }).join('\n');
+
+    // Insert formatted text
+    await docs.documents.batchUpdate({
+      documentId: documentId,
+      requestBody: {
+        requests: [
+          {
+            insertText: {
+              text: formattedText,
+              location: {
+                index: placeholderIndex,
+              },
+            },
+          },
+          ...rows.map((row, idx) => {
+            const [key, ] = row.split(':').map(s => s.trim());
+            if (key) {
+              const beforeText = rows.slice(0, idx).join('- ').length + 2;
+              const keyStartIndex = placeholderIndex + beforeText + 1;
+              return {
+                updateTextStyle: {
+                  range: {
+                    startIndex: keyStartIndex,
+                    endIndex: keyStartIndex + key.length + 1,
+                  },
+                  textStyle: {
+                    bold: true,
+                  },
+                  fields: 'bold',
+                },
+              };
+            }
+            return null;
+          }).filter(req => req !== null)
+        ],
+      },
+    });
+  } catch (error) {
+    console.error('Error inserting formatted metadata:', error);
+    throw error;
+  }
+}
+
+// Clone template
 async function cloneTemplate(templateId) {
   try {
     const sanitizedTemplateId = templateId.trim();
@@ -210,12 +254,12 @@ async function cloneTemplate(templateId) {
       link: copiedFile.data.webViewLink
     };
   } catch (error) {
-    console.error('Error cloning Google Docs template:', error);
+    console.error('Error cloning template:', error);
     throw error;
   }
 }
 
-// Function to move file to folder
+// Move file to folder
 async function moveFileToFolder(fileId, folderId) {
   try {
     const file = await drive.files.get({
@@ -241,7 +285,7 @@ async function moveFileToFolder(fileId, folderId) {
   }
 }
 
-// Function to upload PDF to Drive
+// Upload PDF to Drive
 async function uploadPDFToDrive(pdfBuffer, pdfFilename, folderId) {
   try {
     const fileMetadata = {
@@ -269,7 +313,7 @@ async function uploadPDFToDrive(pdfBuffer, pdfFilename, folderId) {
   }
 }
 
-// Function to export document to PDF
+// Export document to PDF
 async function exportToPDF(documentId) {
   try {
     const response = await drive.files.export(
@@ -287,14 +331,72 @@ async function exportToPDF(documentId) {
   }
 }
 
-// Export all functions
+// Adjust title font size
+async function adjustTitleFontSize(documentId, titleText) {
+  try {
+    const document = await docs.documents.get({ documentId });
+    const content = document.data.body.content;
+
+    let titleRange = null;
+    const titleRegex = new RegExp(titleText.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+
+    for (const element of content) {
+      if (element.paragraph && element.paragraph.elements) {
+        for (const elem of element.paragraph.elements) {
+          if (elem.textRun && elem.textRun.content.trim().match(titleRegex)) {
+            titleRange = {
+              startIndex: elem.startIndex,
+              endIndex: elem.endIndex,
+            };
+            break;
+          }
+        }
+      }
+      if (titleRange) break;
+    }
+
+    if (!titleRange) {
+      console.warn('Title not found for font size adjustment.');
+      return;
+    }
+
+    let fontSize = titleText.length <= 20 ? 18 : titleText.length <= 40 ? 16 : 14;
+
+    await docs.documents.batchUpdate({
+      documentId: documentId,
+      requestBody: {
+        requests: [{
+          updateTextStyle: {
+            range: titleRange,
+            textStyle: {
+              fontSize: {
+                magnitude: fontSize,
+                unit: 'PT',
+              },
+            },
+            fields: 'fontSize',
+          },
+        }],
+      },
+    });
+
+    console.log(`Title font size adjusted to ${fontSize}pt`);
+  } catch (error) {
+    console.error('Error adjusting title font size:', error);
+    throw error;
+  }
+}
+
 module.exports = {
   initializeGoogleApis,
-  insertImageAtPlaceholder,
+  replacePlaceholdersInDocument,
+  insertFormattedMetadata,
   cloneTemplate,
   moveFileToFolder,
   uploadPDFToDrive,
   exportToPDF,
+  adjustTitleFontSize,
+  calculateDimensions,
   docs: () => docs,
   drive: () => drive
 };
