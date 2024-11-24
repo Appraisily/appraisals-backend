@@ -1,4 +1,5 @@
 const fetch = require('node-fetch');
+const he = require('he');
 const config = require('../config');
 
 async function updateWordPressMetadata(postId, metadataKey, metadataValue) {
