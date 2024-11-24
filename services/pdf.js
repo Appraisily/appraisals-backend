@@ -1,11 +1,8 @@
-const express = require('express');
-const fetch = require('node-fetch');
 const { google } = require('googleapis');
-const { v4: uuidv4 } = require('uuid');
 const { Readable } = require('stream');
+const { v4: uuidv4 } = require('uuid');
 const config = require('../config');
 
-// Initialize Google APIs client
 let docs;
 let drive;
 
@@ -30,39 +27,6 @@ async function initializeGoogleApis() {
   } catch (error) {
     console.error('Error initializing Google APIs:', error);
     throw error;
-  }
-}
-
-async function calculateDimensions(imageUrl, maxDimensions) {
-  try {
-    const response = await fetch(imageUrl, { method: 'HEAD' });
-    if (!response.ok) {
-      throw new Error('Failed to fetch image metadata');
-    }
-
-    const contentType = response.headers.get('content-type');
-    if (!contentType?.startsWith('image/')) {
-      throw new Error('URL does not point to an image');
-    }
-
-    const aspectRatio = maxDimensions.width / maxDimensions.height;
-    
-    let width = maxDimensions.width;
-    let height = maxDimensions.height;
-
-    if (width / height > aspectRatio) {
-      width = height * aspectRatio;
-    } else {
-      height = width / aspectRatio;
-    }
-
-    return {
-      width: Math.round(width),
-      height: Math.round(height)
-    };
-  } catch (error) {
-    console.warn('Error calculating image dimensions:', error);
-    return maxDimensions;
   }
 }
 
@@ -121,9 +85,9 @@ async function replacePlaceholdersInDocument(documentId, data) {
 
     const findAndReplace = (elements) => {
       for (const element of elements) {
-        if (element.paragraph?.elements) {
+        if (element.paragraph && element.paragraph.elements) {
           for (const textElement of element.paragraph.elements) {
-            if (textElement.textRun?.content) {
+            if (textElement.textRun && textElement.textRun.content) {
               for (const [key, value] of Object.entries(data)) {
                 const placeholder = `{{${key}}}`;
                 if (textElement.textRun.content.includes(placeholder)) {
@@ -155,9 +119,13 @@ async function replacePlaceholdersInDocument(documentId, data) {
     if (requests.length > 0) {
       await docs.documents.batchUpdate({
         documentId: documentId,
-        requestBody: { requests },
+        requestBody: {
+          requests: requests,
+        },
       });
       console.log(`Placeholders replaced in document ID: ${documentId}`);
+    } else {
+      console.log('No placeholders found to replace.');
     }
   } catch (error) {
     console.error('Error replacing placeholders:', error);
@@ -174,9 +142,9 @@ async function adjustTitleFontSize(documentId, titleText) {
     const titleRegex = new RegExp(titleText.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
 
     for (const element of content) {
-      if (element.paragraph?.elements) {
+      if (element.paragraph && element.paragraph.elements) {
         for (const elem of element.paragraph.elements) {
-          if (elem.textRun?.content.trim().match(titleRegex)) {
+          if (elem.textRun && elem.textRun.content.trim().match(titleRegex)) {
             titleRange = {
               startIndex: elem.startIndex,
               endIndex: elem.endIndex,
@@ -193,8 +161,14 @@ async function adjustTitleFontSize(documentId, titleText) {
       return;
     }
 
-    let fontSize = titleText.length <= 20 ? 18 : 
-                   titleText.length <= 40 ? 16 : 14;
+    let fontSize;
+    if (titleText.length <= 20) {
+      fontSize = 18;
+    } else if (titleText.length <= 40) {
+      fontSize = 16;
+    } else {
+      fontSize = 14;
+    }
 
     await docs.documents.batchUpdate({
       documentId: documentId,
@@ -213,6 +187,8 @@ async function adjustTitleFontSize(documentId, titleText) {
         }],
       },
     });
+
+    console.log(`Title font size adjusted to ${fontSize}pt`);
   } catch (error) {
     console.error('Error adjusting title font size:', error);
     throw error;
@@ -223,13 +199,15 @@ async function insertFormattedMetadata(documentId, placeholder, tableData) {
   try {
     const document = await docs.documents.get({ documentId });
     const content = document.data.body.content;
+    let placeholderFound = false;
     let placeholderIndex = -1;
 
     const findPlaceholder = (elements) => {
       for (const element of elements) {
-        if (element.paragraph?.elements) {
+        if (element.paragraph && element.paragraph.elements) {
           for (const elem of element.paragraph.elements) {
-            if (elem.textRun?.content.includes(`{{${placeholder}}}`)) {
+            if (elem.textRun && elem.textRun.content.includes(`{{${placeholder}}}`)) {
+              placeholderFound = true;
               placeholderIndex = elem.startIndex;
               return;
             }
@@ -238,7 +216,7 @@ async function insertFormattedMetadata(documentId, placeholder, tableData) {
           for (const row of element.table.tableRows) {
             for (const cell of row.tableCells) {
               findPlaceholder(cell.content);
-              if (placeholderIndex !== -1) return;
+              if (placeholderFound) return;
             }
           }
         }
@@ -247,37 +225,65 @@ async function insertFormattedMetadata(documentId, placeholder, tableData) {
 
     findPlaceholder(content);
 
-    if (placeholderIndex === -1) {
-      console.warn(`Placeholder "{{${placeholder}}}" not found.`);
+    if (!placeholderFound) {
+      console.warn(`Placeholder "{{${placeholder}}}" not found in document.`);
       return;
     }
 
     const rows = tableData.split('-').map(item => item.trim()).filter(item => item);
-    const formattedRows = rows.map(row => {
+    const formattedText = rows.map(row => {
       const [key, value] = row.split(':').map(s => s.trim());
-      return key && value ? `${key}: ${value}` : key || value;
-    });
-
-    const requests = [
-      {
-        deleteContentRange: {
-          range: {
-            startIndex: placeholderIndex,
-            endIndex: placeholderIndex + `{{${placeholder}}}`.length,
-          },
-        },
-      },
-      {
-        insertText: {
-          text: formattedRows.join('\n'),
-          location: { index: placeholderIndex },
-        },
-      },
-    ];
+      if (key && value) {
+        return `**${key}:** ${value}`;
+      } else if (key) {
+        return `**${key}:**`;
+      } else {
+        return value;
+      }
+    }).join('\n');
 
     await docs.documents.batchUpdate({
-      documentId,
-      requestBody: { requests },
+      documentId: documentId,
+      requestBody: {
+        requests: [
+          {
+            deleteContentRange: {
+              range: {
+                startIndex: placeholderIndex,
+                endIndex: placeholderIndex + `{{${placeholder}}}`.length,
+              },
+            },
+          },
+          {
+            insertText: {
+              text: formattedText,
+              location: {
+                index: placeholderIndex,
+              },
+            },
+          },
+          ...rows.map((row, idx) => {
+            const [key] = row.split(':').map(s => s.trim());
+            if (key) {
+              const beforeText = rows.slice(0, idx).join('\n').length;
+              const keyStartIndex = placeholderIndex + beforeText + (idx > 0 ? 1 : 0);
+              return {
+                updateTextStyle: {
+                  range: {
+                    startIndex: keyStartIndex,
+                    endIndex: keyStartIndex + key.length + 1,
+                  },
+                  textStyle: {
+                    bold: true,
+                  },
+                  fields: 'bold',
+                },
+              };
+            }
+            return null;
+          }).filter(req => req !== null)
+        ],
+      },
     });
   } catch (error) {
     console.error('Error inserting formatted metadata:', error);
@@ -293,6 +299,7 @@ async function addGalleryImages(documentId, gallery) {
     const content = document.data.body.content;
     let galleryIndex = -1;
 
+    // Find the {{gallery}} placeholder
     for (const element of content) {
       if (element.paragraph?.elements) {
         for (const elem of element.paragraph.elements) {
@@ -310,36 +317,47 @@ async function addGalleryImages(documentId, gallery) {
       return;
     }
 
+    // Calculate table dimensions
     const columns = 3;
     const rows = Math.ceil(gallery.length / columns);
     console.log(`Creating table with ${rows} rows and ${columns} columns`);
 
-    const requests = [
-      {
-        deleteContentRange: {
-          range: {
-            startIndex: galleryIndex,
-            endIndex: galleryIndex + '{{gallery}}'.length,
-          },
-        },
-      },
-      {
-        insertTable: {
-          rows,
-          columns,
-          location: { index: galleryIndex },
-        },
-      },
-    ];
-
+    // Delete gallery placeholder
     await docs.documents.batchUpdate({
       documentId,
-      requestBody: { requests },
+      requestBody: {
+        requests: [{
+          deleteContentRange: {
+            range: {
+              startIndex: galleryIndex,
+              endIndex: galleryIndex + '{{gallery}}'.length,
+            },
+          },
+        }]
+      }
     });
 
+    // Insert table
+    await docs.documents.batchUpdate({
+      documentId,
+      requestBody: {
+        requests: [{
+          insertTable: {
+            rows,
+            columns,
+            location: { index: galleryIndex },
+          },
+        }]
+      }
+    });
+
+    // Wait for table creation
     await new Promise(resolve => setTimeout(resolve, 1000));
 
+    // Get updated document
     const updatedDoc = await docs.documents.get({ documentId });
+    
+    // Find inserted table
     const tableElement = updatedDoc.data.body.content.find(
       element => element.table && element.startIndex >= galleryIndex
     );
@@ -348,18 +366,24 @@ async function addGalleryImages(documentId, gallery) {
       throw new Error('Table not found after insertion');
     }
 
-    let imageIndex = 1;
+    // Insert placeholders in cells
     const placeholderRequests = [];
+    let imageIndex = 1;
 
-    for (const row of tableElement.table.tableRows) {
-      for (const cell of row.tableCells) {
+    for (let rowIndex = 0; rowIndex < tableElement.table.tableRows.length; rowIndex++) {
+      const row = tableElement.table.tableRows[rowIndex];
+      for (let cellIndex = 0; cellIndex < row.tableCells.length; cellIndex++) {
         if (imageIndex <= gallery.length) {
+          const cell = row.tableCells[cellIndex];
+          const cellEndIndex = cell.endIndex - 1;
+
           placeholderRequests.push({
             insertText: {
-              text: `{{googlevision${imageIndex}}}`,
-              location: { index: cell.endIndex - 1 },
-            },
+              location: { index: cellEndIndex },
+              text: `{{googlevision${imageIndex}}}`
+            }
           });
+
           imageIndex++;
         }
       }
@@ -368,7 +392,9 @@ async function addGalleryImages(documentId, gallery) {
     if (placeholderRequests.length > 0) {
       await docs.documents.batchUpdate({
         documentId,
-        requestBody: { requests: placeholderRequests },
+        requestBody: {
+          requests: placeholderRequests
+        }
       });
     }
 
@@ -381,91 +407,16 @@ async function addGalleryImages(documentId, gallery) {
 
 async function replacePlaceholdersWithImages(documentId, gallery) {
   try {
-    console.log('Replacing gallery placeholders with images');
-
     for (let i = 0; i < gallery.length; i++) {
       const placeholder = `googlevision${i + 1}`;
       const imageUrl = gallery[i];
 
-      if (!imageUrl) {
-        console.warn(`No image URL for placeholder ${placeholder}`);
-        continue;
-      }
-
-      try {
-        const response = await fetch(imageUrl, { method: 'HEAD' });
-        if (!response.ok) {
-          console.warn(`Image not accessible: ${imageUrl}`);
-          continue;
-        }
-
-        const dimensions = await calculateDimensions(imageUrl, {
-          width: 150,
-          height: 150
-        });
-
-        const document = await docs.documents.get({ documentId });
-        const content = document.data.body.content;
-        const placeholderText = `{{${placeholder}}}`;
-        const requests = [];
-
-        const findPlaceholders = (elements) => {
-          for (const element of elements) {
-            if (element.paragraph?.elements) {
-              for (const elem of element.paragraph.elements) {
-                if (elem.textRun?.content.includes(placeholderText)) {
-                  const startIndex = elem.startIndex + elem.textRun.content.indexOf(placeholderText);
-                  requests.push(
-                    {
-                      deleteContentRange: {
-                        range: {
-                          startIndex,
-                          endIndex: startIndex + placeholderText.length,
-                        },
-                      },
-                    },
-                    {
-                      insertInlineImage: {
-                        uri: imageUrl,
-                        location: { index: startIndex },
-                        objectSize: {
-                          height: { magnitude: dimensions.height, unit: 'PT' },
-                          width: { magnitude: dimensions.width, unit: 'PT' },
-                        },
-                      },
-                    }
-                  );
-                }
-              }
-            } else if (element.table) {
-              for (const row of element.table.tableRows) {
-                for (const cell of row.tableCells) {
-                  findPlaceholders(cell.content);
-                }
-              }
-            }
-          }
-        };
-
-        findPlaceholders(content);
-
-        if (requests.length > 0) {
-          await docs.documents.batchUpdate({
-            documentId,
-            requestBody: { requests },
-          });
-          console.log(`Replaced placeholder ${placeholder} with image`);
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 500));
-      } catch (error) {
-        console.warn(`Error processing image ${i + 1}:`, error);
+      if (imageUrl) {
+        await insertImageAtPlaceholder(documentId, placeholder, imageUrl);
       }
     }
-
-    console.log('Gallery image replacement complete');
   } catch (error) {
-    console.error('Error replacing gallery images:', error);
+    console.error('Error replacing gallery placeholders:', error);
     throw error;
   }
 }
@@ -473,58 +424,24 @@ async function replacePlaceholdersWithImages(documentId, gallery) {
 async function insertImageAtPlaceholder(documentId, placeholder, imageUrl) {
   try {
     if (!imageUrl) {
-      console.warn(`Invalid image URL for placeholder '{{${placeholder}}}'.`);
+      console.warn(`No image URL provided for placeholder {{${placeholder}}}`);
       return;
-    }
-
-    const maxDimensions = {
-      main_image: { width: 400, height: 300 },
-      signature_image: { width: 200, height: 150 },
-      age_image: { width: 300, height: 200 }
-    };
-
-    let dimensions = { width: 200, height: 150 };
-    const placeholderType = placeholder.toLowerCase();
-    
-    if (placeholderType.includes('main')) {
-      dimensions = await calculateDimensions(imageUrl, maxDimensions.main_image);
-    } else if (placeholderType.includes('signature')) {
-      dimensions = await calculateDimensions(imageUrl, maxDimensions.signature_image);
-    } else if (placeholderType.includes('age')) {
-      dimensions = await calculateDimensions(imageUrl, maxDimensions.age_image);
     }
 
     const document = await docs.documents.get({ documentId });
     const content = document.data.body.content;
-    const placeholderText = `{{${placeholder}}}`;
-    const requests = [];
+    const placeholderFull = `{{${placeholder}}}`;
+    const occurrences = [];
 
     const findPlaceholders = (elements) => {
       for (const element of elements) {
         if (element.paragraph?.elements) {
           for (const elem of element.paragraph.elements) {
-            if (elem.textRun?.content.includes(placeholderText)) {
-              const startIndex = elem.startIndex + elem.textRun.content.indexOf(placeholderText);
-              requests.push(
-                {
-                  deleteContentRange: {
-                    range: {
-                      startIndex,
-                      endIndex: startIndex + placeholderText.length,
-                    },
-                  },
-                },
-                {
-                  insertInlineImage: {
-                    uri: imageUrl,
-                    location: { index: startIndex },
-                    objectSize: {
-                      height: { magnitude: dimensions.height, unit: 'PT' },
-                      width: { magnitude: dimensions.width, unit: 'PT' },
-                    },
-                  },
-                }
-              );
+            if (elem.textRun?.content.includes(placeholderFull)) {
+              occurrences.push({
+                startIndex: elem.startIndex + elem.textRun.content.indexOf(placeholderFull),
+                endIndex: elem.startIndex + elem.textRun.content.indexOf(placeholderFull) + placeholderFull.length
+              });
             }
           }
         } else if (element.table) {
@@ -539,15 +456,45 @@ async function insertImageAtPlaceholder(documentId, placeholder, imageUrl) {
 
     findPlaceholders(content);
 
-    if (requests.length > 0) {
-      await docs.documents.batchUpdate({
-        documentId,
-        requestBody: { requests },
-      });
-      console.log(`Placeholder '{{${placeholder}}}' replaced with image`);
+    if (occurrences.length === 0) {
+      console.warn(`No occurrences found for placeholder {{${placeholder}}}`);
+      return;
     }
+
+    const requests = [];
+    for (const occurrence of occurrences) {
+      requests.push(
+        {
+          deleteContentRange: {
+            range: {
+              startIndex: occurrence.startIndex,
+              endIndex: occurrence.endIndex
+            }
+          }
+        },
+        {
+          insertInlineImage: {
+            location: {
+              index: occurrence.startIndex
+            },
+            uri: imageUrl,
+            objectSize: {
+              height: { magnitude: 150, unit: 'PT' },
+              width: { magnitude: 150, unit: 'PT' }
+            }
+          }
+        }
+      );
+    }
+
+    await docs.documents.batchUpdate({
+      documentId,
+      requestBody: { requests }
+    });
+
+    console.log(`Replaced ${occurrences.length} occurrences of {{${placeholder}}} with image`);
   } catch (error) {
-    console.warn(`Error inserting image for placeholder '{{${placeholder}}}':`, error);
+    console.error(`Error inserting image for placeholder {{${placeholder}}}:`, error);
   }
 }
 
@@ -568,10 +515,10 @@ async function exportToPDF(documentId) {
   }
 }
 
-async function uploadPDFToDrive(pdfBuffer, pdfFilename, folderId) {
+async function uploadPDFToDrive(pdfBuffer, filename, folderId) {
   try {
     const fileMetadata = {
-      name: pdfFilename,
+      name: filename,
       parents: [folderId],
       mimeType: 'application/pdf',
     };
@@ -587,10 +534,9 @@ async function uploadPDFToDrive(pdfBuffer, pdfFilename, folderId) {
       fields: 'id, webViewLink',
     });
 
-    console.log(`PDF uploaded to Drive with ID: ${file.data.id}`);
     return file.data.webViewLink;
   } catch (error) {
-    console.error('Error uploading PDF to Drive:', error);
+    console.error('Error uploading PDF:', error);
     throw error;
   }
 }
