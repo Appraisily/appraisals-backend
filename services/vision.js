@@ -78,8 +78,13 @@ async function isGalleryPopulated(postId) {
     }
 
     const post = await response.json();
-    return post.acf?._gallery_populated === '1' || 
-           (post.acf?.GoogleVision && post.acf.GoogleVision.length > 0);
+    console.log('Gallery population check:', {
+      _gallery_populated: post.acf?._gallery_populated,
+      GoogleVision: post.acf?.GoogleVision?.length
+    });
+    
+    // Only return true if _gallery_populated is explicitly '1'
+    return post.acf?._gallery_populated === '1';
   } catch (error) {
     console.error('Error checking gallery status:', error);
     return false;
