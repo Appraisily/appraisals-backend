@@ -17,7 +17,7 @@ router.post('/complete-appraisal-report', async (req, res) => {
   try {
     console.log(`Processing appraisal report for post: ${postId}`);
 
-    // Get post title and images
+    // Get post title and images in parallel
     const [postTitle, images] = await Promise.all([
       getPostTitle(postId),
       getPostImages(postId)
