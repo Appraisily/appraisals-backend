@@ -1,13 +1,11 @@
 const { google } = require('googleapis');
-const { v4: uuidv4 } = require('uuid');
 const { Readable } = require('stream');
+const { v4: uuidv4 } = require('uuid');
 const config = require('../config');
 
-// Initialize Google APIs client
 let docs;
 let drive;
 
-// Initialize Google APIs
 async function initializeGoogleApis() {
   try {
     const credentials = JSON.parse(config.GOOGLE_DOCS_CREDENTIALS);
@@ -32,7 +30,6 @@ async function initializeGoogleApis() {
   }
 }
 
-// Calculate dimensions preserving aspect ratio
 async function calculateDimensions(imageUrl, maxDimensions) {
   try {
     const response = await fetch(imageUrl, { method: 'HEAD' });
@@ -66,12 +63,10 @@ async function calculateDimensions(imageUrl, maxDimensions) {
   }
 }
 
-// Replace placeholders in document
 async function replacePlaceholdersInDocument(documentId, data) {
   try {
     const document = await docs.documents.get({ documentId });
     const content = document.data.body.content;
-
     const requests = [];
 
     const findAndReplace = (elements) => {
@@ -114,31 +109,25 @@ async function replacePlaceholdersInDocument(documentId, data) {
           requests: requests,
         },
       });
-      console.log(`Placeholders replaced in document ID: ${documentId}`);
-    } else {
-      console.log('No placeholders found to replace.');
+      console.log('Placeholders replaced in document ID:', documentId);
     }
   } catch (error) {
-    console.error('Error replacing placeholders in Google Docs:', error);
+    console.error('Error replacing placeholders:', error);
     throw error;
   }
 }
 
-// Insert formatted metadata
 async function insertFormattedMetadata(documentId, placeholder, tableData) {
   try {
     const document = await docs.documents.get({ documentId });
     const content = document.data.body.content;
-
-    let placeholderFound = false;
     let placeholderIndex = -1;
 
     const findPlaceholder = (elements) => {
       for (const element of elements) {
-        if (element.paragraph && element.paragraph.elements) {
+        if (element.paragraph?.elements) {
           for (const elem of element.paragraph.elements) {
-            if (elem.textRun && elem.textRun.content.includes(`{{${placeholder}}}`)) {
-              placeholderFound = true;
+            if (elem.textRun?.content.includes(`{{${placeholder}}}`)) {
               placeholderIndex = elem.startIndex;
               return;
             }
@@ -147,7 +136,6 @@ async function insertFormattedMetadata(documentId, placeholder, tableData) {
           for (const row of element.table.tableRows) {
             for (const cell of row.tableCells) {
               findPlaceholder(cell.content);
-              if (placeholderFound) return;
             }
           }
         }
@@ -156,76 +144,55 @@ async function insertFormattedMetadata(documentId, placeholder, tableData) {
 
     findPlaceholder(content);
 
-    if (!placeholderFound) {
+    if (placeholderIndex === -1) {
       console.warn(`Placeholder "{{${placeholder}}}" not found in document.`);
       return;
     }
 
-    // Delete placeholder
-    await docs.documents.batchUpdate({
-      documentId: documentId,
-      requestBody: {
-        requests: [
-          {
-            deleteContentRange: {
-              range: {
-                startIndex: placeholderIndex,
-                endIndex: placeholderIndex + `{{${placeholder}}}`.length,
-              },
-            },
-          },
-        ],
-      },
-    });
-
-    // Parse and format table data
     const rows = tableData.split('-').map(item => item.trim()).filter(item => item);
     const formattedText = rows.map(row => {
       const [key, value] = row.split(':').map(s => s.trim());
-      if (key && value) {
-        return `**${key}:** ${value}`;
-      } else if (key) {
-        return `**${key}:**`;
-      } else {
-        return value;
-      }
+      return key && value ? `**${key}:** ${value}` : key ? `**${key}:**` : value;
     }).join('\n');
 
-    // Insert formatted text
-    await docs.documents.batchUpdate({
-      documentId: documentId,
-      requestBody: {
-        requests: [
-          {
-            insertText: {
-              text: formattedText,
-              location: {
-                index: placeholderIndex,
-              },
-            },
+    const requests = [
+      {
+        deleteContentRange: {
+          range: {
+            startIndex: placeholderIndex,
+            endIndex: placeholderIndex + `{{${placeholder}}}`.length,
           },
-          ...rows.map((row, idx) => {
-            const [key, ] = row.split(':').map(s => s.trim());
-            if (key) {
-              const beforeText = rows.slice(0, idx).join('- ').length + 2;
-              const keyStartIndex = placeholderIndex + beforeText + 1;
-              return {
-                updateTextStyle: {
-                  range: {
-                    startIndex: keyStartIndex,
-                    endIndex: keyStartIndex + key.length + 1,
-                  },
-                  textStyle: {
-                    bold: true,
-                  },
-                  fields: 'bold',
-                },
-              };
-            }
-            return null;
-          }).filter(req => req !== null)
-        ],
+        },
       },
+      {
+        insertText: {
+          text: formattedText,
+          location: { index: placeholderIndex },
+        },
+      },
+      ...rows.map((row, idx) => {
+        const [key] = row.split(':').map(s => s.trim());
+        if (!key) return null;
+        
+        const beforeText = rows.slice(0, idx).join('- ').length + 2;
+        const keyStartIndex = placeholderIndex + beforeText + 1;
+        
+        return {
+          updateTextStyle: {
+            range: {
+              startIndex: keyStartIndex,
+              endIndex: keyStartIndex + key.length + 1,
+            },
+            textStyle: { bold: true },
+            fields: 'bold',
+          },
+        };
+      }).filter(Boolean)
+    ];
+
+    await docs.documents.batchUpdate({
+      documentId,
+      requestBody: { requests },
     });
   } catch (error) {
     console.error('Error inserting formatted metadata:', error);
@@ -233,14 +200,265 @@ async function insertFormattedMetadata(documentId, placeholder, tableData) {
   }
 }
 
-// Clone template
+async function adjustTitleFontSize(documentId, titleText) {
+  try {
+    const document = await docs.documents.get({ documentId });
+    const content = document.data.body.content;
+    let titleRange = null;
+
+    const titleRegex = new RegExp(titleText.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+
+    for (const element of content) {
+      if (element.paragraph?.elements) {
+        for (const elem of element.paragraph.elements) {
+          if (elem.textRun?.content.trim().match(titleRegex)) {
+            titleRange = {
+              startIndex: elem.startIndex,
+              endIndex: elem.endIndex,
+            };
+            break;
+          }
+        }
+      }
+      if (titleRange) break;
+    }
+
+    if (!titleRange) {
+      console.warn('Title not found for font size adjustment.');
+      return;
+    }
+
+    const fontSize = titleText.length <= 20 ? 18 : titleText.length <= 40 ? 16 : 14;
+
+    await docs.documents.batchUpdate({
+      documentId,
+      requestBody: {
+        requests: [{
+          updateTextStyle: {
+            range: titleRange,
+            textStyle: {
+              fontSize: {
+                magnitude: fontSize,
+                unit: 'PT',
+              },
+            },
+            fields: 'fontSize',
+          },
+        }],
+      },
+    });
+  } catch (error) {
+    console.error('Error adjusting title font size:', error);
+    throw error;
+  }
+}
+
+async function addGalleryImages(documentId, gallery) {
+  try {
+    const document = await docs.documents.get({ documentId });
+    const content = document.data.body.content;
+    let galleryIndex = -1;
+
+    const findGalleryPlaceholder = (elements) => {
+      for (const element of elements) {
+        if (element.paragraph?.elements) {
+          for (const elem of element.paragraph.elements) {
+            if (elem.textRun?.content.includes('{{gallery}}')) {
+              galleryIndex = elem.startIndex;
+              return;
+            }
+          }
+        } else if (element.table) {
+          for (const row of element.table.tableRows) {
+            for (const cell of row.tableCells) {
+              findGalleryPlaceholder(cell.content);
+            }
+          }
+        }
+      }
+    };
+
+    findGalleryPlaceholder(content);
+
+    if (galleryIndex === -1) {
+      console.warn('Gallery placeholder not found.');
+      return;
+    }
+
+    const columns = 3;
+    const rows = Math.ceil(gallery.length / columns);
+
+    const requests = [
+      {
+        deleteContentRange: {
+          range: {
+            startIndex: galleryIndex,
+            endIndex: galleryIndex + '{{gallery}}'.length,
+          },
+        },
+      },
+      {
+        insertTable: {
+          rows,
+          columns,
+          location: { index: galleryIndex },
+        },
+      },
+    ];
+
+    await docs.documents.batchUpdate({
+      documentId,
+      requestBody: { requests },
+    });
+
+    // Add placeholders for images
+    const updatedDoc = await docs.documents.get({ documentId });
+    const tableElement = updatedDoc.data.body.content.find(
+      element => element.table && element.startIndex >= galleryIndex
+    );
+
+    if (!tableElement) {
+      console.warn('Gallery table not found after creation.');
+      return;
+    }
+
+    let imageIndex = 1;
+    const placeholderRequests = [];
+
+    for (const row of tableElement.table.tableRows) {
+      for (const cell of row.tableCells) {
+        if (imageIndex <= gallery.length) {
+          placeholderRequests.push({
+            insertText: {
+              text: `{{googlevision${imageIndex}}}`,
+              location: { index: cell.endIndex - 1 },
+            },
+          });
+          imageIndex++;
+        }
+      }
+    }
+
+    if (placeholderRequests.length > 0) {
+      await docs.documents.batchUpdate({
+        documentId,
+        requestBody: { requests: placeholderRequests },
+      });
+    }
+  } catch (error) {
+    console.error('Error adding gallery images:', error);
+    throw error;
+  }
+}
+
+async function replacePlaceholdersWithImages(documentId, gallery) {
+  try {
+    for (let i = 0; i < gallery.length; i++) {
+      const placeholder = `googlevision${i + 1}`;
+      const imageUrl = gallery[i];
+
+      if (imageUrl) {
+        try {
+          const response = await fetch(imageUrl, { method: 'HEAD' });
+          if (response.ok) {
+            await insertImageAtPlaceholder(documentId, placeholder, imageUrl);
+          } else {
+            console.warn(`Image not accessible: ${imageUrl}`);
+          }
+        } catch (error) {
+          console.warn(`Error checking image: ${imageUrl}`, error);
+        }
+      }
+    }
+  } catch (error) {
+    console.error('Error replacing image placeholders:', error);
+    throw error;
+  }
+}
+
+async function insertImageAtPlaceholder(documentId, placeholder, imageUrl) {
+  try {
+    const maxDimensions = {
+      main_image: { width: 400, height: 300 },
+      signature_image: { width: 200, height: 150 },
+      age_image: { width: 300, height: 200 },
+      default: { width: 150, height: 150 }
+    };
+
+    const dimensions = await calculateDimensions(
+      imageUrl,
+      maxDimensions[placeholder] || maxDimensions.default
+    );
+
+    await insertImageAtAllPlaceholders(documentId, placeholder, imageUrl, dimensions);
+  } catch (error) {
+    console.warn(`Error inserting image for ${placeholder}:`, error);
+  }
+}
+
+async function insertImageAtAllPlaceholders(documentId, placeholder, imageUrl, dimensions) {
+  try {
+    const document = await docs.documents.get({ documentId });
+    const content = document.data.body.content;
+    const placeholderText = `{{${placeholder}}}`;
+    const requests = [];
+
+    const findPlaceholders = (elements) => {
+      for (const element of elements) {
+        if (element.paragraph?.elements) {
+          for (const elem of element.paragraph.elements) {
+            if (elem.textRun?.content.includes(placeholderText)) {
+              const startIndex = elem.startIndex + elem.textRun.content.indexOf(placeholderText);
+              requests.push(
+                {
+                  deleteContentRange: {
+                    range: {
+                      startIndex,
+                      endIndex: startIndex + placeholderText.length,
+                    },
+                  },
+                },
+                {
+                  insertInlineImage: {
+                    uri: imageUrl,
+                    location: { index: startIndex },
+                    objectSize: {
+                      height: { magnitude: dimensions.height, unit: 'PT' },
+                      width: { magnitude: dimensions.width, unit: 'PT' },
+                    },
+                  },
+                }
+              );
+            }
+          }
+        } else if (element.table) {
+          for (const row of element.table.tableRows) {
+            for (const cell of row.tableCells) {
+              findPlaceholders(cell.content);
+            }
+          }
+        }
+      }
+    };
+
+    findPlaceholders(content);
+
+    if (requests.length > 0) {
+      await docs.documents.batchUpdate({
+        documentId,
+        requestBody: { requests },
+      });
+    }
+  } catch (error) {
+    console.error('Error inserting images:', error);
+    throw error;
+  }
+}
+
 async function cloneTemplate(templateId) {
   try {
-    const sanitizedTemplateId = templateId.trim();
-    console.log(`Cloning template with ID: '${sanitizedTemplateId}'`);
-
     const copiedFile = await drive.files.copy({
-      fileId: sanitizedTemplateId,
+      fileId: templateId.trim(),
       requestBody: {
         name: `Informe_Tasacion_${uuidv4()}`,
       },
@@ -248,7 +466,6 @@ async function cloneTemplate(templateId) {
       supportsAllDrives: true,
     });
 
-    console.log(`Template cloned with ID: ${copiedFile.data.id}`);
     return {
       id: copiedFile.data.id,
       link: copiedFile.data.webViewLink
@@ -259,61 +476,27 @@ async function cloneTemplate(templateId) {
   }
 }
 
-// Move file to folder
 async function moveFileToFolder(fileId, folderId) {
   try {
     const file = await drive.files.get({
-      fileId: fileId,
+      fileId,
       fields: 'parents',
       supportsAllDrives: true,
     });
 
-    const previousParents = file.data.parents.join(',');
-
     await drive.files.update({
-      fileId: fileId,
+      fileId,
       addParents: folderId,
-      removeParents: previousParents,
+      removeParents: file.data.parents.join(','),
       supportsAllDrives: true,
       fields: 'id, parents',
     });
-
-    console.log(`File ${fileId} moved to folder ${folderId}`);
   } catch (error) {
     console.error('Error moving file:', error);
     throw error;
   }
 }
 
-// Upload PDF to Drive
-async function uploadPDFToDrive(pdfBuffer, pdfFilename, folderId) {
-  try {
-    const fileMetadata = {
-      name: pdfFilename,
-      parents: [folderId],
-      mimeType: 'application/pdf',
-    };
-
-    const media = {
-      mimeType: 'application/pdf',
-      body: Readable.from(pdfBuffer),
-    };
-
-    const file = await drive.files.create({
-      resource: fileMetadata,
-      media: media,
-      fields: 'id, webViewLink',
-    });
-
-    console.log(`PDF uploaded to Drive with ID: ${file.data.id}`);
-    return file.data.webViewLink;
-  } catch (error) {
-    console.error('Error uploading PDF to Drive:', error);
-    throw error;
-  }
-}
-
-// Export document to PDF
 async function exportToPDF(documentId) {
   try {
     const response = await drive.files.export(
@@ -331,58 +514,24 @@ async function exportToPDF(documentId) {
   }
 }
 
-// Adjust title font size
-async function adjustTitleFontSize(documentId, titleText) {
+async function uploadPDFToDrive(pdfBuffer, filename, folderId) {
   try {
-    const document = await docs.documents.get({ documentId });
-    const content = document.data.body.content;
-
-    let titleRange = null;
-    const titleRegex = new RegExp(titleText.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-
-    for (const element of content) {
-      if (element.paragraph && element.paragraph.elements) {
-        for (const elem of element.paragraph.elements) {
-          if (elem.textRun && elem.textRun.content.trim().match(titleRegex)) {
-            titleRange = {
-              startIndex: elem.startIndex,
-              endIndex: elem.endIndex,
-            };
-            break;
-          }
-        }
-      }
-      if (titleRange) break;
-    }
-
-    if (!titleRange) {
-      console.warn('Title not found for font size adjustment.');
-      return;
-    }
-
-    let fontSize = titleText.length <= 20 ? 18 : titleText.length <= 40 ? 16 : 14;
-
-    await docs.documents.batchUpdate({
-      documentId: documentId,
-      requestBody: {
-        requests: [{
-          updateTextStyle: {
-            range: titleRange,
-            textStyle: {
-              fontSize: {
-                magnitude: fontSize,
-                unit: 'PT',
-              },
-            },
-            fields: 'fontSize',
-          },
-        }],
+    const file = await drive.files.create({
+      resource: {
+        name: filename,
+        parents: [folderId],
+        mimeType: 'application/pdf',
       },
+      media: {
+        mimeType: 'application/pdf',
+        body: Readable.from(pdfBuffer),
+      },
+      fields: 'id, webViewLink',
     });
 
-    console.log(`Title font size adjusted to ${fontSize}pt`);
+    return file.data.webViewLink;
   } catch (error) {
-    console.error('Error adjusting title font size:', error);
+    console.error('Error uploading PDF:', error);
     throw error;
   }
 }
@@ -391,12 +540,13 @@ module.exports = {
   initializeGoogleApis,
   replacePlaceholdersInDocument,
   insertFormattedMetadata,
+  adjustTitleFontSize,
+  addGalleryImages,
+  replacePlaceholdersWithImages,
+  insertImageAtPlaceholder,
   cloneTemplate,
   moveFileToFolder,
-  uploadPDFToDrive,
   exportToPDF,
-  adjustTitleFontSize,
+  uploadPDFToDrive,
   calculateDimensions,
-  docs: () => docs,
-  drive: () => drive
 };
