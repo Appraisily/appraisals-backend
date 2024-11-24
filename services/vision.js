@@ -91,6 +91,39 @@ async function isGalleryPopulated(postId) {
   }
 }
 
+async function updateWordPressGallery(postId, imageIds) {
+  try {
+    console.log(`Updating WordPress gallery for post ${postId} with ${imageIds.length} images`);
+    
+    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      },
+      body: JSON.stringify({
+        acf: {
+          GoogleVision: imageIds,
+          _gallery_populated: '1'
+        }
+      })
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Error response from WordPress:', errorText);
+      throw new Error(`Error updating WordPress gallery: ${errorText}`);
+    }
+
+    const result = await response.json();
+    console.log('Gallery update response:', result);
+    return true;
+  } catch (error) {
+    console.error('Error updating WordPress gallery:', error);
+    throw error;
+  }
+}
+
 async function processMainImageWithGoogleVision(visionClient, postId) {
   try {
     // Check if gallery is already populated
@@ -159,26 +192,18 @@ async function processMainImageWithGoogleVision(visionClient, postId) {
       }
     }
 
-    // Update WordPress metadata
+    // Update WordPress gallery if we have uploaded images
     if (uploadedImageIds.length > 0) {
-      console.log(`Updating WordPress with ${uploadedImageIds.length} similar images`);
-      const updateResponse = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
-        },
-        body: JSON.stringify({
-          acf: {
-            GoogleVision: uploadedImageIds,
-            _gallery_populated: '1'
-          }
-        })
-      });
-
-      if (!updateResponse.ok) {
-        throw new Error(`Error updating WordPress metadata: ${await updateResponse.text()}`);
+      try {
+        console.log(`Updating WordPress gallery with ${uploadedImageIds.length} images:`, uploadedImageIds);
+        await updateWordPressGallery(postId, uploadedImageIds);
+        console.log('Gallery updated successfully');
+      } catch (updateError) {
+        console.error('Error updating gallery:', updateError);
+        throw updateError;
       }
+    } else {
+      console.warn('No images were successfully uploaded to update the gallery');
     }
 
     return {
