@@ -3,7 +3,6 @@ const { updateWordPressMetadata } = require('./wordpress');
 const fs = require('fs').promises;
 const path = require('path');
 
-// Get prompt from file
 async function getPrompt(custom_post_type_name) {
   const promptsDir = path.join(__dirname, '..', 'prompts');
   const promptFilePath = path.join(promptsDir, `${custom_post_type_name}.txt`);
@@ -15,7 +14,6 @@ async function getPrompt(custom_post_type_name) {
   }
 }
 
-// Get all available prompts
 async function getAvailablePrompts() {
   const promptsDir = path.join(__dirname, '..', 'prompts');
   try {
@@ -29,13 +27,23 @@ async function getAvailablePrompts() {
   }
 }
 
-// Process single metadata field
-async function processMetadataField(postId, fieldName, postTitle, images) {
+async function processMetadataField(postId, fieldName, postTitle, images = {}) {
   try {
     console.log(`Processing field: ${fieldName}`);
+    console.log(`Available images for ${fieldName}:`, Object.keys(images).filter(key => images[key]));
+
     const prompt = await getPrompt(fieldName);
+    if (!prompt) {
+      throw new Error(`Prompt file not found for ${fieldName}`);
+    }
+
     const content = await generateContent(prompt, postTitle, images);
+    if (!content) {
+      throw new Error(`No content generated for ${fieldName}`);
+    }
+
     await updateWordPressMetadata(postId, fieldName, content);
+    
     return {
       field: fieldName,
       status: 'success'
@@ -50,11 +58,11 @@ async function processMetadataField(postId, fieldName, postTitle, images) {
   }
 }
 
-// Process all metadata fields
-async function processAllMetadata(postId, postTitle, images) {
+async function processAllMetadata(postId, postTitle, images = {}) {
   try {
     const availablePrompts = await getAvailablePrompts();
     console.log(`Processing ${availablePrompts.length} metadata fields for post ${postId}`);
+    console.log('Available images:', Object.keys(images).filter(key => images[key]));
 
     const results = await Promise.all(
       availablePrompts.map(fieldName => 

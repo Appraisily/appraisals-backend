@@ -1,10 +1,11 @@
 const fetch = require('node-fetch');
 const config = require('../config');
 
-async function generateContent(prompt, postTitle, images) {
+async function generateContent(prompt, postTitle, images = {}) {
   try {
     console.log('Generating content with OpenAI...');
     console.log('Title:', postTitle);
+    console.log('Available images:', Object.keys(images).filter(key => images[key]));
 
     const messages = [
       {
@@ -19,26 +20,21 @@ async function generateContent(prompt, postTitle, images) {
       }
     ];
 
-    // Add images to the message if they exist and are valid URLs
-    if (images) {
-      if (images.main) {
+    // Add available images to the message
+    const validImages = ['main', 'age', 'signature'].filter(type => 
+      images[type] && typeof images[type] === 'string' && images[type].startsWith('http')
+    );
+
+    if (validImages.length > 0) {
+      validImages.forEach(type => {
         messages[1].content.push({
           type: "image_url",
-          image_url: { url: images.main }
+          image_url: { url: images[type] }
         });
-      }
-      if (images.age) {
-        messages[1].content.push({
-          type: "image_url",
-          image_url: { url: images.age }
-        });
-      }
-      if (images.signature) {
-        messages[1].content.push({
-          type: "image_url",
-          image_url: { url: images.signature }
-        });
-      }
+      });
+      console.log(`Added ${validImages.length} images to OpenAI request`);
+    } else {
+      console.log('No valid images available for content generation');
     }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
@@ -62,7 +58,7 @@ async function generateContent(prompt, postTitle, images) {
 
     const data = await response.json();
     
-    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+    if (!data.choices?.[0]?.message?.content) {
       throw new Error('Invalid response from OpenAI API');
     }
 

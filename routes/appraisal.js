@@ -4,7 +4,6 @@ const { processAllMetadata } = require('../services/metadata');
 const { processMainImageWithGoogleVision } = require('../services/vision');
 const { getPostTitle, getPostImages } = require('../services/wordpress');
 
-// Complete appraisal report endpoint
 router.post('/complete-appraisal-report', async (req, res) => {
   const { postId } = req.body;
 
@@ -24,15 +23,20 @@ router.post('/complete-appraisal-report', async (req, res) => {
       getPostImages(postId)
     ]);
 
+    if (!postTitle) {
+      throw new Error('Post title not found');
+    }
+
+    console.log('Post title:', postTitle);
+    console.log('Available images:', Object.keys(images).filter(key => images[key]));
+
     // Process Google Vision analysis
     const visionResult = await processMainImageWithGoogleVision(postId);
-    
-    if (!visionResult.success) {
-      console.log('Gallery already populated, skipping Vision analysis');
-    }
+    console.log('Vision analysis result:', visionResult);
 
     // Process metadata fields
     const metadataResults = await processAllMetadata(postId, postTitle, images);
+    console.log('Metadata processing results:', metadataResults);
 
     // Return response
     res.json({
@@ -49,7 +53,8 @@ router.post('/complete-appraisal-report', async (req, res) => {
     console.error('Error in /complete-appraisal-report:', error);
     res.status(500).json({ 
       success: false, 
-      message: error.message || 'Error completing appraisal report.'
+      message: error.message || 'Error completing appraisal report.',
+      error: error.stack
     });
   }
 });
