@@ -1,8 +1,11 @@
+const express = require('express');
+const fetch = require('node-fetch');
 const { google } = require('googleapis');
-const { Readable } = require('stream');
 const { v4: uuidv4 } = require('uuid');
+const { Readable } = require('stream');
 const config = require('../config');
 
+// Initialize Google APIs client
 let docs;
 let drive;
 
@@ -63,6 +66,53 @@ async function calculateDimensions(imageUrl, maxDimensions) {
   }
 }
 
+async function cloneTemplate(templateId) {
+  try {
+    const sanitizedTemplateId = templateId.trim();
+    console.log(`Cloning template with ID: '${sanitizedTemplateId}'`);
+
+    const copiedFile = await drive.files.copy({
+      fileId: sanitizedTemplateId,
+      requestBody: {
+        name: `Informe_Tasacion_${uuidv4()}`,
+      },
+      fields: 'id, webViewLink',
+      supportsAllDrives: true,
+    });
+
+    console.log(`Template cloned with ID: ${copiedFile.data.id}`);
+    return { id: copiedFile.data.id, link: copiedFile.data.webViewLink };
+  } catch (error) {
+    console.error('Error cloning Google Docs template:', error);
+    throw error;
+  }
+}
+
+async function moveFileToFolder(fileId, folderId) {
+  try {
+    const file = await drive.files.get({
+      fileId: fileId,
+      fields: 'parents',
+      supportsAllDrives: true,
+    });
+
+    const previousParents = file.data.parents.join(',');
+
+    await drive.files.update({
+      fileId: fileId,
+      addParents: folderId,
+      removeParents: previousParents,
+      supportsAllDrives: true,
+      fields: 'id, parents',
+    });
+
+    console.log(`File ${fileId} moved to folder ${folderId}`);
+  } catch (error) {
+    console.error('Error moving file:', error);
+    throw error;
+  }
+}
+
 async function replacePlaceholdersInDocument(documentId, data) {
   try {
     const document = await docs.documents.get({ documentId });
@@ -71,9 +121,9 @@ async function replacePlaceholdersInDocument(documentId, data) {
 
     const findAndReplace = (elements) => {
       for (const element of elements) {
-        if (element.paragraph && element.paragraph.elements) {
+        if (element.paragraph?.elements) {
           for (const textElement of element.paragraph.elements) {
-            if (textElement.textRun && textElement.textRun.content) {
+            if (textElement.textRun?.content) {
               for (const [key, value] of Object.entries(data)) {
                 const placeholder = `{{${key}}}`;
                 if (textElement.textRun.content.includes(placeholder)) {
@@ -105,97 +155,12 @@ async function replacePlaceholdersInDocument(documentId, data) {
     if (requests.length > 0) {
       await docs.documents.batchUpdate({
         documentId: documentId,
-        requestBody: {
-          requests: requests,
-        },
+        requestBody: { requests },
       });
-      console.log('Placeholders replaced in document ID:', documentId);
+      console.log(`Placeholders replaced in document ID: ${documentId}`);
     }
   } catch (error) {
     console.error('Error replacing placeholders:', error);
-    throw error;
-  }
-}
-
-async function insertFormattedMetadata(documentId, placeholder, tableData) {
-  try {
-    const document = await docs.documents.get({ documentId });
-    const content = document.data.body.content;
-    let placeholderIndex = -1;
-
-    const findPlaceholder = (elements) => {
-      for (const element of elements) {
-        if (element.paragraph?.elements) {
-          for (const elem of element.paragraph.elements) {
-            if (elem.textRun?.content.includes(`{{${placeholder}}}`)) {
-              placeholderIndex = elem.startIndex;
-              return;
-            }
-          }
-        } else if (element.table) {
-          for (const row of element.table.tableRows) {
-            for (const cell of row.tableCells) {
-              findPlaceholder(cell.content);
-            }
-          }
-        }
-      }
-    };
-
-    findPlaceholder(content);
-
-    if (placeholderIndex === -1) {
-      console.warn(`Placeholder "{{${placeholder}}}" not found in document.`);
-      return;
-    }
-
-    const rows = tableData.split('-').map(item => item.trim()).filter(item => item);
-    const formattedText = rows.map(row => {
-      const [key, value] = row.split(':').map(s => s.trim());
-      return key && value ? `**${key}:** ${value}` : key ? `**${key}:**` : value;
-    }).join('\n');
-
-    const requests = [
-      {
-        deleteContentRange: {
-          range: {
-            startIndex: placeholderIndex,
-            endIndex: placeholderIndex + `{{${placeholder}}}`.length,
-          },
-        },
-      },
-      {
-        insertText: {
-          text: formattedText,
-          location: { index: placeholderIndex },
-        },
-      },
-      ...rows.map((row, idx) => {
-        const [key] = row.split(':').map(s => s.trim());
-        if (!key) return null;
-        
-        const beforeText = rows.slice(0, idx).join('- ').length + 2;
-        const keyStartIndex = placeholderIndex + beforeText + 1;
-        
-        return {
-          updateTextStyle: {
-            range: {
-              startIndex: keyStartIndex,
-              endIndex: keyStartIndex + key.length + 1,
-            },
-            textStyle: { bold: true },
-            fields: 'bold',
-          },
-        };
-      }).filter(Boolean)
-    ];
-
-    await docs.documents.batchUpdate({
-      documentId,
-      requestBody: { requests },
-    });
-  } catch (error) {
-    console.error('Error inserting formatted metadata:', error);
     throw error;
   }
 }
@@ -228,10 +193,11 @@ async function adjustTitleFontSize(documentId, titleText) {
       return;
     }
 
-    const fontSize = titleText.length <= 20 ? 18 : titleText.length <= 40 ? 16 : 14;
+    let fontSize = titleText.length <= 20 ? 18 : 
+                   titleText.length <= 40 ? 16 : 14;
 
     await docs.documents.batchUpdate({
-      documentId,
+      documentId: documentId,
       requestBody: {
         requests: [{
           updateTextStyle: {
@@ -253,40 +219,100 @@ async function adjustTitleFontSize(documentId, titleText) {
   }
 }
 
-async function addGalleryImages(documentId, gallery) {
+async function insertFormattedMetadata(documentId, placeholder, tableData) {
   try {
     const document = await docs.documents.get({ documentId });
     const content = document.data.body.content;
-    let galleryIndex = -1;
+    let placeholderIndex = -1;
 
-    const findGalleryPlaceholder = (elements) => {
+    const findPlaceholder = (elements) => {
       for (const element of elements) {
         if (element.paragraph?.elements) {
           for (const elem of element.paragraph.elements) {
-            if (elem.textRun?.content.includes('{{gallery}}')) {
-              galleryIndex = elem.startIndex;
+            if (elem.textRun?.content.includes(`{{${placeholder}}}`)) {
+              placeholderIndex = elem.startIndex;
               return;
             }
           }
         } else if (element.table) {
           for (const row of element.table.tableRows) {
             for (const cell of row.tableCells) {
-              findGalleryPlaceholder(cell.content);
+              findPlaceholder(cell.content);
+              if (placeholderIndex !== -1) return;
             }
           }
         }
       }
     };
 
-    findGalleryPlaceholder(content);
+    findPlaceholder(content);
+
+    if (placeholderIndex === -1) {
+      console.warn(`Placeholder "{{${placeholder}}}" not found.`);
+      return;
+    }
+
+    const rows = tableData.split('-').map(item => item.trim()).filter(item => item);
+    const formattedRows = rows.map(row => {
+      const [key, value] = row.split(':').map(s => s.trim());
+      return key && value ? `${key}: ${value}` : key || value;
+    });
+
+    const requests = [
+      {
+        deleteContentRange: {
+          range: {
+            startIndex: placeholderIndex,
+            endIndex: placeholderIndex + `{{${placeholder}}}`.length,
+          },
+        },
+      },
+      {
+        insertText: {
+          text: formattedRows.join('\n'),
+          location: { index: placeholderIndex },
+        },
+      },
+    ];
+
+    await docs.documents.batchUpdate({
+      documentId,
+      requestBody: { requests },
+    });
+  } catch (error) {
+    console.error('Error inserting formatted metadata:', error);
+    throw error;
+  }
+}
+
+async function addGalleryImages(documentId, gallery) {
+  try {
+    console.log('Starting gallery image insertion:', gallery.length, 'images');
+    
+    const document = await docs.documents.get({ documentId });
+    const content = document.data.body.content;
+    let galleryIndex = -1;
+
+    for (const element of content) {
+      if (element.paragraph?.elements) {
+        for (const elem of element.paragraph.elements) {
+          if (elem.textRun?.content.includes('{{gallery}}')) {
+            galleryIndex = elem.startIndex;
+            break;
+          }
+        }
+      }
+      if (galleryIndex !== -1) break;
+    }
 
     if (galleryIndex === -1) {
-      console.warn('Gallery placeholder not found.');
+      console.warn('Gallery placeholder not found');
       return;
     }
 
     const columns = 3;
     const rows = Math.ceil(gallery.length / columns);
+    console.log(`Creating table with ${rows} rows and ${columns} columns`);
 
     const requests = [
       {
@@ -311,15 +337,15 @@ async function addGalleryImages(documentId, gallery) {
       requestBody: { requests },
     });
 
-    // Add placeholders for images
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
     const updatedDoc = await docs.documents.get({ documentId });
     const tableElement = updatedDoc.data.body.content.find(
       element => element.table && element.startIndex >= galleryIndex
     );
 
     if (!tableElement) {
-      console.warn('Gallery table not found after creation.');
-      return;
+      throw new Error('Table not found after insertion');
     }
 
     let imageIndex = 1;
@@ -345,6 +371,8 @@ async function addGalleryImages(documentId, gallery) {
         requestBody: { requests: placeholderRequests },
       });
     }
+
+    console.log(`Added ${placeholderRequests.length} image placeholders`);
   } catch (error) {
     console.error('Error adding gallery images:', error);
     throw error;
@@ -353,51 +381,119 @@ async function addGalleryImages(documentId, gallery) {
 
 async function replacePlaceholdersWithImages(documentId, gallery) {
   try {
+    console.log('Replacing gallery placeholders with images');
+
     for (let i = 0; i < gallery.length; i++) {
       const placeholder = `googlevision${i + 1}`;
       const imageUrl = gallery[i];
 
-      if (imageUrl) {
-        try {
-          const response = await fetch(imageUrl, { method: 'HEAD' });
-          if (response.ok) {
-            await insertImageAtPlaceholder(documentId, placeholder, imageUrl);
-          } else {
-            console.warn(`Image not accessible: ${imageUrl}`);
-          }
-        } catch (error) {
-          console.warn(`Error checking image: ${imageUrl}`, error);
+      if (!imageUrl) {
+        console.warn(`No image URL for placeholder ${placeholder}`);
+        continue;
+      }
+
+      try {
+        const response = await fetch(imageUrl, { method: 'HEAD' });
+        if (!response.ok) {
+          console.warn(`Image not accessible: ${imageUrl}`);
+          continue;
         }
+
+        const dimensions = await calculateDimensions(imageUrl, {
+          width: 150,
+          height: 150
+        });
+
+        const document = await docs.documents.get({ documentId });
+        const content = document.data.body.content;
+        const placeholderText = `{{${placeholder}}}`;
+        const requests = [];
+
+        const findPlaceholders = (elements) => {
+          for (const element of elements) {
+            if (element.paragraph?.elements) {
+              for (const elem of element.paragraph.elements) {
+                if (elem.textRun?.content.includes(placeholderText)) {
+                  const startIndex = elem.startIndex + elem.textRun.content.indexOf(placeholderText);
+                  requests.push(
+                    {
+                      deleteContentRange: {
+                        range: {
+                          startIndex,
+                          endIndex: startIndex + placeholderText.length,
+                        },
+                      },
+                    },
+                    {
+                      insertInlineImage: {
+                        uri: imageUrl,
+                        location: { index: startIndex },
+                        objectSize: {
+                          height: { magnitude: dimensions.height, unit: 'PT' },
+                          width: { magnitude: dimensions.width, unit: 'PT' },
+                        },
+                      },
+                    }
+                  );
+                }
+              }
+            } else if (element.table) {
+              for (const row of element.table.tableRows) {
+                for (const cell of row.tableCells) {
+                  findPlaceholders(cell.content);
+                }
+              }
+            }
+          }
+        };
+
+        findPlaceholders(content);
+
+        if (requests.length > 0) {
+          await docs.documents.batchUpdate({
+            documentId,
+            requestBody: { requests },
+          });
+          console.log(`Replaced placeholder ${placeholder} with image`);
+        }
+
+        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (error) {
+        console.warn(`Error processing image ${i + 1}:`, error);
       }
     }
+
+    console.log('Gallery image replacement complete');
   } catch (error) {
-    console.error('Error replacing image placeholders:', error);
+    console.error('Error replacing gallery images:', error);
     throw error;
   }
 }
 
 async function insertImageAtPlaceholder(documentId, placeholder, imageUrl) {
   try {
+    if (!imageUrl) {
+      console.warn(`Invalid image URL for placeholder '{{${placeholder}}}'.`);
+      return;
+    }
+
     const maxDimensions = {
       main_image: { width: 400, height: 300 },
       signature_image: { width: 200, height: 150 },
-      age_image: { width: 300, height: 200 },
-      default: { width: 150, height: 150 }
+      age_image: { width: 300, height: 200 }
     };
 
-    const dimensions = await calculateDimensions(
-      imageUrl,
-      maxDimensions[placeholder] || maxDimensions.default
-    );
+    let dimensions = { width: 200, height: 150 };
+    const placeholderType = placeholder.toLowerCase();
+    
+    if (placeholderType.includes('main')) {
+      dimensions = await calculateDimensions(imageUrl, maxDimensions.main_image);
+    } else if (placeholderType.includes('signature')) {
+      dimensions = await calculateDimensions(imageUrl, maxDimensions.signature_image);
+    } else if (placeholderType.includes('age')) {
+      dimensions = await calculateDimensions(imageUrl, maxDimensions.age_image);
+    }
 
-    await insertImageAtAllPlaceholders(documentId, placeholder, imageUrl, dimensions);
-  } catch (error) {
-    console.warn(`Error inserting image for ${placeholder}:`, error);
-  }
-}
-
-async function insertImageAtAllPlaceholders(documentId, placeholder, imageUrl, dimensions) {
-  try {
     const document = await docs.documents.get({ documentId });
     const content = document.data.body.content;
     const placeholderText = `{{${placeholder}}}`;
@@ -448,52 +544,10 @@ async function insertImageAtAllPlaceholders(documentId, placeholder, imageUrl, d
         documentId,
         requestBody: { requests },
       });
+      console.log(`Placeholder '{{${placeholder}}}' replaced with image`);
     }
   } catch (error) {
-    console.error('Error inserting images:', error);
-    throw error;
-  }
-}
-
-async function cloneTemplate(templateId) {
-  try {
-    const copiedFile = await drive.files.copy({
-      fileId: templateId.trim(),
-      requestBody: {
-        name: `Informe_Tasacion_${uuidv4()}`,
-      },
-      fields: 'id, webViewLink',
-      supportsAllDrives: true,
-    });
-
-    return {
-      id: copiedFile.data.id,
-      link: copiedFile.data.webViewLink
-    };
-  } catch (error) {
-    console.error('Error cloning template:', error);
-    throw error;
-  }
-}
-
-async function moveFileToFolder(fileId, folderId) {
-  try {
-    const file = await drive.files.get({
-      fileId,
-      fields: 'parents',
-      supportsAllDrives: true,
-    });
-
-    await drive.files.update({
-      fileId,
-      addParents: folderId,
-      removeParents: file.data.parents.join(','),
-      supportsAllDrives: true,
-      fields: 'id, parents',
-    });
-  } catch (error) {
-    console.error('Error moving file:', error);
-    throw error;
+    console.warn(`Error inserting image for placeholder '{{${placeholder}}}':`, error);
   }
 }
 
@@ -514,39 +568,43 @@ async function exportToPDF(documentId) {
   }
 }
 
-async function uploadPDFToDrive(pdfBuffer, filename, folderId) {
+async function uploadPDFToDrive(pdfBuffer, pdfFilename, folderId) {
   try {
+    const fileMetadata = {
+      name: pdfFilename,
+      parents: [folderId],
+      mimeType: 'application/pdf',
+    };
+
+    const media = {
+      mimeType: 'application/pdf',
+      body: Readable.from(pdfBuffer),
+    };
+
     const file = await drive.files.create({
-      resource: {
-        name: filename,
-        parents: [folderId],
-        mimeType: 'application/pdf',
-      },
-      media: {
-        mimeType: 'application/pdf',
-        body: Readable.from(pdfBuffer),
-      },
+      resource: fileMetadata,
+      media: media,
       fields: 'id, webViewLink',
     });
 
+    console.log(`PDF uploaded to Drive with ID: ${file.data.id}`);
     return file.data.webViewLink;
   } catch (error) {
-    console.error('Error uploading PDF:', error);
+    console.error('Error uploading PDF to Drive:', error);
     throw error;
   }
 }
 
 module.exports = {
   initializeGoogleApis,
+  cloneTemplate,
+  moveFileToFolder,
   replacePlaceholdersInDocument,
-  insertFormattedMetadata,
   adjustTitleFontSize,
+  insertFormattedMetadata,
   addGalleryImages,
   replacePlaceholdersWithImages,
   insertImageAtPlaceholder,
-  cloneTemplate,
-  moveFileToFolder,
   exportToPDF,
-  uploadPDFToDrive,
-  calculateDimensions,
+  uploadPDFToDrive
 };
