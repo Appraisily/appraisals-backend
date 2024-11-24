@@ -1,5 +1,6 @@
 // index.js
 const express = require('express');
+const fetch = require('node-fetch'); // Añadido fetch
 const fs = require('fs').promises;
 const path = require('path');
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
