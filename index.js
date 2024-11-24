@@ -1,63 +1,32 @@
 // index.js
 const express = require('express');
-const fetch = require('node-fetch');
-const fs = require('fs').promises;
 const path = require('path');
+const fs = require('fs').promises;
+const cors = require('cors');
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const vision = require('@google-cloud/vision');
-const config = require('./config');
-const cors = require('cors');
-
-const { router: pdfRouter, initializeGoogleApis } = require('./pdfGenerator');
-const { processMainImageWithGoogleVision, getImageUrl } = require('./services/vision');
-const { updateWordPressMetadata } = require('./services/wordpress');
+const { processMainImageWithGoogleVision } = require('./services/vision');
 const { generateContent } = require('./services/openai');
+const { updateWordPressMetadata } = require('./services/wordpress');
+const config = require('./config');
 
 const app = express();
 
+// Middleware
 app.use(express.json());
-
-// Simplified CORS configuration
 app.use(cors({
-  origin: '*', // Allow all origins temporarily to debug
+  origin: [
+    'https://appraisers-frontend-856401495068.us-central1.run.app',
+    'https://appraisers-task-queue-856401495068.us-central1.run.app',
+    'https://appraisers-backend-856401495068.us-central1.run.app'
+  ],
   credentials: true
 }));
 
-app.use('/', pdfRouter);
-
-const client = new SecretManagerServiceClient();
+// Initialize Vision client
 let visionClient;
 
-async function getSecret(secretName) {
-  try {
-    const projectId = 'civil-forge-403609';
-    const secretPath = `projects/${projectId}/secrets/${secretName}/versions/latest`;
-    const [version] = await client.accessSecretVersion({ name: secretPath });
-    const payload = version.payload.data.toString('utf8');
-    console.log(`Secreto '${secretName}' obtenido exitosamente.`);
-    return payload;
-  } catch (error) {
-    console.error(`Error obteniendo el secreto '${secretName}':`, error);
-    throw new Error(`No se pudo obtener el secreto '${secretName}'.`);
-  }
-}
-
-async function loadSecrets() {
-  try {
-    config.WORDPRESS_API_URL = await getSecret('WORDPRESS_API_URL');
-    config.WORDPRESS_USERNAME = await getSecret('wp_username');
-    config.WORDPRESS_APP_PASSWORD = await getSecret('wp_app_password');
-    config.OPENAI_API_KEY = await getSecret('OPENAI_API_KEY');
-    config.GOOGLE_VISION_CREDENTIALS = await getSecret('GOOGLE_VISION_CREDENTIALS');
-    config.GOOGLE_DOCS_CREDENTIALS = await getSecret('GOOGLE_DOCS_CREDENTIALS');
-    console.log('Todos los secretos han sido cargados exitosamente.');
-  } catch (error) {
-    console.error('Error cargando los secretos:', error);
-    process.exit(1);
-  }
-}
-
-function initializeVisionClient() {
+async function initializeVisionClient() {
   try {
     const credentials = JSON.parse(config.GOOGLE_VISION_CREDENTIALS);
     visionClient = new vision.ImageAnnotatorClient({
@@ -65,12 +34,12 @@ function initializeVisionClient() {
         client_email: credentials.client_email,
         private_key: credentials.private_key,
       },
-      projectId: 'civil-forge-403609',
+      projectId: 'civil-forge-403609'
     });
-    console.log('Cliente de Google Vision inicializado correctamente.');
+    console.log('Vision client initialized successfully');
   } catch (error) {
-    console.error('Error inicializando el cliente de Google Vision:', error);
-    process.exit(1);
+    console.error('Error initializing Vision client:', error);
+    throw error;
   }
 }
 
@@ -83,15 +52,14 @@ async function getPostDetails(postId) {
     });
 
     if (!response.ok) {
-      const errorText = await response.text();
-      throw new Error(`Error fetching post: ${errorText}`);
+      throw new Error(`Error fetching post: ${await response.text()}`);
     }
 
     const post = await response.json();
     const images = {
-      main: await getImageUrl(post.acf?.main),
-      age: await getImageUrl(post.acf?.age),
-      signature: await getImageUrl(post.acf?.signature)
+      main: post.acf?.main ? `${config.WORDPRESS_API_URL}/media/${post.acf.main}` : null,
+      age: post.acf?.age ? `${config.WORDPRESS_API_URL}/media/${post.acf.age}` : null,
+      signature: post.acf?.signature ? `${config.WORDPRESS_API_URL}/media/${post.acf.signature}` : null
     };
 
     return {
@@ -123,11 +91,10 @@ app.post('/complete-appraisal-report', async (req, res) => {
     // Process with Google Vision only if gallery is not populated
     if (postDetails.acf._gallery_populated !== '1') {
       try {
-        const visionResults = await processMainImageWithGoogleVision(visionClient, postId);
+        await processMainImageWithGoogleVision(visionClient, postId);
         console.log('Google Vision analysis completed');
       } catch (visionError) {
         console.error('Error in Vision analysis:', visionError);
-        // Continue with content generation even if Vision fails
       }
     } else {
       console.log('Gallery already populated, skipping Vision analysis');
@@ -138,30 +105,21 @@ app.post('/complete-appraisal-report', async (req, res) => {
     const files = await fs.readdir(promptsDir);
     const txtFiles = files.filter(file => path.extname(file).toLowerCase() === '.txt');
 
-    // Process each prompt
+    // Process each prompt once
     const results = [];
     for (const file of txtFiles) {
       const fieldName = path.basename(file, '.txt');
       console.log(`Processing field: ${fieldName}`);
 
       try {
-        // Read prompt
         const promptContent = await fs.readFile(path.join(promptsDir, file), 'utf8');
-        
-        // Generate content
         const generatedContent = await generateContent(
           promptContent,
           postDetails.title,
           postDetails.images
         );
-
-        // Update WordPress
         await updateWordPressMetadata(postId, fieldName, generatedContent);
-
-        results.push({
-          field: fieldName,
-          status: 'success'
-        });
+        results.push({ field: fieldName, status: 'success' });
       } catch (error) {
         console.error(`Error processing ${fieldName}:`, error);
         results.push({
@@ -169,10 +127,10 @@ app.post('/complete-appraisal-report', async (req, res) => {
           status: 'error',
           error: error.message
         });
-        // Continue with next field even if this one fails
       }
     }
 
+    // Send final response
     res.json({
       success: true,
       message: 'Informe de tasación completado exitosamente.',
@@ -192,18 +150,41 @@ app.post('/complete-appraisal-report', async (req, res) => {
   }
 });
 
-// Start server
-loadSecrets().then(async () => {
-  initializeVisionClient();
-  await initializeGoogleApis();
-  
-  const PORT = process.env.PORT || 8080;
-  app.listen(PORT, () => {
-    console.log(`Servidor backend corriendo en el puerto ${PORT}`);
-  });
-}).catch(error => {
-  console.error('Failed to start server:', error);
-  process.exit(1);
-});
+// Initialize secrets and start server
+async function start() {
+  try {
+    const client = new SecretManagerServiceClient();
+    const projectId = 'civil-forge-403609';
 
-module.exports = app;
+    // Load secrets
+    const secrets = [
+      'WORDPRESS_API_URL',
+      'wp_username',
+      'wp_app_password',
+      'OPENAI_API_KEY',
+      'GOOGLE_VISION_CREDENTIALS'
+    ];
+
+    for (const secretName of secrets) {
+      const [version] = await client.accessSecretVersion({
+        name: `projects/${projectId}/secrets/${secretName}/versions/latest`
+      });
+      config[secretName] = version.payload.data.toString('utf8');
+      console.log(`Secret '${secretName}' loaded successfully`);
+    }
+
+    // Initialize Vision client
+    await initializeVisionClient();
+
+    // Start server
+    const PORT = process.env.PORT || 8080;
+    app.listen(PORT, () => {
+      console.log(`Server running on port ${PORT}`);
+    });
+  } catch (error) {
+    console.error('Error starting server:', error);
+    process.exit(1);
+  }
+}
+
+start();
