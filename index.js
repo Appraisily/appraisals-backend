@@ -1,6 +1,5 @@
 // index.js
 const express = require('express');
-const fetch = require('node-fetch');
 const fs = require('fs').promises;
 const path = require('path');
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
@@ -9,8 +8,9 @@ const config = require('./config');
 const cors = require('cors');
 
 const { router: pdfRouter, initializeGoogleApis } = require('./pdfGenerator');
-const { processMainImageWithGoogleVision } = require('./services/vision');
+const { processMainImageWithGoogleVision, getImageUrl } = require('./services/vision');
 const { updateWordPressMetadata } = require('./services/wordpress');
+const { generateContent } = require('./services/openai');
 
 const app = express();
 
@@ -94,63 +94,23 @@ async function getPostDetails(postId) {
     });
 
     if (!response.ok) {
-      throw new Error(`Error fetching post: ${response.statusText}`);
+      throw new Error(`Error fetching post: ${await response.text()}`);
     }
 
     const post = await response.json();
+    const images = {
+      main: await getImageUrl(post.acf?.main),
+      age: await getImageUrl(post.acf?.age),
+      signature: await getImageUrl(post.acf?.signature)
+    };
+
     return {
       title: post.title.rendered,
       acf: post.acf || {},
-      images: {
-        main: post.acf?.main,
-        age: post.acf?.age,
-        signature: post.acf?.signature
-      }
+      images
     };
   } catch (error) {
     console.error('Error getting post details:', error);
-    throw error;
-  }
-}
-
-async function generateContent(prompt, postTitle, images) {
-  try {
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${config.OPENAI_API_KEY}`
-      },
-      body: JSON.stringify({
-        model: 'gpt-4-vision-preview',
-        messages: [
-          {
-            role: "system",
-            content: "You are a professional art expert."
-          },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: `Title: ${postTitle}` },
-              ...(images.main ? [{ type: "image_url", image_url: { url: images.main } }] : []),
-              ...(images.age ? [{ type: "image_url", image_url: { url: images.age } }] : []),
-              ...(images.signature ? [{ type: "image_url", image_url: { url: images.signature } }] : []),
-              { type: "text", text: prompt }
-            ]
-          }
-        ],
-        max_tokens: 500
-      })
-    });
-
-    if (!response.ok) {
-      throw new Error(`OpenAI API error: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    return data.choices[0].message.content.trim();
-  } catch (error) {
-    console.error('Error generating content:', error);
     throw error;
   }
 }
@@ -183,37 +143,53 @@ app.post('/complete-appraisal-report', async (req, res) => {
     const files = await fs.readdir(promptsDir);
     const txtFiles = files.filter(file => path.extname(file).toLowerCase() === '.txt');
 
-    // Process each prompt
+    // Process each prompt with retries
     const results = [];
     for (const file of txtFiles) {
-      try {
-        const fieldName = path.basename(file, '.txt');
-        console.log(`Processing field: ${fieldName}`);
+      const fieldName = path.basename(file, '.txt');
+      console.log(`Processing field: ${fieldName}`);
 
-        // Read prompt
-        const promptContent = await fs.readFile(path.join(promptsDir, file), 'utf8');
-        
-        // Generate content
-        const generatedContent = await generateContent(
-          promptContent,
-          postDetails.title,
-          postDetails.images
-        );
+      let retries = 3;
+      let success = false;
 
-        // Update WordPress
-        await updateWordPressMetadata(postId, fieldName, generatedContent);
+      while (retries > 0 && !success) {
+        try {
+          // Read prompt
+          const promptContent = await fs.readFile(path.join(promptsDir, file), 'utf8');
+          
+          // Generate content
+          const generatedContent = await generateContent(
+            promptContent,
+            postDetails.title,
+            postDetails.images
+          );
 
-        results.push({
-          field: fieldName,
-          status: 'success'
-        });
-      } catch (error) {
-        console.error(`Error processing ${file}:`, error);
-        results.push({
-          field: path.basename(file, '.txt'),
-          status: 'error',
-          error: error.message
-        });
+          // Update WordPress
+          await updateWordPressMetadata(postId, fieldName, generatedContent);
+
+          results.push({
+            field: fieldName,
+            status: 'success'
+          });
+
+          success = true;
+        } catch (error) {
+          retries--;
+          console.error(`Error processing ${fieldName} (${retries} retries left):`, error);
+          
+          if (retries === 0) {
+            results.push({
+              field: fieldName,
+              status: 'error',
+              error: error.message
+            });
+          }
+
+          // Wait before retrying
+          if (retries > 0) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+        }
       }
     }
 
