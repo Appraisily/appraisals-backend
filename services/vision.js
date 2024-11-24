@@ -89,25 +89,10 @@ async function uploadImageToWordPress(imageUrl) {
 async function updateWordPressGallery(postId, imageIds) {
   try {
     console.log(`Updating WordPress gallery for post ${postId} with ${imageIds.length} images:`, imageIds);
-    
-    // Get current post data
-    const getResponse = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}`, {
-      headers: {
-        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
-      }
-    });
 
-    if (!getResponse.ok) {
-      throw new Error(`Error fetching post: ${await getResponse.text()}`);
-    }
-
-    const post = await getResponse.json();
-    const currentAcf = post.acf || {};
-
-    // Update data
+    // Update only the GoogleVision gallery field and _gallery_populated flag
     const updateData = {
-      acf: {
-        ...currentAcf,
+      fields: {
         GoogleVision: imageIds,
         _gallery_populated: '1'
       }
@@ -133,7 +118,7 @@ async function updateWordPressGallery(postId, imageIds) {
     const result = await response.json();
     console.log('Gallery update response:', JSON.stringify(result.acf?.GoogleVision));
     
-    if (!result.acf?.GoogleVision || !Array.isArray(result.acf.GoogleVision)) {
+    if (!result.acf?.GoogleVision) {
       throw new Error('Gallery update failed: No GoogleVision array in response');
     }
 
