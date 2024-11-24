@@ -1,4 +1,3 @@
-// services/openai.js
 const fetch = require('node-fetch');
 const config = require('../config');
 
@@ -6,28 +5,41 @@ async function generateContent(prompt, postTitle, images) {
   try {
     console.log('Generating content with OpenAI...');
     console.log('Title:', postTitle);
-    console.log('Images:', JSON.stringify(images));
 
     const messages = [
       {
         role: "system",
-        content: "You are a professional art expert."
+        content: "You are a professional art expert specializing in appraisals and artwork analysis."
       },
       {
         role: "user",
         content: [
-          { type: "text", text: `Title: ${postTitle}` }
+          { type: "text", text: `Title: ${postTitle}\n\n${prompt}` }
         ]
       }
     ];
 
     // Add images to the message if they exist and are valid URLs
-    if (images.main) messages[1].content.push({ type: "image_url", image_url: { url: images.main } });
-    if (images.age) messages[1].content.push({ type: "image_url", image_url: { url: images.age } });
-    if (images.signature) messages[1].content.push({ type: "image_url", image_url: { url: images.signature } });
-
-    // Add the prompt as the final text content
-    messages[1].content.push({ type: "text", text: prompt });
+    if (images) {
+      if (images.main) {
+        messages[1].content.push({
+          type: "image_url",
+          image_url: { url: images.main }
+        });
+      }
+      if (images.age) {
+        messages[1].content.push({
+          type: "image_url",
+          image_url: { url: images.age }
+        });
+      }
+      if (images.signature) {
+        messages[1].content.push({
+          type: "image_url",
+          image_url: { url: images.signature }
+        });
+      }
+    }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -36,9 +48,9 @@ async function generateContent(prompt, postTitle, images) {
         'Authorization': `Bearer ${config.OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'gpt-4o-mini',
+        model: 'gpt-4-vision-preview',
         messages: messages,
-        max_tokens: 500,
+        max_tokens: 1000,
         temperature: 0.7
       })
     });
@@ -49,8 +61,14 @@ async function generateContent(prompt, postTitle, images) {
     }
 
     const data = await response.json();
+    
+    if (!data.choices || !data.choices[0] || !data.choices[0].message) {
+      throw new Error('Invalid response from OpenAI API');
+    }
+
+    const content = data.choices[0].message.content.trim();
     console.log('Content generated successfully');
-    return data.choices[0].message.content.trim();
+    return content;
   } catch (error) {
     console.error('Error generating content:', error);
     throw error;
