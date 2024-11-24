@@ -4,6 +4,7 @@ const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const config = require('./config');
 const appraisalRouter = require('./routes/appraisal');
 const pdfRouter = require('./routes/pdf');
+const { initializeGoogleApis } = require('./services/pdf');
 
 const app = express();
 
@@ -58,7 +59,6 @@ async function getSecret(secretName) {
 async function startServer() {
   try {
     await loadSecrets();
-    const { initializeGoogleApis } = require('./services/pdf');
     await initializeGoogleApis();
 
     const PORT = process.env.PORT || 8080;

@@ -1,129 +1,42 @@
-// ... (previous imports and functions remain the same)
+const express = require('express');
+const fetch = require('node-fetch');
+const { google } = require('googleapis');
+const { v4: uuidv4 } = require('uuid');
+const { Readable } = require('stream');
+const config = require('../config');
 
-async function calculateDimensions(imageUrl, maxDimensions) {
+// Initialize Google APIs client
+let docs;
+let drive;
+
+// Function to initialize Google APIs
+async function initializeGoogleApis() {
   try {
-    const response = await fetch(imageUrl, { method: 'HEAD' });
-    if (!response.ok) {
-      throw new Error('Failed to fetch image metadata');
-    }
+    const credentials = JSON.parse(config.GOOGLE_DOCS_CREDENTIALS);
 
-    const contentType = response.headers.get('content-type');
-    if (!contentType?.startsWith('image/')) {
-      throw new Error('URL does not point to an image');
-    }
-
-    // Calculate dimensions preserving aspect ratio
-    const aspectRatio = maxDimensions.width / maxDimensions.height;
-    let { width, height } = maxDimensions;
-
-    if (width / height > aspectRatio) {
-      width = height * aspectRatio;
-    } else {
-      height = width / aspectRatio;
-    }
-
-    return {
-      width: Math.round(width),
-      height: Math.round(height)
-    };
-  } catch (error) {
-    console.warn('Error calculating image dimensions:', error);
-    return maxDimensions;
-  }
-}
-
-async function getImageDimensions(placeholder, imageUrl) {
-  const maxDimensions = {
-    main_image: { width: 400, height: 300 },
-    signature_image: { width: 200, height: 150 },
-    age_image: { width: 300, height: 200 },
-    googlevision: { width: 200, height: 150 }
-  };
-
-  const defaultDimensions = { width: 200, height: 150 };
-  const dimensions = maxDimensions[placeholder] || defaultDimensions;
-
-  return calculateDimensions(imageUrl, dimensions);
-}
-
-async function insertImageAtPlaceholder(documentId, placeholder, imageUrl) {
-  if (!imageUrl) {
-    console.warn(`No image URL provided for placeholder ${placeholder}`);
-    return;
-  }
-
-  try {
-    // Check if image is accessible
-    const response = await fetch(imageUrl, { method: 'HEAD' });
-    if (!response.ok) {
-      throw new Error('Image not accessible');
-    }
-
-    // Calculate dimensions
-    const dimensions = await getImageDimensions(placeholder, imageUrl);
-
-    // Find and replace placeholder
-    const document = await docs.documents.get({ documentId });
-    const content = document.data.body.content;
-    const placeholderText = `{{${placeholder}}}`;
-    let placeholderIndex = -1;
-
-    // Find placeholder in document
-    for (const element of content) {
-      if (element.paragraph?.elements) {
-        for (const elem of element.paragraph.elements) {
-          if (elem.textRun?.content.includes(placeholderText)) {
-            placeholderIndex = elem.startIndex;
-            break;
-          }
-        }
-      }
-      if (placeholderIndex !== -1) break;
-    }
-
-    if (placeholderIndex === -1) {
-      console.warn(`Placeholder ${placeholderText} not found`);
-      return;
-    }
-
-    // Replace placeholder with image
-    await docs.documents.batchUpdate({
-      documentId,
-      requestBody: {
-        requests: [
-          {
-            deleteContentRange: {
-              range: {
-                startIndex: placeholderIndex,
-                endIndex: placeholderIndex + placeholderText.length,
-              },
-            },
-          },
-          {
-            insertInlineImage: {
-              location: { index: placeholderIndex },
-              uri: imageUrl,
-              objectSize: {
-                height: { magnitude: dimensions.height, unit: 'PT' },
-                width: { magnitude: dimensions.width, unit: 'PT' },
-              },
-            },
-          },
-        ],
-      },
+    const auth = new google.auth.GoogleAuth({
+      credentials: credentials,
+      scopes: [
+        'https://www.googleapis.com/auth/documents',
+        'https://www.googleapis.com/auth/drive',
+      ],
     });
 
-    console.log(`Successfully inserted image for placeholder ${placeholder}`);
+    const authClient = await auth.getClient();
+
+    docs = google.docs({ version: 'v1', auth: authClient });
+    drive = google.drive({ version: 'v3', auth: authClient });
+
+    console.log('Google Docs and Drive clients initialized successfully.');
   } catch (error) {
-    console.error(`Error inserting image for placeholder ${placeholder}:`, error);
-    // Don't throw error to allow processing to continue
+    console.error('Error initializing Google APIs:', error);
+    throw error;
   }
 }
 
-// ... (rest of the file remains the same)
-
+// Export all functions that need access to docs/drive clients
 module.exports = {
-  // ... (previous exports)
-  calculateDimensions,
-  getImageDimensions
+  initializeGoogleApis,
+  docs: () => docs,
+  drive: () => drive
 };
