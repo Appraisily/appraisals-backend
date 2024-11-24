@@ -1,6 +1,6 @@
 // index.js
 const express = require('express');
-const fetch = require('node-fetch'); // Añadido fetch
+const fetch = require('node-fetch');
 const fs = require('fs').promises;
 const path = require('path');
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
@@ -17,21 +17,9 @@ const app = express();
 
 app.use(express.json());
 
-const allowedOrigins = [
-  'https://appraisers-frontend-856401495068.us-central1.run.app',
-  'https://appraisers-task-queue-856401495068.us-central1.run.app',
-  'https://appraisers-backend-856401495068.us-central1.run.app'
-];
-
+// Simplified CORS configuration
 app.use(cors({
-  origin: function(origin, callback) {
-    if (!origin) return callback(null, true);
-    if (allowedOrigins.indexOf(origin) === -1) {
-      const msg = 'The CORS policy for this site does not allow access from the specified Origin.';
-      return callback(new Error(msg), false);
-    }
-    return callback(null, true);
-  },
+  origin: '*', // Allow all origins temporarily to debug
   credentials: true
 }));
 
@@ -95,7 +83,8 @@ async function getPostDetails(postId) {
     });
 
     if (!response.ok) {
-      throw new Error(`Error fetching post: ${await response.text()}`);
+      const errorText = await response.text();
+      throw new Error(`Error fetching post: ${errorText}`);
     }
 
     const post = await response.json();
@@ -122,11 +111,7 @@ app.post('/complete-appraisal-report', async (req, res) => {
   if (!postId) {
     return res.status(400).json({ 
       success: false, 
-      message: 'postId es requerido.',
-      details: {
-        required: ["postId"],
-        received: req.body
-      }
+      message: 'postId es requerido.'
     });
   }
 
@@ -135,73 +120,65 @@ app.post('/complete-appraisal-report', async (req, res) => {
     const postDetails = await getPostDetails(postId);
     console.log(`Processing appraisal report for post: ${postDetails.title}`);
 
-    // Process with Google Vision
-    const visionResults = await processMainImageWithGoogleVision(visionClient, postId);
-    console.log('Google Vision analysis completed');
+    // Process with Google Vision only if gallery is not populated
+    if (postDetails.acf._gallery_populated !== '1') {
+      try {
+        const visionResults = await processMainImageWithGoogleVision(visionClient, postId);
+        console.log('Google Vision analysis completed');
+      } catch (visionError) {
+        console.error('Error in Vision analysis:', visionError);
+        // Continue with content generation even if Vision fails
+      }
+    } else {
+      console.log('Gallery already populated, skipping Vision analysis');
+    }
 
     // Get all prompt files
     const promptsDir = path.join(__dirname, 'prompts');
     const files = await fs.readdir(promptsDir);
     const txtFiles = files.filter(file => path.extname(file).toLowerCase() === '.txt');
 
-    // Process each prompt with retries
+    // Process each prompt
     const results = [];
     for (const file of txtFiles) {
       const fieldName = path.basename(file, '.txt');
       console.log(`Processing field: ${fieldName}`);
 
-      let retries = 3;
-      let success = false;
+      try {
+        // Read prompt
+        const promptContent = await fs.readFile(path.join(promptsDir, file), 'utf8');
+        
+        // Generate content
+        const generatedContent = await generateContent(
+          promptContent,
+          postDetails.title,
+          postDetails.images
+        );
 
-      while (retries > 0 && !success) {
-        try {
-          // Read prompt
-          const promptContent = await fs.readFile(path.join(promptsDir, file), 'utf8');
-          
-          // Generate content
-          const generatedContent = await generateContent(
-            promptContent,
-            postDetails.title,
-            postDetails.images
-          );
+        // Update WordPress
+        await updateWordPressMetadata(postId, fieldName, generatedContent);
 
-          // Update WordPress
-          await updateWordPressMetadata(postId, fieldName, generatedContent);
-
-          results.push({
-            field: fieldName,
-            status: 'success'
-          });
-
-          success = true;
-        } catch (error) {
-          retries--;
-          console.error(`Error processing ${fieldName} (${retries} retries left):`, error);
-          
-          if (retries === 0) {
-            results.push({
-              field: fieldName,
-              status: 'error',
-              error: error.message
-            });
-          }
-
-          // Wait before retrying
-          if (retries > 0) {
-            await new Promise(resolve => setTimeout(resolve, 2000));
-          }
-        }
+        results.push({
+          field: fieldName,
+          status: 'success'
+        });
+      } catch (error) {
+        console.error(`Error processing ${fieldName}:`, error);
+        results.push({
+          field: fieldName,
+          status: 'error',
+          error: error.message
+        });
+        // Continue with next field even if this one fails
       }
     }
 
-    // Return detailed response
     res.json({
       success: true,
       message: 'Informe de tasación completado exitosamente.',
       details: {
         postId,
         title: postDetails.title,
-        visionAnalysis: visionResults,
         processedFields: results
       }
     });
@@ -210,12 +187,7 @@ app.post('/complete-appraisal-report', async (req, res) => {
     console.error('Error en /complete-appraisal-report:', error);
     res.status(500).json({
       success: false,
-      message: 'Error completando el informe de tasación.',
-      error: error.message,
-      details: {
-        postId,
-        timestamp: new Date().toISOString()
-      }
+      message: error.message || 'Error completando el informe de tasación.'
     });
   }
 });
@@ -229,6 +201,9 @@ loadSecrets().then(async () => {
   app.listen(PORT, () => {
     console.log(`Servidor backend corriendo en el puerto ${PORT}`);
   });
+}).catch(error => {
+  console.error('Failed to start server:', error);
+  process.exit(1);
 });
 
 module.exports = app;
