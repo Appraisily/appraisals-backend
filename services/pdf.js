@@ -209,6 +209,104 @@ async function adjustTitleFontSize(documentId, titleText) {
   }
 }
 
+async function insertFormattedMetadata(documentId, placeholder, tableData) {
+  try {
+    const document = await docs.documents.get({ documentId });
+    const content = document.data.body.content;
+    let placeholderFound = false;
+    let placeholderIndex = -1;
+
+    const findPlaceholder = (elements) => {
+      for (const element of elements) {
+        if (element.paragraph && element.paragraph.elements) {
+          for (const elem of element.paragraph.elements) {
+            if (elem.textRun && elem.textRun.content.includes(`{{${placeholder}}}`)) {
+              placeholderFound = true;
+              placeholderIndex = elem.startIndex;
+              return true;
+            }
+          }
+        } else if (element.table) {
+          for (const row of element.table.tableRows) {
+            for (const cell of row.tableCells) {
+              if (cell.content && findPlaceholder(cell.content)) {
+                return true;
+              }
+            }
+          }
+        }
+      }
+      return false;
+    };
+
+    findPlaceholder(content);
+
+    if (!placeholderFound) {
+      console.warn(`Placeholder "{{${placeholder}}}" not found in document.`);
+      return;
+    }
+
+    const rows = tableData.split('-').map(item => item.trim()).filter(item => item);
+    const formattedText = rows.map(row => {
+      const [key, value] = row.split(':').map(s => s.trim());
+      if (key && value) {
+        return `**${key}:** ${value}`;
+      } else if (key) {
+        return `**${key}:**`;
+      } else {
+        return value;
+      }
+    }).join('\n');
+
+    await docs.documents.batchUpdate({
+      documentId: documentId,
+      requestBody: {
+        requests: [
+          {
+            deleteContentRange: {
+              range: {
+                startIndex: placeholderIndex,
+                endIndex: placeholderIndex + `{{${placeholder}}}`.length,
+              },
+            },
+          },
+          {
+            insertText: {
+              text: formattedText,
+              location: {
+                index: placeholderIndex,
+              },
+            },
+          },
+          ...rows.map((row, idx) => {
+            const [key] = row.split(':').map(s => s.trim());
+            if (key) {
+              const beforeText = rows.slice(0, idx).join('\n').length;
+              const keyStartIndex = placeholderIndex + beforeText + (idx > 0 ? 1 : 0);
+              return {
+                updateTextStyle: {
+                  range: {
+                    startIndex: keyStartIndex,
+                    endIndex: keyStartIndex + key.length + 1,
+                  },
+                  textStyle: {
+                    bold: true,
+                  },
+                  fields: 'bold',
+                },
+              };
+            }
+            return null;
+          }).filter(req => req !== null)
+        ],
+      },
+    });
+  } catch (error) {
+    console.error('Error inserting formatted metadata:', error);
+    throw error;
+  }
+}
+
 async function addGalleryImages(documentId, gallery) {
   try {
     console.log('Starting gallery image insertion:', gallery.length, 'images');
@@ -297,7 +395,6 @@ async function addGalleryImages(documentId, gallery) {
 
     // Insert placeholders in cells
     const placeholderRequests = [];
-    let imageIndex = 1;
 
     // First, get all cell indices
     const cellIndices = [];
