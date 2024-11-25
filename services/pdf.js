@@ -105,7 +105,6 @@ async function replacePlaceholdersInDocument(documentId, data) {
             }
           }
         } else if (element.table) {
-          // Process table cells recursively
           for (const row of element.table.tableRows) {
             for (const cell of row.tableCells) {
               if (cell.content) {
@@ -144,7 +143,6 @@ async function adjustTitleFontSize(documentId, titleText) {
 
     const titleRegex = new RegExp(titleText.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
 
-    // Search for title in both regular paragraphs and table cells
     const findTitleInElements = (elements) => {
       for (const element of elements) {
         if (element.paragraph && element.paragraph.elements) {
@@ -211,102 +209,6 @@ async function adjustTitleFontSize(documentId, titleText) {
   }
 }
 
-async function insertFormattedMetadata(documentId, placeholder, tableData) {
-  try {
-    const document = await docs.documents.get({ documentId });
-    const content = document.data.body.content;
-    let placeholderFound = false;
-    let placeholderIndex = -1;
-
-    const findPlaceholder = (elements) => {
-      for (const element of elements) {
-        if (element.paragraph && element.paragraph.elements) {
-          for (const elem of element.paragraph.elements) {
-            if (elem.textRun && elem.textRun.content.includes(`{{${placeholder}}}`)) {
-              placeholderFound = true;
-              placeholderIndex = elem.startIndex;
-              return;
-            }
-          }
-        } else if (element.table) {
-          for (const row of element.table.tableRows) {
-            for (const cell of row.tableCells) {
-              findPlaceholder(cell.content);
-              if (placeholderFound) return;
-            }
-          }
-        }
-      }
-    };
-
-    findPlaceholder(content);
-
-    if (!placeholderFound) {
-      console.warn(`Placeholder "{{${placeholder}}}" not found in document.`);
-      return;
-    }
-
-    const rows = tableData.split('-').map(item => item.trim()).filter(item => item);
-    const formattedText = rows.map(row => {
-      const [key, value] = row.split(':').map(s => s.trim());
-      if (key && value) {
-        return `**${key}:** ${value}`;
-      } else if (key) {
-        return `**${key}:**`;
-      } else {
-        return value;
-      }
-    }).join('\n');
-
-    await docs.documents.batchUpdate({
-      documentId: documentId,
-      requestBody: {
-        requests: [
-          {
-            deleteContentRange: {
-              range: {
-                startIndex: placeholderIndex,
-                endIndex: placeholderIndex + `{{${placeholder}}}`.length,
-              },
-            },
-          },
-          {
-            insertText: {
-              text: formattedText,
-              location: {
-                index: placeholderIndex,
-              },
-            },
-          },
-          ...rows.map((row, idx) => {
-            const [key] = row.split(':').map(s => s.trim());
-            if (key) {
-              const beforeText = rows.slice(0, idx).join('\n').length;
-              const keyStartIndex = placeholderIndex + beforeText + (idx > 0 ? 1 : 0);
-              return {
-                updateTextStyle: {
-                  range: {
-                    startIndex: keyStartIndex,
-                    endIndex: keyStartIndex + key.length + 1,
-                  },
-                  textStyle: {
-                    bold: true,
-                  },
-                  fields: 'bold',
-                },
-              };
-            }
-            return null;
-          }).filter(req => req !== null)
-        ],
-      },
-    });
-  } catch (error) {
-    console.error('Error inserting formatted metadata:', error);
-    throw error;
-  }
-}
-
 async function addGalleryImages(documentId, gallery) {
   try {
     console.log('Starting gallery image insertion:', gallery.length, 'images');
@@ -315,7 +217,6 @@ async function addGalleryImages(documentId, gallery) {
     const content = document.data.body.content;
     let galleryIndex = -1;
 
-    // Find the {{gallery}} placeholder in both paragraphs and table cells
     const findGalleryPlaceholder = (elements) => {
       for (const element of elements) {
         if (element.paragraph?.elements) {
@@ -328,7 +229,7 @@ async function addGalleryImages(documentId, gallery) {
         } else if (element.table) {
           for (const row of element.table.tableRows) {
             for (const cell of row.tableCells) {
-              if (findGalleryPlaceholder(cell.content)) {
+              if (cell.content && findGalleryPlaceholder(cell.content)) {
                 return true;
               }
             }
@@ -398,23 +299,25 @@ async function addGalleryImages(documentId, gallery) {
     const placeholderRequests = [];
     let imageIndex = 1;
 
-    for (let rowIndex = 0; rowIndex < tableElement.table.tableRows.length; rowIndex++) {
-      const row = tableElement.table.tableRows[rowIndex];
-      for (let cellIndex = 0; cellIndex < row.tableCells.length; cellIndex++) {
-        if (imageIndex <= gallery.length) {
-          const cell = row.tableCells[cellIndex];
-          const cellEndIndex = cell.endIndex - 1;
-
-          placeholderRequests.push({
-            insertText: {
-              location: { index: cellEndIndex },
-              text: `{{googlevision${imageIndex}}}`
-            }
-          });
-
-          imageIndex++;
-        }
+    // First, get all cell indices
+    const cellIndices = [];
+    for (const row of tableElement.table.tableRows) {
+      for (const cell of row.tableCells) {
+        // Get the last content element's end index
+        const lastContentElement = cell.content[cell.content.length - 1];
+        const cellEndIndex = lastContentElement?.endIndex || cell.endIndex;
+        cellIndices.push(cellEndIndex - 1);
       }
+    }
+
+    // Then create requests for each cell that should contain an image
+    for (let i = 0; i < gallery.length && i < cellIndices.length; i++) {
+      placeholderRequests.push({
+        insertText: {
+          location: { index: cellIndices[i] },
+          text: `{{googlevision${i + 1}}}`
+        }
+      });
     }
 
     if (placeholderRequests.length > 0) {
@@ -475,7 +378,9 @@ async function insertImageAtPlaceholder(documentId, placeholder, imageUrl) {
         } else if (element.table) {
           for (const row of element.table.tableRows) {
             for (const cell of row.tableCells) {
-              findPlaceholders(cell.content);
+              if (cell.content) {
+                findPlaceholders(cell.content);
+              }
             }
           }
         }
