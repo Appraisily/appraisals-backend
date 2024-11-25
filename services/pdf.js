@@ -105,9 +105,12 @@ async function replacePlaceholdersInDocument(documentId, data) {
             }
           }
         } else if (element.table) {
+          // Process table cells recursively
           for (const row of element.table.tableRows) {
             for (const cell of row.tableCells) {
-              findAndReplace(cell.content);
+              if (cell.content) {
+                findAndReplace(cell.content);
+              }
             }
           }
         }
@@ -141,20 +144,33 @@ async function adjustTitleFontSize(documentId, titleText) {
 
     const titleRegex = new RegExp(titleText.trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
 
-    for (const element of content) {
-      if (element.paragraph && element.paragraph.elements) {
-        for (const elem of element.paragraph.elements) {
-          if (elem.textRun && elem.textRun.content.trim().match(titleRegex)) {
-            titleRange = {
-              startIndex: elem.startIndex,
-              endIndex: elem.endIndex,
-            };
-            break;
+    // Search for title in both regular paragraphs and table cells
+    const findTitleInElements = (elements) => {
+      for (const element of elements) {
+        if (element.paragraph && element.paragraph.elements) {
+          for (const elem of element.paragraph.elements) {
+            if (elem.textRun && elem.textRun.content.trim().match(titleRegex)) {
+              titleRange = {
+                startIndex: elem.startIndex,
+                endIndex: elem.endIndex,
+              };
+              return true;
+            }
+          }
+        } else if (element.table) {
+          for (const row of element.table.tableRows) {
+            for (const cell of row.tableCells) {
+              if (findTitleInElements(cell.content)) {
+                return true;
+              }
+            }
           }
         }
       }
-      if (titleRange) break;
-    }
+      return false;
+    };
+
+    findTitleInElements(content);
 
     if (!titleRange) {
       console.warn('Title not found for font size adjustment.');
@@ -299,18 +315,30 @@ async function addGalleryImages(documentId, gallery) {
     const content = document.data.body.content;
     let galleryIndex = -1;
 
-    // Find the {{gallery}} placeholder
-    for (const element of content) {
-      if (element.paragraph?.elements) {
-        for (const elem of element.paragraph.elements) {
-          if (elem.textRun?.content.includes('{{gallery}}')) {
-            galleryIndex = elem.startIndex;
-            break;
+    // Find the {{gallery}} placeholder in both paragraphs and table cells
+    const findGalleryPlaceholder = (elements) => {
+      for (const element of elements) {
+        if (element.paragraph?.elements) {
+          for (const elem of element.paragraph.elements) {
+            if (elem.textRun?.content.includes('{{gallery}}')) {
+              galleryIndex = elem.startIndex;
+              return true;
+            }
+          }
+        } else if (element.table) {
+          for (const row of element.table.tableRows) {
+            for (const cell of row.tableCells) {
+              if (findGalleryPlaceholder(cell.content)) {
+                return true;
+              }
+            }
           }
         }
       }
-      if (galleryIndex !== -1) break;
-    }
+      return false;
+    };
+
+    findGalleryPlaceholder(content);
 
     if (galleryIndex === -1) {
       console.warn('Gallery placeholder not found');
