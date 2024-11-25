@@ -6,6 +6,7 @@ const config = require('../config');
 let docs;
 let drive;
 
+// Initialize Google APIs
 async function initializeGoogleApis() {
   try {
     const credentials = JSON.parse(config.GOOGLE_DOCS_CREDENTIALS);
@@ -30,6 +31,7 @@ async function initializeGoogleApis() {
   }
 }
 
+// Clone template document
 async function cloneTemplate(templateId) {
   try {
     const sanitizedTemplateId = templateId.trim();
@@ -52,6 +54,7 @@ async function cloneTemplate(templateId) {
   }
 }
 
+// Move file to folder
 async function moveFileToFolder(fileId, folderId) {
   try {
     const file = await drive.files.get({
@@ -77,6 +80,7 @@ async function moveFileToFolder(fileId, folderId) {
   }
 }
 
+// Replace placeholders in document
 async function replacePlaceholdersInDocument(documentId, data) {
   try {
     const document = await docs.documents.get({ documentId });
@@ -135,6 +139,224 @@ async function replacePlaceholdersInDocument(documentId, data) {
   }
 }
 
+// Add gallery images
+async function addGalleryImages(documentId, gallery) {
+  try {
+    console.log('Starting gallery image insertion:', gallery.length, 'images');
+    
+    const document = await docs.documents.get({ documentId });
+    const content = document.data.body.content;
+    let galleryIndex = -1;
+
+    // Find gallery placeholder
+    const findGalleryPlaceholder = (elements) => {
+      for (const element of elements) {
+        if (element.paragraph?.elements) {
+          for (const elem of element.paragraph.elements) {
+            if (elem.textRun?.content.includes('{{gallery}}')) {
+              galleryIndex = elem.startIndex;
+              return true;
+            }
+          }
+        } else if (element.table) {
+          for (const row of element.table.tableRows) {
+            for (const cell of row.tableCells) {
+              if (cell.content && findGalleryPlaceholder(cell.content)) {
+                return true;
+              }
+            }
+          }
+        }
+      }
+      return false;
+    };
+
+    findGalleryPlaceholder(content);
+
+    if (galleryIndex === -1) {
+      console.warn('Gallery placeholder not found');
+      return;
+    }
+
+    // Calculate table dimensions
+    const columns = 3;
+    const rows = Math.ceil(gallery.length / columns);
+    console.log(`Creating table with ${rows} rows and ${columns} columns`);
+
+    // Delete gallery placeholder and insert table
+    const requests = [
+      {
+        deleteContentRange: {
+          range: {
+            startIndex: galleryIndex,
+            endIndex: galleryIndex + '{{gallery}}'.length,
+          },
+        },
+      },
+      {
+        insertTable: {
+          rows,
+          columns,
+          location: { index: galleryIndex },
+        },
+      }
+    ];
+
+    // Add initial table
+    await docs.documents.batchUpdate({
+      documentId,
+      requestBody: { requests }
+    });
+
+    // Wait for table creation
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Get updated document
+    const updatedDoc = await docs.documents.get({ documentId });
+    
+    // Find inserted table
+    const tableElement = updatedDoc.data.body.content.find(
+      element => element.table && element.startIndex >= galleryIndex
+    );
+
+    if (!tableElement) {
+      throw new Error('Table not found after insertion');
+    }
+
+    // Insert placeholders in cells
+    const placeholderRequests = [];
+    let imageIndex = 0;
+
+    for (const row of tableElement.table.tableRows) {
+      for (const cell of row.tableCells) {
+        if (imageIndex < gallery.length) {
+          // Insert text in each cell
+          placeholderRequests.push({
+            insertText: {
+              location: { index: cell.startIndex + 1 },
+              text: `{{googlevision${imageIndex + 1}}}`
+            }
+          });
+          imageIndex++;
+        }
+      }
+    }
+
+    if (placeholderRequests.length > 0) {
+      await docs.documents.batchUpdate({
+        documentId,
+        requestBody: {
+          requests: placeholderRequests
+        }
+      });
+    }
+
+    console.log(`Added ${placeholderRequests.length} image placeholders`);
+  } catch (error) {
+    console.error('Error adding gallery images:', error);
+    throw error;
+  }
+}
+
+// Replace placeholders with images
+async function replacePlaceholdersWithImages(documentId, gallery) {
+  try {
+    for (let i = 0; i < gallery.length; i++) {
+      const placeholder = `googlevision${i + 1}`;
+      const imageUrl = gallery[i];
+
+      if (imageUrl) {
+        await insertImageAtPlaceholder(documentId, placeholder, imageUrl);
+      }
+    }
+  } catch (error) {
+    console.error('Error replacing gallery placeholders:', error);
+    throw error;
+  }
+}
+
+// Insert image at placeholder
+async function insertImageAtPlaceholder(documentId, placeholder, imageUrl) {
+  try {
+    if (!imageUrl) {
+      console.warn(`No image URL provided for placeholder {{${placeholder}}}`);
+      return;
+    }
+
+    const document = await docs.documents.get({ documentId });
+    const content = document.data.body.content;
+    const placeholderFull = `{{${placeholder}}}`;
+    const occurrences = [];
+
+    const findPlaceholders = (elements) => {
+      for (const element of elements) {
+        if (element.paragraph?.elements) {
+          for (const elem of element.paragraph.elements) {
+            if (elem.textRun?.content.includes(placeholderFull)) {
+              const startIndex = elem.startIndex + elem.textRun.content.indexOf(placeholderFull);
+              occurrences.push({
+                startIndex,
+                endIndex: startIndex + placeholderFull.length
+              });
+            }
+          }
+        } else if (element.table) {
+          for (const row of element.table.tableRows) {
+            for (const cell of row.tableCells) {
+              if (cell.content) {
+                findPlaceholders(cell.content);
+              }
+            }
+          }
+        }
+      }
+    };
+
+    findPlaceholders(content);
+
+    if (occurrences.length === 0) {
+      console.warn(`No occurrences found for placeholder {{${placeholder}}}`);
+      return;
+    }
+
+    const requests = [];
+    for (const occurrence of occurrences) {
+      requests.push(
+        {
+          deleteContentRange: {
+            range: {
+              startIndex: occurrence.startIndex,
+              endIndex: occurrence.endIndex
+            }
+          }
+        },
+        {
+          insertInlineImage: {
+            location: {
+              index: occurrence.startIndex
+            },
+            uri: imageUrl,
+            objectSize: {
+              height: { magnitude: 150, unit: 'PT' },
+              width: { magnitude: 150, unit: 'PT' }
+            }
+          }
+        }
+      );
+    }
+
+    await docs.documents.batchUpdate({
+      documentId,
+      requestBody: { requests }
+    });
+
+    console.log(`Replaced ${occurrences.length} occurrences of {{${placeholder}}} with image`);
+  } catch (error) {
+    console.error(`Error inserting image for placeholder {{${placeholder}}}:`, error);
+  }
+}
+
+// Adjust title font size
 async function adjustTitleFontSize(documentId, titleText) {
   try {
     const document = await docs.documents.get({ documentId });
@@ -209,6 +431,7 @@ async function adjustTitleFontSize(documentId, titleText) {
   }
 }
 
+// Insert formatted metadata
 async function insertFormattedMetadata(documentId, placeholder, tableData) {
   try {
     const document = await docs.documents.get({ documentId });
@@ -307,227 +530,7 @@ async function insertFormattedMetadata(documentId, placeholder, tableData) {
   }
 }
 
-async function addGalleryImages(documentId, gallery) {
-  try {
-    console.log('Starting gallery image insertion:', gallery.length, 'images');
-    
-    const document = await docs.documents.get({ documentId });
-    const content = document.data.body.content;
-    let galleryIndex = -1;
-
-    const findGalleryPlaceholder = (elements) => {
-      for (const element of elements) {
-        if (element.paragraph?.elements) {
-          for (const elem of element.paragraph.elements) {
-            if (elem.textRun?.content.includes('{{gallery}}')) {
-              galleryIndex = elem.startIndex;
-              return true;
-            }
-          }
-        } else if (element.table) {
-          for (const row of element.table.tableRows) {
-            for (const cell of row.tableCells) {
-              if (cell.content && findGalleryPlaceholder(cell.content)) {
-                return true;
-              }
-            }
-          }
-        }
-      }
-      return false;
-    };
-
-    findGalleryPlaceholder(content);
-
-    if (galleryIndex === -1) {
-      console.warn('Gallery placeholder not found');
-      return;
-    }
-
-    // Calculate table dimensions
-    const columns = 3;
-    const rows = Math.ceil(gallery.length / columns);
-    console.log(`Creating table with ${rows} rows and ${columns} columns`);
-
-    // Delete gallery placeholder
-    await docs.documents.batchUpdate({
-      documentId,
-      requestBody: {
-        requests: [{
-          deleteContentRange: {
-            range: {
-              startIndex: galleryIndex,
-              endIndex: galleryIndex + '{{gallery}}'.length,
-            },
-          },
-        }]
-      }
-    });
-
-    // Insert table
-    await docs.documents.batchUpdate({
-      documentId,
-      requestBody: {
-        requests: [{
-          insertTable: {
-            rows,
-            columns,
-            location: { index: galleryIndex },
-          },
-        }]
-      }
-    });
-
-    // Wait for table creation
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Get updated document
-    const updatedDoc = await docs.documents.get({ documentId });
-    
-    // Find inserted table
-    const tableElement = updatedDoc.data.body.content.find(
-      element => element.table && element.startIndex >= galleryIndex
-    );
-
-    if (!tableElement) {
-      throw new Error('Table not found after insertion');
-    }
-
-    // Insert placeholders in cells
-    const placeholderRequests = [];
-
-    // First, get all cell indices
-    const cellIndices = [];
-    for (const row of tableElement.table.tableRows) {
-      for (const cell of row.tableCells) {
-        // Get the last content element's end index
-        const lastContentElement = cell.content[cell.content.length - 1];
-        const cellEndIndex = lastContentElement?.endIndex || cell.endIndex;
-        cellIndices.push(cellEndIndex - 1);
-      }
-    }
-
-    // Then create requests for each cell that should contain an image
-    for (let i = 0; i < gallery.length && i < cellIndices.length; i++) {
-      placeholderRequests.push({
-        insertText: {
-          location: { index: cellIndices[i] },
-          text: `{{googlevision${i + 1}}}`
-        }
-      });
-    }
-
-    if (placeholderRequests.length > 0) {
-      await docs.documents.batchUpdate({
-        documentId,
-        requestBody: {
-          requests: placeholderRequests
-        }
-      });
-    }
-
-    console.log(`Added ${placeholderRequests.length} image placeholders`);
-  } catch (error) {
-    console.error('Error adding gallery images:', error);
-    throw error;
-  }
-}
-
-async function replacePlaceholdersWithImages(documentId, gallery) {
-  try {
-    for (let i = 0; i < gallery.length; i++) {
-      const placeholder = `googlevision${i + 1}`;
-      const imageUrl = gallery[i];
-
-      if (imageUrl) {
-        await insertImageAtPlaceholder(documentId, placeholder, imageUrl);
-      }
-    }
-  } catch (error) {
-    console.error('Error replacing gallery placeholders:', error);
-    throw error;
-  }
-}
-
-async function insertImageAtPlaceholder(documentId, placeholder, imageUrl) {
-  try {
-    if (!imageUrl) {
-      console.warn(`No image URL provided for placeholder {{${placeholder}}}`);
-      return;
-    }
-
-    const document = await docs.documents.get({ documentId });
-    const content = document.data.body.content;
-    const placeholderFull = `{{${placeholder}}}`;
-    const occurrences = [];
-
-    const findPlaceholders = (elements) => {
-      for (const element of elements) {
-        if (element.paragraph?.elements) {
-          for (const elem of element.paragraph.elements) {
-            if (elem.textRun?.content.includes(placeholderFull)) {
-              occurrences.push({
-                startIndex: elem.startIndex + elem.textRun.content.indexOf(placeholderFull),
-                endIndex: elem.startIndex + elem.textRun.content.indexOf(placeholderFull) + placeholderFull.length
-              });
-            }
-          }
-        } else if (element.table) {
-          for (const row of element.table.tableRows) {
-            for (const cell of row.tableCells) {
-              if (cell.content) {
-                findPlaceholders(cell.content);
-              }
-            }
-          }
-        }
-      }
-    };
-
-    findPlaceholders(content);
-
-    if (occurrences.length === 0) {
-      console.warn(`No occurrences found for placeholder {{${placeholder}}}`);
-      return;
-    }
-
-    const requests = [];
-    for (const occurrence of occurrences) {
-      requests.push(
-        {
-          deleteContentRange: {
-            range: {
-              startIndex: occurrence.startIndex,
-              endIndex: occurrence.endIndex
-            }
-          }
-        },
-        {
-          insertInlineImage: {
-            location: {
-              index: occurrence.startIndex
-            },
-            uri: imageUrl,
-            objectSize: {
-              height: { magnitude: 150, unit: 'PT' },
-              width: { magnitude: 150, unit: 'PT' }
-            }
-          }
-        }
-      );
-    }
-
-    await docs.documents.batchUpdate({
-      documentId,
-      requestBody: { requests }
-    });
-
-    console.log(`Replaced ${occurrences.length} occurrences of {{${placeholder}}} with image`);
-  } catch (error) {
-    console.error(`Error inserting image for placeholder {{${placeholder}}}:`, error);
-  }
-}
-
+// Export to PDF
 async function exportToPDF(documentId) {
   try {
     const response = await drive.files.export(
@@ -545,6 +548,7 @@ async function exportToPDF(documentId) {
   }
 }
 
+// Upload PDF to Drive
 async function uploadPDFToDrive(pdfBuffer, filename, folderId) {
   try {
     const fileMetadata = {
