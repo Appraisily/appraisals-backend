@@ -3,6 +3,7 @@ const FormData = require('form-data');
 const { v4: uuidv4 } = require('uuid');
 const config = require('../config');
 const vision = require('@google-cloud/vision');
+const { getImageUrl } = require('./wordpress');
 
 let visionClient;
 
@@ -97,8 +98,71 @@ async function processMainImageWithGoogleVision(postId) {
   }
 }
 
-// Rest of the code remains the same...
-// Include all the helper functions from the original file
+async function uploadImageToWordPress(imageUrl) {
+  try {
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      console.warn(`Failed to fetch image from ${imageUrl}`);
+      return null;
+    }
+
+    const buffer = await response.buffer();
+    const filename = `similar-image-${uuidv4()}.jpg`;
+
+    const form = new FormData();
+    form.append('file', buffer, {
+      filename,
+      contentType: 'image/jpeg'
+    });
+
+    const uploadResponse = await fetch(`${config.WORDPRESS_API_URL}/media`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      },
+      body: form
+    });
+
+    if (!uploadResponse.ok) {
+      console.warn(`Failed to upload image to WordPress: ${await uploadResponse.text()}`);
+      return null;
+    }
+
+    const mediaData = await uploadResponse.json();
+    return mediaData.id;
+  } catch (error) {
+    console.error('Error uploading image to WordPress:', error);
+    return null;
+  }
+}
+
+async function updateWordPressGallery(postId, imageIds) {
+  try {
+    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      },
+      body: JSON.stringify({
+        acf: {
+          googlevision: imageIds,
+          _gallery_populated: '1'
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error updating gallery: ${await response.text()}`);
+    }
+
+    console.log(`Gallery updated for post ${postId} with ${imageIds.length} images`);
+    return true;
+  } catch (error) {
+    console.error('Error updating WordPress gallery:', error);
+    throw error;
+  }
+}
 
 module.exports = {
   processMainImageWithGoogleVision,
