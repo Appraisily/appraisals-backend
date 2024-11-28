@@ -112,23 +112,44 @@ async function uploadImageToWordPress(imageUrl) {
     const form = new FormData();
     form.append('file', buffer, {
       filename,
-      contentType: 'image/jpeg'
+      contentType: response.headers.get('content-type') || 'image/jpeg'
     });
 
     const uploadResponse = await fetch(`${config.WORDPRESS_API_URL}/media`, {
       method: 'POST',
       headers: {
-        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`,
+        'Accept': 'application/json'
       },
       body: form
     });
 
     if (!uploadResponse.ok) {
-      console.warn(`Failed to upload image to WordPress: ${await uploadResponse.text()}`);
+      const errorText = await uploadResponse.text();
+      console.warn(`Failed to upload image to WordPress (Status ${uploadResponse.status}):`, errorText);
+      
+      // Si es un error de autenticación, lo registramos específicamente
+      if (uploadResponse.status === 401 || uploadResponse.status === 403) {
+        console.error('Authentication error - Please check WordPress credentials');
+      }
+      
       return null;
     }
 
-    const mediaData = await uploadResponse.json();
+    let mediaData;
+    try {
+      mediaData = await uploadResponse.json();
+    } catch (error) {
+      console.error('Error parsing WordPress response:', error);
+      console.log('Response text:', await uploadResponse.text());
+      return null;
+    }
+
+    if (!mediaData || !mediaData.id) {
+      console.error('Invalid media response from WordPress:', mediaData);
+      return null;
+    }
+
     return mediaData.id;
   } catch (error) {
     console.error('Error uploading image to WordPress:', error);
