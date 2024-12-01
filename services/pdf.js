@@ -157,45 +157,36 @@ async function addGalleryImages(documentId, gallery) {
     const rows = Math.ceil(gallery.length / columns);
     console.log(`Creating table with ${rows} rows and ${columns} columns`);
 
-    // Create table with styling
-    const requests = [
-      {
-        deleteContentRange: {
-          range: {
-            startIndex: galleryIndex,
-            endIndex: galleryIndex + '{{gallery}}'.length
-          }
-        }
-      },
-      {
-        insertTable: {
-          rows,
-          columns,
-          location: { index: galleryIndex },
-          tableCellStyle: {
-            borderBottom: { color: { color: { rgbColor: { red: 0.8, green: 0.8, blue: 0.8 } } }, width: { magnitude: 1, unit: 'PT' } },
-            borderTop: { color: { color: { rgbColor: { red: 0.8, green: 0.8, blue: 0.8 } } }, width: { magnitude: 1, unit: 'PT' } },
-            borderLeft: { color: { color: { rgbColor: { red: 0.8, green: 0.8, blue: 0.8 } } }, width: { magnitude: 1, unit: 'PT' } },
-            borderRight: { color: { color: { rgbColor: { red: 0.8, green: 0.8, blue: 0.8 } } }, width: { magnitude: 1, unit: 'PT' } },
-            paddingTop: { magnitude: 5, unit: 'PT' },
-            paddingBottom: { magnitude: 5, unit: 'PT' },
-            paddingLeft: { magnitude: 5, unit: 'PT' },
-            paddingRight: { magnitude: 5, unit: 'PT' }
-          }
-        }
-      }
-    ];
-
-    // Execute table creation
-    await docs.documents.batchUpdate({
+    // First create the table
+    const createTableRequest = {
       documentId,
-      requestBody: { requests }
-    });
+      requestBody: {
+        requests: [
+          {
+            deleteContentRange: {
+              range: {
+                startIndex: galleryIndex,
+                endIndex: galleryIndex + '{{gallery}}'.length
+              }
+            }
+          },
+          {
+            insertTable: {
+              rows,
+              columns,
+              location: { index: galleryIndex }
+            }
+          }
+        ]
+      }
+    };
+
+    await docs.documents.batchUpdate(createTableRequest);
 
     // Wait for table creation
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Get updated document
+    // Get updated document to find table
     const updatedDoc = await docs.documents.get({ documentId });
     
     // Find inserted table
@@ -205,6 +196,57 @@ async function addGalleryImages(documentId, gallery) {
 
     if (!tableElement) {
       throw new Error('Table not found after insertion');
+    }
+
+    // Prepare style requests for table and cells
+    const styleRequests = [];
+
+    // Add table border and cell padding styles
+    for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
+      for (let colIndex = 0; colIndex < columns; colIndex++) {
+        const cell = tableElement.table.tableRows[rowIndex].tableCells[colIndex];
+        
+        styleRequests.push({
+          updateTableCellStyle: {
+            tableCell: {
+              tableCellLocation: {
+                tableStartLocation: { index: tableElement.startIndex },
+                rowIndex,
+                columnIndex: colIndex
+              }
+            },
+            tableCellStyle: {
+              paddingTop: { magnitude: 5, unit: 'PT' },
+              paddingBottom: { magnitude: 5, unit: 'PT' },
+              paddingLeft: { magnitude: 5, unit: 'PT' },
+              paddingRight: { magnitude: 5, unit: 'PT' }
+            },
+            fields: 'paddingTop,paddingBottom,paddingLeft,paddingRight'
+          }
+        });
+
+        // Center align cell content
+        styleRequests.push({
+          updateParagraphStyle: {
+            range: {
+              startIndex: cell.startIndex,
+              endIndex: cell.endIndex
+            },
+            paragraphStyle: {
+              alignment: 'CENTER'
+            },
+            fields: 'alignment'
+          }
+        });
+      }
+    }
+
+    // Apply styles
+    if (styleRequests.length > 0) {
+      await docs.documents.batchUpdate({
+        documentId,
+        requestBody: { requests: styleRequests }
+      });
     }
 
     // Insert images into cells
@@ -217,37 +259,14 @@ async function addGalleryImages(documentId, gallery) {
         const imageUrl = gallery[imageIndex];
 
         if (imageUrl && cell) {
-          // Add a paragraph for spacing
-          imageRequests.push({
-            insertText: {
-              location: { index: cell.startIndex + 1 },
-              text: '\n'
-            }
-          });
-
-          // Insert image with fixed dimensions
           imageRequests.push({
             insertInlineImage: {
-              location: { index: cell.startIndex + 2 },
+              location: { index: cell.startIndex + 1 },
               uri: imageUrl,
               objectSize: {
                 height: { magnitude: 150, unit: 'PT' },
                 width: { magnitude: 150, unit: 'PT' }
               }
-            }
-          });
-
-          // Center align the cell content
-          imageRequests.push({
-            updateParagraphStyle: {
-              range: {
-                startIndex: cell.startIndex + 1,
-                endIndex: cell.startIndex + 3
-              },
-              paragraphStyle: {
-                alignment: 'CENTER'
-              },
-              fields: 'alignment'
             }
           });
         }
