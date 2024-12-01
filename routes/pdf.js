@@ -10,7 +10,6 @@ const {
   adjustTitleFontSize,
   insertFormattedMetadata,
   addGalleryImages,
-  replacePlaceholdersWithImages,
   exportToPDF,
   uploadPDFToDrive
 } = require('../services/pdf');
@@ -129,12 +128,7 @@ router.post('/generate-pdf', async (req, res) => {
       await addGalleryImages(clonedDocId, gallery);
     }
 
-    // Step 12: Replace gallery placeholders
-    if (gallery.length > 0) {
-      await replacePlaceholdersWithImages(clonedDocId, gallery);
-    }
-
-    // Step 13: Insert specific images
+    // Step 12: Insert specific images
     if (ageImageUrl) {
       await insertImageAtPlaceholder(clonedDocId, 'age_image', ageImageUrl);
     }
@@ -145,18 +139,18 @@ router.post('/generate-pdf', async (req, res) => {
       await insertImageAtPlaceholder(clonedDocId, 'main_image', mainImageUrl);
     }
 
-    // Step 14: Export to PDF
+    // Step 13: Export to PDF
     const pdfBuffer = await exportToPDF(clonedDocId);
 
-    // Step 15: Generate filename
+    // Step 14: Generate filename
     const pdfFilename = session_ID?.trim()
       ? `${session_ID}.pdf`
       : `Informe_Tasacion_Post_${postId}_${uuidv4()}.pdf`;
 
-    // Step 16: Upload PDF
+    // Step 15: Upload PDF
     const pdfLink = await uploadPDFToDrive(pdfBuffer, pdfFilename, GOOGLE_DRIVE_FOLDER_ID);
 
-    // Step 17: Update WordPress
+    // Step 16: Update WordPress
     await updatePostACFFields(postId, pdfLink, clonedDocLink);
 
     // Return response
