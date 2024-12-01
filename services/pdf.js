@@ -211,7 +211,7 @@ async function addGalleryImages(documentId, gallery) {
     // Wait for table creation
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Get updated document
+    // Get updated document to get table cell information
     const updatedDoc = await docs.documents.get({ documentId });
     
     // Find inserted table
@@ -227,10 +227,10 @@ async function addGalleryImages(documentId, gallery) {
     const placeholderRequests = [];
     let imageIndex = 0;
 
-    for (const row of tableElement.table.tableRows) {
-      for (const cell of row.tableCells) {
+    for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
+      for (let colIndex = 0; colIndex < columns; colIndex++) {
         if (imageIndex < gallery.length) {
-          // Insert text in each cell
+          const cell = tableElement.table.tableRows[rowIndex].tableCells[colIndex];
           placeholderRequests.push({
             insertText: {
               location: { index: cell.startIndex + 1 },

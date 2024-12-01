@@ -1,5 +1,6 @@
 const fetch = require('node-fetch');
 const config = require('../config');
+const he = require('he');
 
 async function getPostMetadata(postId, metadataKey) {
   try {
@@ -20,6 +21,9 @@ async function getPostMetadata(postId, metadataKey) {
     const postData = await response.json();
     const acfFields = postData.acf || {};
     let metadataValue = acfFields[metadataKey] || '';
+
+    // Decode HTML entities
+    metadataValue = he.decode(metadataValue);
 
     // Size validation (max 5000 characters)
     const MAX_LENGTH = 5000;
@@ -52,7 +56,8 @@ async function getPostTitle(postId) {
     }
 
     const postData = await response.json();
-    return postData.title.rendered || '';
+    // Decode HTML entities in the title
+    return he.decode(postData.title.rendered || '');
   } catch (error) {
     console.error(`Error getting title for post ID ${postId}:`, error);
     throw error;
