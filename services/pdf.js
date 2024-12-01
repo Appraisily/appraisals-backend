@@ -75,34 +75,45 @@ async function addGalleryImages(documentId, gallery) {
     const rows = Math.ceil(gallery.length / columns);
     console.log(`Creating table with ${rows} rows and ${columns} columns`);
 
-    // Delete gallery placeholder and create table
+    // Create table with styling
+    const requests = [
+      {
+        deleteContentRange: {
+          range: {
+            startIndex: galleryIndex,
+            endIndex: galleryIndex + '{{gallery}}'.length
+          }
+        }
+      },
+      {
+        insertTable: {
+          rows,
+          columns,
+          location: { index: galleryIndex },
+          tableCellStyle: {
+            borderBottom: { color: { color: { rgbColor: { red: 0.8, green: 0.8, blue: 0.8 } } }, width: { magnitude: 1, unit: 'PT' } },
+            borderTop: { color: { color: { rgbColor: { red: 0.8, green: 0.8, blue: 0.8 } } }, width: { magnitude: 1, unit: 'PT' } },
+            borderLeft: { color: { color: { rgbColor: { red: 0.8, green: 0.8, blue: 0.8 } } }, width: { magnitude: 1, unit: 'PT' } },
+            borderRight: { color: { color: { rgbColor: { red: 0.8, green: 0.8, blue: 0.8 } } }, width: { magnitude: 1, unit: 'PT' } },
+            paddingTop: { magnitude: 5, unit: 'PT' },
+            paddingBottom: { magnitude: 5, unit: 'PT' },
+            paddingLeft: { magnitude: 5, unit: 'PT' },
+            paddingRight: { magnitude: 5, unit: 'PT' }
+          }
+        }
+      }
+    ];
+
+    // Execute table creation
     await docs.documents.batchUpdate({
       documentId,
-      requestBody: {
-        requests: [
-          {
-            deleteContentRange: {
-              range: {
-                startIndex: galleryIndex,
-                endIndex: galleryIndex + '{{gallery}}'.length,
-              },
-            },
-          },
-          {
-            insertTable: {
-              rows,
-              columns,
-              location: { index: galleryIndex },
-            },
-          }
-        ]
-      }
+      requestBody: { requests }
     });
 
     // Wait for table creation
     await new Promise(resolve => setTimeout(resolve, 1000));
 
-    // Get updated document to get table cell information
+    // Get updated document
     const updatedDoc = await docs.documents.get({ documentId });
     
     // Find inserted table
@@ -114,139 +125,67 @@ async function addGalleryImages(documentId, gallery) {
       throw new Error('Table not found after insertion');
     }
 
-    // Insert placeholders in cells
+    // Insert images into cells
+    const imageRequests = [];
     let imageIndex = 0;
-    const placeholderRequests = [];
 
-    // Process each cell
     for (let rowIndex = 0; rowIndex < rows && imageIndex < gallery.length; rowIndex++) {
       for (let colIndex = 0; colIndex < columns && imageIndex < gallery.length; colIndex++) {
         const cell = tableElement.table.tableRows[rowIndex].tableCells[colIndex];
-        
-        // Insert placeholder text
-        placeholderRequests.push({
-          insertText: {
-            location: { index: cell.startIndex + 1 },
-            text: `{{googlevision${imageIndex + 1}}}`
-          }
-        });
+        const imageUrl = gallery[imageIndex];
+
+        if (imageUrl && cell) {
+          // Add a paragraph for spacing
+          imageRequests.push({
+            insertText: {
+              location: { index: cell.startIndex + 1 },
+              text: '\n'
+            }
+          });
+
+          // Insert image with fixed dimensions
+          imageRequests.push({
+            insertInlineImage: {
+              location: { index: cell.startIndex + 2 },
+              uri: imageUrl,
+              objectSize: {
+                height: { magnitude: 150, unit: 'PT' },
+                width: { magnitude: 150, unit: 'PT' }
+              }
+            }
+          });
+
+          // Center align the cell content
+          imageRequests.push({
+            updateParagraphStyle: {
+              range: {
+                startIndex: cell.startIndex + 1,
+                endIndex: cell.startIndex + 3
+              },
+              paragraphStyle: {
+                alignment: 'CENTER'
+              },
+              fields: 'alignment'
+            }
+          });
+        }
 
         imageIndex++;
       }
     }
 
-    // Execute placeholder insertion
-    if (placeholderRequests.length > 0) {
+    // Execute image insertion if we have any images
+    if (imageRequests.length > 0) {
       await docs.documents.batchUpdate({
         documentId,
-        requestBody: {
-          requests: placeholderRequests
-        }
+        requestBody: { requests: imageRequests }
       });
     }
 
-    console.log(`Added ${imageIndex} image placeholders to table cells`);
+    console.log(`Added ${imageIndex} images to gallery`);
   } catch (error) {
     console.error('Error adding gallery images:', error);
     throw error;
-  }
-}
-
-// Replace placeholders with images
-async function replacePlaceholdersWithImages(documentId, gallery) {
-  try {
-    for (let i = 0; i < gallery.length; i++) {
-      const placeholder = `googlevision${i + 1}`;
-      const imageUrl = gallery[i];
-
-      if (imageUrl) {
-        await insertImageAtPlaceholder(documentId, placeholder, imageUrl);
-      }
-    }
-  } catch (error) {
-    console.error('Error replacing gallery placeholders:', error);
-    throw error;
-  }
-}
-
-// Insert image at placeholder
-async function insertImageAtPlaceholder(documentId, placeholder, imageUrl) {
-  try {
-    if (!imageUrl) {
-      console.warn(`No image URL provided for placeholder {{${placeholder}}}`);
-      return;
-    }
-
-    const document = await docs.documents.get({ documentId });
-    const content = document.data.body.content;
-    const placeholderFull = `{{${placeholder}}}`;
-    const occurrences = [];
-
-    const findPlaceholders = (elements) => {
-      for (const element of elements) {
-        if (element.paragraph?.elements) {
-          for (const elem of element.paragraph.elements) {
-            if (elem.textRun?.content.includes(placeholderFull)) {
-              const startIndex = elem.startIndex + elem.textRun.content.indexOf(placeholderFull);
-              occurrences.push({
-                startIndex,
-                endIndex: startIndex + placeholderFull.length
-              });
-            }
-          }
-        } else if (element.table) {
-          for (const row of element.table.tableRows) {
-            for (const cell of row.tableCells) {
-              if (cell.content) {
-                findPlaceholders(cell.content);
-              }
-            }
-          }
-        }
-      }
-    };
-
-    findPlaceholders(content);
-
-    if (occurrences.length === 0) {
-      console.warn(`No occurrences found for placeholder {{${placeholder}}}`);
-      return;
-    }
-
-    const requests = [];
-    for (const occurrence of occurrences) {
-      requests.push(
-        {
-          deleteContentRange: {
-            range: {
-              startIndex: occurrence.startIndex,
-              endIndex: occurrence.endIndex
-            }
-          }
-        },
-        {
-          insertInlineImage: {
-            location: {
-              index: occurrence.startIndex
-            },
-            uri: imageUrl,
-            objectSize: {
-              height: { magnitude: 150, unit: 'PT' },
-              width: { magnitude: 150, unit: 'PT' }
-            }
-          }
-        }
-      );
-    }
-
-    await docs.documents.batchUpdate({
-      documentId,
-      requestBody: { requests }
-    });
-
-    console.log(`Replaced ${occurrences.length} occurrences of {{${placeholder}}} with image`);
-  } catch (error) {
-    console.error(`Error inserting image for placeholder {{${placeholder}}}:`, error);
   }
 }
 
@@ -585,7 +524,7 @@ module.exports = {
   adjustTitleFontSize,
   insertFormattedMetadata,
   addGalleryImages,
-  replacePlaceholdersWithImages,
+  replacePlaceholdersWithImages: () => {}, // No longer needed but kept for compatibility
   insertImageAtPlaceholder,
   exportToPDF,
   uploadPDFToDrive
