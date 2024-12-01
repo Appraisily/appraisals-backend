@@ -20,16 +20,33 @@ async function getPostMetadata(postId, metadataKey) {
 
     const postData = await response.json();
     const acfFields = postData.acf || {};
-    let metadataValue = acfFields[metadataKey] || '';
+    let metadataValue = acfFields[metadataKey];
 
-    // Decode HTML entities
-    metadataValue = he.decode(metadataValue);
+    // Handle different types of values
+    if (metadataValue === null || metadataValue === undefined) {
+      return '';
+    }
 
-    // Size validation (max 5000 characters)
-    const MAX_LENGTH = 5000;
-    if (metadataValue.length > MAX_LENGTH) {
-      metadataValue = metadataValue.substring(0, MAX_LENGTH) + '...';
-      console.warn(`Metadata '${metadataKey}' exceeds ${MAX_LENGTH} characters and has been truncated.`);
+    // Special handling for 'value' field which is numeric
+    if (metadataKey === 'value' && typeof metadataValue === 'number') {
+      return metadataValue.toString();
+    }
+
+    // Convert to string if it's a number
+    if (typeof metadataValue === 'number') {
+      return metadataValue.toString();
+    }
+
+    // Only decode if it's a string
+    if (typeof metadataValue === 'string') {
+      metadataValue = he.decode(metadataValue);
+
+      // Size validation (max 5000 characters)
+      const MAX_LENGTH = 5000;
+      if (metadataValue.length > MAX_LENGTH) {
+        metadataValue = metadataValue.substring(0, MAX_LENGTH) + '...';
+        console.warn(`Metadata '${metadataKey}' exceeds ${MAX_LENGTH} characters and has been truncated.`);
+      }
     }
 
     return metadataValue;
