@@ -183,7 +183,7 @@ async function addGalleryImages(documentId, gallery) {
     const rows = Math.ceil(gallery.length / columns);
     console.log(`Creating table with ${rows} rows and ${columns} columns`);
 
-    // Delete gallery placeholder and insert table
+    // Delete gallery placeholder
     const requests = [
       {
         deleteContentRange: {
@@ -227,18 +227,32 @@ async function addGalleryImages(documentId, gallery) {
     const placeholderRequests = [];
     let imageIndex = 0;
 
-    for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
-      for (let colIndex = 0; colIndex < columns; colIndex++) {
-        if (imageIndex < gallery.length) {
-          const cell = tableElement.table.tableRows[rowIndex].tableCells[colIndex];
+    // Create a separate request for each cell
+    for (let rowIndex = 0; rowIndex < rows && imageIndex < gallery.length; rowIndex++) {
+      for (let colIndex = 0; colIndex < columns && imageIndex < gallery.length; colIndex++) {
+        const cell = tableElement.table.tableRows[rowIndex].tableCells[colIndex];
+        
+        // First, clear any existing content in the cell
+        if (cell.content && cell.content[0]?.paragraph?.elements) {
           placeholderRequests.push({
-            insertText: {
-              location: { index: cell.startIndex + 1 },
-              text: `{{googlevision${imageIndex + 1}}}`
+            deleteContentRange: {
+              range: {
+                startIndex: cell.startIndex + 1,
+                endIndex: cell.endIndex - 1
+              }
             }
           });
-          imageIndex++;
         }
+
+        // Then insert the new placeholder
+        placeholderRequests.push({
+          insertText: {
+            location: { index: cell.startIndex + 1 },
+            text: `{{googlevision${imageIndex + 1}}}`
+          }
+        });
+
+        imageIndex++;
       }
     }
 
@@ -251,7 +265,7 @@ async function addGalleryImages(documentId, gallery) {
       });
     }
 
-    console.log(`Added ${placeholderRequests.length} image placeholders`);
+    console.log(`Added ${imageIndex} image placeholders to table cells`);
   } catch (error) {
     console.error('Error adding gallery images:', error);
     throw error;
