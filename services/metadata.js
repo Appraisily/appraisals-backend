@@ -1,33 +1,9 @@
 const { generateContent } = require('./openai');
 const { updateWordPressMetadata } = require('./wordpress');
-const fs = require('fs').promises;
-const path = require('path');
+const { getPrompt, buildContextualPrompt } = require('./utils/promptUtils');
+const { PROMPT_PROCESSING_ORDER, REPORT_INTRODUCTION } = require('./constants/reportStructure');
 
-async function getPrompt(custom_post_type_name) {
-  const promptsDir = path.join(__dirname, '..', 'prompts');
-  const promptFilePath = path.join(promptsDir, `${custom_post_type_name}.txt`);
-  try {
-    return await fs.readFile(promptFilePath, 'utf8');
-  } catch (error) {
-    console.error(`Error reading prompt file for ${custom_post_type_name}:`, error);
-    throw error;
-  }
-}
-
-async function getAvailablePrompts() {
-  const promptsDir = path.join(__dirname, '..', 'prompts');
-  try {
-    const files = await fs.readdir(promptsDir);
-    return files
-      .filter(file => path.extname(file).toLowerCase() === '.txt')
-      .map(file => path.basename(file, '.txt'));
-  } catch (error) {
-    console.error('Error reading prompts directory:', error);
-    throw error;
-  }
-}
-
-async function processMetadataField(postId, fieldName, postTitle, images = {}) {
+async function processMetadataField(postId, fieldName, postTitle, images = {}, context = {}) {
   try {
     console.log(`Processing field: ${fieldName}`);
     console.log(`Available images for ${fieldName}:`, Object.keys(images).filter(key => images[key]));
@@ -37,7 +13,15 @@ async function processMetadataField(postId, fieldName, postTitle, images = {}) {
       throw new Error(`Prompt file not found for ${fieldName}`);
     }
 
-    const content = await generateContent(prompt, postTitle, images);
+    // Add report introduction to context for the first field
+    if (fieldName === PROMPT_PROCESSING_ORDER[0]) {
+      context.introduction = REPORT_INTRODUCTION;
+    }
+
+    // Build contextual prompt with previous generations
+    const contextualPrompt = buildContextualPrompt(prompt, context);
+
+    const content = await generateContent(contextualPrompt, postTitle, images);
     if (!content) {
       throw new Error(`No content generated for ${fieldName}`);
     }
@@ -46,7 +30,8 @@ async function processMetadataField(postId, fieldName, postTitle, images = {}) {
     
     return {
       field: fieldName,
-      status: 'success'
+      status: 'success',
+      content
     };
   } catch (error) {
     console.error(`Error processing ${fieldName}:`, error);
@@ -60,15 +45,22 @@ async function processMetadataField(postId, fieldName, postTitle, images = {}) {
 
 async function processAllMetadata(postId, postTitle, images = {}) {
   try {
-    const availablePrompts = await getAvailablePrompts();
-    console.log(`Processing ${availablePrompts.length} metadata fields for post ${postId}`);
+    console.log(`Processing metadata fields for post ${postId} in specified order`);
     console.log('Available images:', Object.keys(images).filter(key => images[key]));
 
-    const results = await Promise.all(
-      availablePrompts.map(fieldName => 
-        processMetadataField(postId, fieldName, postTitle, images)
-      )
-    );
+    const context = {};
+    const results = [];
+
+    // Process prompts in specified order
+    for (const fieldName of PROMPT_PROCESSING_ORDER) {
+      const result = await processMetadataField(postId, fieldName, postTitle, images, context);
+      results.push(result);
+
+      // Add successful generations to context for next iterations
+      if (result.status === 'success' && result.content) {
+        context[fieldName] = result.content;
+      }
+    }
 
     const successful = results.filter(r => r.status === 'success').length;
     const failed = results.filter(r => r.status === 'error').length;

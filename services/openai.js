@@ -44,7 +44,7 @@ async function generateContent(prompt, postTitle, images = {}) {
         'Authorization': `Bearer ${config.OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'gpt-4-vision-preview',
+        model: 'gpt-4o', //gpt-4o is a new model advanced, that is more powerfull it is used as gpt-4-vision
         messages: messages,
         max_tokens: 1000,
         temperature: 0.7
