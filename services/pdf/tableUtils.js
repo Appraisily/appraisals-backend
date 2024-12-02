@@ -36,27 +36,28 @@ async function applyTableStyles(docs, documentId, tableElement, rows, columns) {
   // Add cell styles
   for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
     for (let colIndex = 0; colIndex < columns; colIndex++) {
-      const cell = tableElement.table.tableRows[rowIndex].tableCells[colIndex];
+      const cell = tableElement.table.tableRows[rowIndex]?.tableCells[colIndex];
       
-      // Update table cell style
-      requests.push({
-        updateTableCellStyle: {
-          tableStartLocation: { index: tableElement.startIndex },
-          row: rowIndex,
-          column: colIndex,
-          tableCellStyle: {
-            paddingTop: { magnitude: 5, unit: 'PT' },
-            paddingBottom: { magnitude: 5, unit: 'PT' },
-            paddingLeft: { magnitude: 5, unit: 'PT' },
-            paddingRight: { magnitude: 5, unit: 'PT' },
-            contentAlignment: 'MIDDLE'
-          },
-          fields: 'paddingTop,paddingBottom,paddingLeft,paddingRight,contentAlignment'
-        }
-      });
-
-      // Update paragraph alignment
       if (cell) {
+        // Update table cell style
+        requests.push({
+          updateTableCellStyle: {
+            tableCellStyle: {
+              paddingTop: { magnitude: 5, unit: 'PT' },
+              paddingBottom: { magnitude: 5, unit: 'PT' },
+              paddingLeft: { magnitude: 5, unit: 'PT' },
+              paddingRight: { magnitude: 5, unit: 'PT' }
+            },
+            tableStartLocation: {
+              index: tableElement.startIndex
+            },
+            rowIndex: rowIndex,
+            columnIndex: colIndex,
+            fields: 'paddingTop,paddingBottom,paddingLeft,paddingRight'
+          }
+        });
+
+        // Update paragraph alignment for cell content
         requests.push({
           updateParagraphStyle: {
             range: {
@@ -67,6 +68,21 @@ async function applyTableStyles(docs, documentId, tableElement, rows, columns) {
               alignment: 'CENTER'
             },
             fields: 'alignment'
+          }
+        });
+
+        // Update vertical alignment
+        requests.push({
+          updateTableCellStyle: {
+            tableCellStyle: {
+              contentAlignment: 'MIDDLE'
+            },
+            tableStartLocation: {
+              index: tableElement.startIndex
+            },
+            rowIndex: rowIndex,
+            columnIndex: colIndex,
+            fields: 'contentAlignment'
           }
         });
       }
@@ -87,7 +103,7 @@ async function insertTableImages(docs, documentId, tableElement, gallery, rows, 
 
   for (let rowIndex = 0; rowIndex < rows && imageIndex < gallery.length; rowIndex++) {
     for (let colIndex = 0; colIndex < columns && imageIndex < gallery.length; colIndex++) {
-      const cell = tableElement.table.tableRows[rowIndex].tableCells[colIndex];
+      const cell = tableElement.table.tableRows[rowIndex]?.tableCells[colIndex];
       const imageUrl = gallery[imageIndex];
 
       if (imageUrl && cell) {
