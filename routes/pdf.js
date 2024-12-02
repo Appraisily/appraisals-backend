@@ -36,13 +36,13 @@ router.post('/generate-pdf', async (req, res) => {
     await initializeGoogleApis();
 
     // Step 2: Get environment variables
-    const GOOGLE_DOCS_TEMPLATE_ID = process.env.GOOGLE_DOCS_TEMPLATE_ID;
-    const GOOGLE_DRIVE_FOLDER_ID = process.env.GOOGLE_DRIVE_FOLDER_ID;
+    const templateId = process.env.GOOGLE_DOCS_TEMPLATE_ID;
+    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
 
-    console.log(`GOOGLE_DOCS_TEMPLATE_ID: '${GOOGLE_DOCS_TEMPLATE_ID}'`);
-    console.log(`GOOGLE_DRIVE_FOLDER_ID: '${GOOGLE_DRIVE_FOLDER_ID}'`);
+    console.log(`GOOGLE_DOCS_TEMPLATE_ID: '${templateId}'`);
+    console.log(`GOOGLE_DRIVE_FOLDER_ID: '${folderId}'`);
 
-    if (!GOOGLE_DOCS_TEMPLATE_ID || !GOOGLE_DRIVE_FOLDER_ID) {
+    if (!templateId || !folderId) {
       throw new Error('GOOGLE_DOCS_TEMPLATE_ID and GOOGLE_DRIVE_FOLDER_ID must be set in environment variables.');
     }
 
@@ -99,12 +99,12 @@ router.post('/generate-pdf', async (req, res) => {
     console.log('Main image URL:', mainImageUrl);
 
     // Step 6: Clone template
-    const clonedDoc = await cloneTemplate(GOOGLE_DOCS_TEMPLATE_ID);
+    const clonedDoc = await cloneTemplate(templateId);
     const clonedDocId = clonedDoc.id;
     const clonedDocLink = clonedDoc.link;
 
     // Step 7: Move to folder
-    await moveFileToFolder(clonedDocId, GOOGLE_DRIVE_FOLDER_ID);
+    await moveFileToFolder(clonedDocId, folderId);
 
     // Step 8: Replace placeholders
     const data = {
@@ -142,7 +142,7 @@ router.post('/generate-pdf', async (req, res) => {
       : `Informe_Tasacion_Post_${postId}_${uuidv4()}.pdf`;
 
     // Step 14: Upload PDF
-    const pdfLink = await uploadPDFToDrive(pdfBuffer, pdfFilename, GOOGLE_DRIVE_FOLDER_ID);
+    const pdfLink = await uploadPDFToDrive(pdfBuffer, pdfFilename, folderId);
 
     // Step 15: Update WordPress
     await updatePostACFFields(postId, pdfLink, clonedDocLink);

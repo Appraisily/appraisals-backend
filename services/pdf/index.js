@@ -71,14 +71,43 @@ async function addGalleryImages(documentId, gallery) {
   }
 }
 
+// Wrapper functions that provide initialized clients
+function cloneTemplateWrapper(templateId) {
+  return cloneTemplate(drive, templateId);
+}
+
+function moveFileToFolderWrapper(fileId, folderId) {
+  return moveFileToFolder(drive, fileId, folderId);
+}
+
+function replacePlaceholdersInDocumentWrapper(documentId, data) {
+  return replacePlaceholdersInDocument(docs, documentId, data);
+}
+
+function adjustTitleFontSizeWrapper(documentId, titleText) {
+  return adjustTitleFontSize(docs, documentId, titleText);
+}
+
+function insertImageAtPlaceholderWrapper(documentId, placeholder, imageUrl) {
+  return insertImageAtPlaceholder(docs, documentId, placeholder, imageUrl);
+}
+
+function exportToPDFWrapper(documentId) {
+  return exportToPDF(drive, documentId);
+}
+
+function uploadPDFToDriveWrapper(pdfBuffer, filename, folderId) {
+  return uploadPDFToDrive(drive, pdfBuffer, filename, folderId);
+}
+
 module.exports = {
   initializeGoogleApis,
-  insertImageAtPlaceholder,
+  cloneTemplate: cloneTemplateWrapper,
+  moveFileToFolder: moveFileToFolderWrapper,
+  replacePlaceholdersInDocument: replacePlaceholdersInDocumentWrapper,
+  adjustTitleFontSize: adjustTitleFontSizeWrapper,
+  insertImageAtPlaceholder: insertImageAtPlaceholderWrapper,
   addGalleryImages,
-  cloneTemplate,
-  moveFileToFolder,
-  replacePlaceholdersInDocument,
-  adjustTitleFontSize,
-  exportToPDF,
-  uploadPDFToDrive
+  exportToPDF: exportToPDFWrapper,
+  uploadPDFToDrive: uploadPDFToDriveWrapper
 };
