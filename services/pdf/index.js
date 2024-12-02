@@ -1,6 +1,6 @@
 const { google } = require('googleapis');
 const config = require('../../config');
-const { processGalleryTable } = require('./table');
+const { processGalleryTable } = require('./table/index.js');
 const { insertImageAtPlaceholder } = require('./imageUtils');
 const { cloneTemplate, moveFileToFolder, replacePlaceholdersInDocument, adjustTitleFontSize } = require('./documentUtils');
 const { exportToPDF, uploadPDFToDrive } = require('./exportUtils');
