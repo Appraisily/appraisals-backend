@@ -1,7 +1,6 @@
 const fetch = require('node-fetch');
 const sizeOf = require('image-size');
 
-// Calculate dimensions preserving aspect ratio
 async function calculateImageDimensions(url, maxWidth = 200, maxHeight = 150) {
   try {
     const response = await fetch(url);
@@ -15,58 +14,82 @@ async function calculateImageDimensions(url, maxWidth = 200, maxHeight = 150) {
     let width = dimensions.width;
     let height = dimensions.height;
 
-    // Calculate scaling factor to fit within bounds while preserving aspect ratio
     const widthScale = maxWidth / width;
     const heightScale = maxHeight / height;
     const scale = Math.min(widthScale, heightScale);
 
     return {
       width: Math.round(width * scale),
-      height: Math.round(height * scale)
+      height: Math.round(height * scale),
+      buffer // Return buffer to avoid downloading twice
     };
   } catch (error) {
     console.warn(`Error calculating image dimensions for ${url}:`, error.message);
-    // Return default dimensions if calculation fails
-    return { width: 150, height: 150 };
+    return null;
   }
 }
 
-// Verify if an image URL is accessible
-async function verifyImageUrl(url) {
+async function verifyAndProcessImage(url) {
   try {
-    const response = await fetch(url, { method: 'HEAD' });
-    return response.ok && response.headers.get('content-type')?.startsWith('image/');
+    console.log(`Processing image: ${url}`);
+    const imageData = await calculateImageDimensions(url);
+    
+    if (!imageData) {
+      console.warn(`Failed to process image: ${url}`);
+      return null;
+    }
+
+    return imageData;
   } catch (error) {
-    console.warn(`Failed to verify image URL ${url}:`, error.message);
-    return false;
+    console.warn(`Failed to verify image ${url}:`, error.message);
+    return null;
   }
 }
 
 async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
   try {
-    console.log(`Verifying ${gallery.length} images before insertion`);
+    console.log(`Processing ${gallery.length} images for gallery`);
 
-    // Verify all images first
-    const verificationPromises = gallery.map(url => verifyImageUrl(url));
-    const verificationResults = await Promise.all(verificationPromises);
-    const validImages = gallery.filter((_, index) => verificationResults[index]);
+    // Process all images first
+    const processedImages = await Promise.all(
+      gallery.map(url => verifyAndProcessImage(url))
+    );
 
-    console.log(`Found ${validImages.length} valid images out of ${gallery.length}`);
+    // Filter out failed images
+    const validImages = processedImages.filter(img => img !== null);
+
+    console.log(`Successfully processed ${validImages.length} out of ${gallery.length} images`);
 
     if (validImages.length === 0) {
       console.warn('No valid images found for gallery');
+      // Remove gallery placeholder and exit
+      await docs.documents.batchUpdate({
+        documentId,
+        requestBody: {
+          requests: [{
+            deleteContentRange: {
+              range: {
+                startIndex: galleryIndex,
+                endIndex: galleryIndex + '{{gallery}}'.length
+              }
+            }
+          }]
+        }
+      });
       return 0;
     }
 
+    const requests = [];
+
     // Delete gallery placeholder
-    const requests = [{
+    requests.push({
       deleteContentRange: {
         range: {
           startIndex: galleryIndex,
           endIndex: galleryIndex + '{{gallery}}'.length
         }
       }
-    }];
+    });
 
     // Insert section title
     requests.push({
@@ -94,61 +117,71 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
     // Insert images with spacing
     let currentIndex = galleryIndex + "Similar Artworks\n".length;
     let insertedCount = 0;
+    const batchSize = 10; // Process images in smaller batches
     
-    for (const imageUrl of validImages) {
-      try {
-        // Calculate dimensions preserving aspect ratio
-        const dimensions = await calculateImageDimensions(imageUrl);
+    // Process images in batches
+    for (let i = 0; i < validImages.length; i += batchSize) {
+      const batch = validImages.slice(i, i + batchSize);
+      const batchRequests = [];
 
-        // Add image
-        requests.push({
-          insertInlineImage: {
-            location: { index: currentIndex },
-            uri: imageUrl,
-            objectSize: {
-              height: { magnitude: dimensions.height, unit: 'PT' },
-              width: { magnitude: dimensions.width, unit: 'PT' }
-            }
-          }
-        });
-
-        // Add spacing after image
-        requests.push({
-          insertText: {
-            location: { index: currentIndex + 1 },
-            text: '   '  // 3 spaces for horizontal spacing
-          }
-        });
-
-        insertedCount++;
-
-        // Add line break after every 3 images
-        if (insertedCount % 3 === 0) {
-          requests.push({
-            insertText: {
-              location: { index: currentIndex + 4 },
-              text: '\n\n'  // Double line break for vertical spacing
+      for (const imageData of batch) {
+        try {
+          // Add image
+          batchRequests.push({
+            insertInlineImage: {
+              location: { index: currentIndex },
+              uri: gallery[i], // Original URL
+              objectSize: {
+                height: { magnitude: imageData.height, unit: 'PT' },
+                width: { magnitude: imageData.width, unit: 'PT' }
+              }
             }
           });
-          currentIndex += 6;  // Account for image + spaces + line breaks
-        } else {
-          currentIndex += 4;  // Account for image + spaces
+
+          // Add spacing after image
+          batchRequests.push({
+            insertText: {
+              location: { index: currentIndex + 1 },
+              text: '   ' // 3 spaces for horizontal spacing
+            }
+          });
+
+          insertedCount++;
+
+          // Add line break after every 3 images
+          if (insertedCount % 3 === 0) {
+            batchRequests.push({
+              insertText: {
+                location: { index: currentIndex + 4 },
+                text: '\n\n' // Double line break for vertical spacing
+              }
+            });
+            currentIndex += 6; // Account for image + spaces + line breaks
+          } else {
+            currentIndex += 4; // Account for image + spaces
+          }
+        } catch (error) {
+          console.warn(`Failed to prepare image request:`, error.message);
+          continue;
         }
-      } catch (error) {
-        console.warn(`Failed to add image ${imageUrl}:`, error.message);
-        continue;
+      }
+
+      // Execute batch requests
+      if (batchRequests.length > 0) {
+        try {
+          await docs.documents.batchUpdate({
+            documentId,
+            requestBody: { requests: batchRequests }
+          });
+          console.log(`Successfully inserted batch of ${batchRequests.length / 2} images`);
+        } catch (error) {
+          console.error(`Error inserting batch:`, error.message);
+          // Continue with next batch
+        }
       }
     }
 
-    // Execute all requests
-    if (requests.length > 0) {
-      await docs.documents.batchUpdate({
-        documentId,
-        requestBody: { requests }
-      });
-      console.log(`Successfully inserted ${insertedCount} images in grid layout`);
-    }
-
+    console.log(`Gallery insertion complete. Inserted ${insertedCount} images`);
     return insertedCount;
   } catch (error) {
     console.error('Error inserting gallery grid:', error);
