@@ -1,6 +1,6 @@
 const { google } = require('googleapis');
 const config = require('../../config');
-const { createTable, applyTableStyles, insertTableImages } = require('./tableUtils');
+const { processGalleryTable } = require('./table');
 const { insertImageAtPlaceholder } = require('./imageUtils');
 const { cloneTemplate, moveFileToFolder, replacePlaceholdersInDocument, adjustTitleFontSize } = require('./documentUtils');
 const { exportToPDF, uploadPDFToDrive } = require('./exportUtils');
@@ -70,33 +70,9 @@ async function addGalleryImages(documentId, gallery) {
       return;
     }
 
-    // Calculate table dimensions
-    const columns = 3;
-    const rows = Math.ceil(gallery.length / columns);
-    console.log(`Creating table with ${rows} rows and ${columns} columns`);
-
-    // Create table
-    await createTable(docs, documentId, galleryIndex, rows, columns);
-
-    // Get updated document to find table
-    const updatedDoc = await docs.documents.get({ documentId });
-    
-    // Find inserted table
-    const tableElement = updatedDoc.data.body.content.find(
-      element => element.table && element.startIndex >= galleryIndex
-    );
-
-    if (!tableElement) {
-      throw new Error('Table not found after insertion');
-    }
-
-    // Apply styles to table cells
-    await applyTableStyles(docs, documentId, tableElement, rows, columns);
-
-    // Insert images into cells
-    const insertedImages = await insertTableImages(docs, documentId, tableElement, gallery, rows, columns);
-
-    console.log(`Added ${insertedImages} images to gallery`);
+    // Process gallery table
+    const insertedImages = await processGalleryTable(docs, documentId, galleryIndex, gallery);
+    console.log(`Gallery processing complete. Added ${insertedImages} images.`);
   } catch (error) {
     console.error('Error adding gallery images:', error);
     throw error;
