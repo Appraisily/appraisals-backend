@@ -25,9 +25,23 @@ async function createTable(docs, documentId, galleryIndex, rows, columns) {
   };
 
   await docs.documents.batchUpdate(createTableRequest);
-  
-  // Wait for table creation
-  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  // Add delay to ensure table creation is complete
+  await new Promise(resolve => setTimeout(resolve, 2000));
+
+  // Get updated document to find table
+  const updatedDoc = await docs.documents.get({ documentId });
+    
+  // Find inserted table
+  const tableElement = updatedDoc.data.body.content.find(
+    element => element.table && element.startIndex >= galleryIndex
+  );
+
+  if (!tableElement) {
+    throw new Error('Table not found after insertion');
+  }
+
+  return tableElement;
 }
 
 async function applyTableStyles(docs, documentId, tableElement, rows, columns) {
@@ -39,25 +53,30 @@ async function applyTableStyles(docs, documentId, tableElement, rows, columns) {
       const cell = tableElement.table.tableRows[rowIndex]?.tableCells[colIndex];
       
       if (cell) {
-        // Update table cell style
+        // Cell padding and alignment
         requests.push({
           updateTableCellStyle: {
+            tableRange: {
+              tableCellLocation: {
+                tableStartLocation: { index: tableElement.startIndex },
+                rowIndex,
+                columnIndex: colIndex
+              },
+              rowSpan: 1,
+              columnSpan: 1
+            },
             tableCellStyle: {
               paddingTop: { magnitude: 5, unit: 'PT' },
               paddingBottom: { magnitude: 5, unit: 'PT' },
               paddingLeft: { magnitude: 5, unit: 'PT' },
-              paddingRight: { magnitude: 5, unit: 'PT' }
+              paddingRight: { magnitude: 5, unit: 'PT' },
+              contentAlignment: 'MIDDLE'
             },
-            tableStartLocation: {
-              index: tableElement.startIndex
-            },
-            rowIndex: rowIndex,
-            columnIndex: colIndex,
-            fields: 'paddingTop,paddingBottom,paddingLeft,paddingRight'
+            fields: 'paddingTop,paddingBottom,paddingLeft,paddingRight,contentAlignment'
           }
         });
 
-        // Update paragraph alignment for cell content
+        // Horizontal text alignment
         requests.push({
           updateParagraphStyle: {
             range: {
@@ -68,21 +87,6 @@ async function applyTableStyles(docs, documentId, tableElement, rows, columns) {
               alignment: 'CENTER'
             },
             fields: 'alignment'
-          }
-        });
-
-        // Update vertical alignment
-        requests.push({
-          updateTableCellStyle: {
-            tableCellStyle: {
-              contentAlignment: 'MIDDLE'
-            },
-            tableStartLocation: {
-              index: tableElement.startIndex
-            },
-            rowIndex: rowIndex,
-            columnIndex: colIndex,
-            fields: 'contentAlignment'
           }
         });
       }
