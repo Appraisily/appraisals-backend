@@ -1,15 +1,18 @@
 const { google } = require('googleapis');
-const { v4: uuidv4 } = require('uuid');
 
 async function cloneTemplate(drive, templateId) {
   try {
+    if (!templateId || typeof templateId !== 'string') {
+      throw new Error('Invalid template ID provided');
+    }
+
     const sanitizedTemplateId = templateId.trim();
     console.log(`Cloning template with ID: '${sanitizedTemplateId}'`);
 
     const copiedFile = await drive.files.copy({
       fileId: sanitizedTemplateId,
       requestBody: {
-        name: `Informe_Tasacion_${uuidv4()}`,
+        name: `Informe_Tasacion_${new Date().toISOString()}`,
       },
       fields: 'id, webViewLink',
       supportsAllDrives: true,
@@ -108,6 +111,11 @@ async function replacePlaceholdersInDocument(docs, documentId, data) {
 
 async function adjustTitleFontSize(docs, documentId, titleText) {
   try {
+    if (!titleText) {
+      console.warn('No title text provided for font size adjustment.');
+      return;
+    }
+
     const document = await docs.documents.get({ documentId });
     const content = document.data.body.content;
     let titleRange = null;

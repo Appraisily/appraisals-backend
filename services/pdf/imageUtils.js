@@ -1,7 +1,44 @@
+const fetch = require('node-fetch');
+const sizeOf = require('image-size');
+
+async function calculateImageDimensions(url, maxWidth = 200, maxHeight = 150) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Failed to fetch image');
+    }
+
+    const buffer = await response.buffer();
+    const dimensions = sizeOf(buffer);
+
+    let width = dimensions.width;
+    let height = dimensions.height;
+
+    const widthScale = maxWidth / width;
+    const heightScale = maxHeight / height;
+    const scale = Math.min(widthScale, heightScale);
+
+    return {
+      width: Math.round(width * scale),
+      height: Math.round(height * scale),
+      buffer
+    };
+  } catch (error) {
+    console.warn(`Error calculating image dimensions for ${url}:`, error.message);
+    return null;
+  }
+}
+
 async function insertImageAtPlaceholder(docs, documentId, placeholder, imageUrl) {
   try {
     if (!imageUrl) {
       console.warn(`No image URL provided for placeholder {{${placeholder}}}`);
+      return;
+    }
+
+    const imageData = await calculateImageDimensions(imageUrl);
+    if (!imageData) {
+      console.warn(`Failed to process image for placeholder {{${placeholder}}}`);
       return;
     }
 
@@ -59,8 +96,8 @@ async function insertImageAtPlaceholder(docs, documentId, placeholder, imageUrl)
             },
             uri: imageUrl,
             objectSize: {
-              height: { magnitude: 150, unit: 'PT' },
-              width: { magnitude: 150, unit: 'PT' }
+              height: { magnitude: imageData.height, unit: 'PT' },
+              width: { magnitude: imageData.width, unit: 'PT' }
             }
           }
         }
@@ -80,5 +117,6 @@ async function insertImageAtPlaceholder(docs, documentId, placeholder, imageUrl)
 }
 
 module.exports = {
-  insertImageAtPlaceholder
+  insertImageAtPlaceholder,
+  calculateImageDimensions
 };
