@@ -20,18 +20,13 @@ async function applyTableStyles(docs, documentId, tableElement) {
     for (let colIndex = 0; colIndex < tableCells.length; colIndex++) {
       const cell = tableCells[colIndex];
 
-      if (cell) {
-        // Cell padding and alignment
+      if (cell && cell.startIndex && cell.endIndex) {
+        // Cell padding using direct range instead of tableRange
         requests.push({
           updateTableCellStyle: {
-            tableRange: {
-              tableCellLocation: {
-                tableStartLocation: { index: tableElement.startIndex },
-                rowIndex,
-                columnIndex: colIndex
-              },
-              rowSpan: 1,
-              columnSpan: 1
+            range: {
+              startIndex: cell.startIndex,
+              endIndex: cell.endIndex
             },
             tableCellStyle: {
               paddingTop: { magnitude: 5, unit: 'PT' },
@@ -58,19 +53,24 @@ async function applyTableStyles(docs, documentId, tableElement) {
           }
         });
 
-        console.log(`Styled cell at row ${rowIndex}, column ${colIndex}`);
+        console.log(`Styled cell at row ${rowIndex}, column ${colIndex} (range: ${cell.startIndex}-${cell.endIndex})`);
       } else {
-        console.warn(`Cell at row ${rowIndex}, column ${colIndex} is undefined.`);
+        console.warn(`Invalid cell at row ${rowIndex}, column ${colIndex}`);
       }
     }
   }
 
   if (requests.length > 0) {
-    await docs.documents.batchUpdate({
-      documentId,
-      requestBody: { requests }
-    });
-    console.log(`Applied ${requests.length} style updates to table`);
+    try {
+      await docs.documents.batchUpdate({
+        documentId,
+        requestBody: { requests }
+      });
+      console.log(`Applied ${requests.length} style updates to table`);
+    } catch (error) {
+      console.error('Error applying table styles:', error);
+      throw new Error(`Failed to apply table styles: ${error.message}`);
+    }
   }
 }
 
