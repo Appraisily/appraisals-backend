@@ -157,7 +157,7 @@ async function addGalleryImages(documentId, gallery) {
     const rows = Math.ceil(gallery.length / columns);
     console.log(`Creating table with ${rows} rows and ${columns} columns`);
 
-    // First create the table
+    // Create table and apply initial styling
     const createTableRequest = {
       documentId,
       requestBody: {
@@ -198,44 +198,29 @@ async function addGalleryImages(documentId, gallery) {
       throw new Error('Table not found after insertion');
     }
 
-    // Prepare style requests for table and cells
+    // Prepare style requests for table cells
     const styleRequests = [];
 
-    // Add table border and cell padding styles
+    // Add cell padding and alignment styles
     for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
       for (let colIndex = 0; colIndex < columns; colIndex++) {
-        const cell = tableElement.table.tableRows[rowIndex].tableCells[colIndex];
-        
         styleRequests.push({
           updateTableCellStyle: {
-            tableCell: {
+            tableCellStyle: {
+              paddingTop: { magnitude: 5, unit: 'PT' },
+              paddingBottom: { magnitude: 5, unit: 'PT' },
+              paddingLeft: { magnitude: 5, unit: 'PT' },
+              paddingRight: { magnitude: 5, unit: 'PT' },
+              contentAlignment: 'CENTER'
+            },
+            tableRange: {
               tableCellLocation: {
                 tableStartLocation: { index: tableElement.startIndex },
                 rowIndex,
                 columnIndex: colIndex
               }
             },
-            tableCellStyle: {
-              paddingTop: { magnitude: 5, unit: 'PT' },
-              paddingBottom: { magnitude: 5, unit: 'PT' },
-              paddingLeft: { magnitude: 5, unit: 'PT' },
-              paddingRight: { magnitude: 5, unit: 'PT' }
-            },
-            fields: 'paddingTop,paddingBottom,paddingLeft,paddingRight'
-          }
-        });
-
-        // Center align cell content
-        styleRequests.push({
-          updateParagraphStyle: {
-            range: {
-              startIndex: cell.startIndex,
-              endIndex: cell.endIndex
-            },
-            paragraphStyle: {
-              alignment: 'CENTER'
-            },
-            fields: 'alignment'
+            fields: 'paddingTop,paddingBottom,paddingLeft,paddingRight,contentAlignment'
           }
         });
       }
@@ -625,7 +610,6 @@ module.exports = {
   adjustTitleFontSize,
   insertFormattedMetadata,
   addGalleryImages,
-  replacePlaceholdersWithImages: () => {}, // No longer needed but kept for compatibility
   insertImageAtPlaceholder,
   exportToPDF,
   uploadPDFToDrive
