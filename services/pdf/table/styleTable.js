@@ -23,17 +23,13 @@ async function applyTableStyles(docs, documentId, tableElement) {
       if (cell) {
         console.log(`Processing cell at row ${rowIndex}, column ${colIndex}`);
 
-        // Cell padding and alignment using tableRange
+        // Cell padding and alignment using tableCellLocation directly
         requests.push({
           updateTableCellStyle: {
-            tableRange: {
-              rowSpan: 1,
-              columnSpan: 1,
-              tableCellLocation: {
-                tableStartLocation: { index: tableElement.startIndex },
-                rowIndex: rowIndex,
-                columnIndex: colIndex
-              }
+            tableCellLocation: {
+              tableStartLocation: { index: tableElement.startIndex },
+              rowIndex: rowIndex,
+              columnIndex: colIndex
             },
             tableCellStyle: {
               paddingTop: { magnitude: 5, unit: 'PT' },
