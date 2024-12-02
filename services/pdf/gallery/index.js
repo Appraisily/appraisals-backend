@@ -1,4 +1,35 @@
 const fetch = require('node-fetch');
+const sizeOf = require('image-size');
+
+// Calculate dimensions preserving aspect ratio
+async function calculateImageDimensions(url, maxWidth = 200, maxHeight = 150) {
+  try {
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Failed to fetch image');
+    }
+
+    const buffer = await response.buffer();
+    const dimensions = sizeOf(buffer);
+
+    let width = dimensions.width;
+    let height = dimensions.height;
+
+    // Calculate scaling factor to fit within bounds while preserving aspect ratio
+    const widthScale = maxWidth / width;
+    const heightScale = maxHeight / height;
+    const scale = Math.min(widthScale, heightScale);
+
+    return {
+      width: Math.round(width * scale),
+      height: Math.round(height * scale)
+    };
+  } catch (error) {
+    console.warn(`Error calculating image dimensions for ${url}:`, error.message);
+    // Return default dimensions if calculation fails
+    return { width: 150, height: 150 };
+  }
+}
 
 // Verify if an image URL is accessible
 async function verifyImageUrl(url) {
@@ -66,14 +97,17 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
     
     for (const imageUrl of validImages) {
       try {
+        // Calculate dimensions preserving aspect ratio
+        const dimensions = await calculateImageDimensions(imageUrl);
+
         // Add image
         requests.push({
           insertInlineImage: {
             location: { index: currentIndex },
             uri: imageUrl,
             objectSize: {
-              height: { magnitude: 150, unit: 'PT' },
-              width: { magnitude: 150, unit: 'PT' }
+              height: { magnitude: dimensions.height, unit: 'PT' },
+              width: { magnitude: dimensions.width, unit: 'PT' }
             }
           }
         });

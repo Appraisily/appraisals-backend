@@ -73,12 +73,12 @@ async function addGalleryImages(documentId, gallery) {
 
 module.exports = {
   initializeGoogleApis,
-  cloneTemplate: (...args) => cloneTemplate(drive, ...args),
-  moveFileToFolder: (...args) => moveFileToFolder(drive, ...args),
-  replacePlaceholdersInDocument: (...args) => replacePlaceholdersInDocument(docs, ...args),
-  adjustTitleFontSize: (...args) => adjustTitleFontSize(docs, ...args),
+  insertImageAtPlaceholder,
   addGalleryImages,
-  insertImageAtPlaceholder: (...args) => insertImageAtPlaceholder(docs, ...args),
-  exportToPDF: (...args) => exportToPDF(drive, ...args),
-  uploadPDFToDrive: (...args) => uploadPDFToDrive(drive, ...args)
+  cloneTemplate,
+  moveFileToFolder,
+  replacePlaceholdersInDocument,
+  adjustTitleFontSize,
+  exportToPDF,
+  uploadPDFToDrive
 };
