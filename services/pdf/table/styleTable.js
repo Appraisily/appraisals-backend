@@ -20,13 +20,16 @@ async function applyTableStyles(docs, documentId, tableElement) {
     for (let colIndex = 0; colIndex < tableCells.length; colIndex++) {
       const cell = tableCells[colIndex];
 
-      if (cell && cell.startIndex && cell.endIndex) {
-        // Cell padding using direct range instead of tableRange
+      if (cell) {
+        console.log(`Processing cell at row ${rowIndex}, column ${colIndex}`);
+
+        // Cell padding and alignment using tableCellLocation
         requests.push({
           updateTableCellStyle: {
-            range: {
-              startIndex: cell.startIndex,
-              endIndex: cell.endIndex
+            tableCellLocation: {
+              tableStartLocation: { index: tableElement.startIndex },
+              rowIndex: rowIndex,
+              columnIndex: colIndex
             },
             tableCellStyle: {
               paddingTop: { magnitude: 5, unit: 'PT' },
@@ -53,9 +56,9 @@ async function applyTableStyles(docs, documentId, tableElement) {
           }
         });
 
-        console.log(`Styled cell at row ${rowIndex}, column ${colIndex} (range: ${cell.startIndex}-${cell.endIndex})`);
+        console.log(`Styled cell at row ${rowIndex}, column ${colIndex}`);
       } else {
-        console.warn(`Invalid cell at row ${rowIndex}, column ${colIndex}`);
+        console.warn(`Cell at row ${rowIndex}, column ${colIndex} is undefined.`);
       }
     }
   }
