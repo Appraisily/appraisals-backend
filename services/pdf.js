@@ -211,7 +211,7 @@ async function addGalleryImages(documentId, gallery) {
               paddingBottom: { magnitude: 5, unit: 'PT' },
               paddingLeft: { magnitude: 5, unit: 'PT' },
               paddingRight: { magnitude: 5, unit: 'PT' },
-              contentAlignment: 'CENTER'
+              contentAlignment: 'MIDDLE'
             },
             tableRange: {
               tableCellLocation: {
@@ -221,6 +221,21 @@ async function addGalleryImages(documentId, gallery) {
               }
             },
             fields: 'paddingTop,paddingBottom,paddingLeft,paddingRight,contentAlignment'
+          }
+        });
+
+        // Add paragraph alignment for horizontal centering
+        const cell = tableElement.table.tableRows[rowIndex].tableCells[colIndex];
+        styleRequests.push({
+          updateParagraphStyle: {
+            paragraphStyle: {
+              alignment: 'CENTER'
+            },
+            range: {
+              startIndex: cell.startIndex,
+              endIndex: cell.endIndex
+            },
+            fields: 'alignment'
           }
         });
       }
