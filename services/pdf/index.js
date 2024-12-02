@@ -1,6 +1,6 @@
 const { google } = require('googleapis');
 const config = require('../../config');
-const { processGalleryTable } = require('./table/index.js');
+const { insertGalleryGrid } = require('./gallery');
 const { insertImageAtPlaceholder } = require('./imageUtils');
 const { cloneTemplate, moveFileToFolder, replacePlaceholdersInDocument, adjustTitleFontSize } = require('./documentUtils');
 const { exportToPDF, uploadPDFToDrive } = require('./exportUtils');
@@ -70,9 +70,9 @@ async function addGalleryImages(documentId, gallery) {
       return;
     }
 
-    // Process gallery table
-    const insertedImages = await processGalleryTable(docs, documentId, galleryIndex, gallery);
-    console.log(`Gallery processing complete. Added ${insertedImages} images.`);
+    // Insert gallery grid
+    const insertedImages = await insertGalleryGrid(docs, documentId, galleryIndex, gallery);
+    console.log(`Gallery insertion complete. Added ${insertedImages} images.`);
   } catch (error) {
     console.error('Error adding gallery images:', error);
     throw error;
