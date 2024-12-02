@@ -1,6 +1,11 @@
+const express = require('express');
+const cors = require('cors');
+const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const { google } = require('googleapis');
-const { Readable } = require('stream');
 const { v4: uuidv4 } = require('uuid');
+const { Readable } = require('stream');
+const he = require('he');
+const { format } = require('date-fns');
 const config = require('../config');
 
 let docs;
@@ -54,14 +59,6 @@ async function insertImageAtPlaceholder(documentId, placeholder, imageUrl) {
                 startIndex,
                 endIndex: startIndex + placeholderFull.length
               });
-            }
-          }
-        } else if (element.table) {
-          for (const row of element.table.tableRows) {
-            for (const cell of row.tableCells) {
-              if (cell.content) {
-                findPlaceholders(cell.content);
-              }
             }
           }
         }
@@ -132,14 +129,6 @@ async function addGalleryImages(documentId, gallery) {
               return true;
             }
           }
-        } else if (element.table) {
-          for (const row of element.table.tableRows) {
-            for (const cell of row.tableCells) {
-              if (cell.content && findGalleryPlaceholder(cell.content)) {
-                return true;
-              }
-            }
-          }
         }
       }
       return false;
@@ -152,138 +141,84 @@ async function addGalleryImages(documentId, gallery) {
       return;
     }
 
-    // Calculate table dimensions
-    const columns = 3;
-    const rows = Math.ceil(gallery.length / columns);
-    console.log(`Creating table with ${rows} rows and ${columns} columns`);
-
-    // Create table and apply initial styling
-    const createTableRequest = {
-      documentId,
-      requestBody: {
-        requests: [
-          {
-            deleteContentRange: {
-              range: {
-                startIndex: galleryIndex,
-                endIndex: galleryIndex + '{{gallery}}'.length
-              }
-            }
-          },
-          {
-            insertTable: {
-              rows,
-              columns,
-              location: { index: galleryIndex }
-            }
-          }
-        ]
-      }
-    };
-
-    await docs.documents.batchUpdate(createTableRequest);
-
-    // Wait for table creation
-    await new Promise(resolve => setTimeout(resolve, 1000));
-
-    // Get updated document to find table
-    const updatedDoc = await docs.documents.get({ documentId });
-    
-    // Find inserted table
-    const tableElement = updatedDoc.data.body.content.find(
-      element => element.table && element.startIndex >= galleryIndex
-    );
-
-    if (!tableElement) {
-      throw new Error('Table not found after insertion');
-    }
-
-    // Prepare style requests for table cells
-    const styleRequests = [];
-
-    // Add cell padding and alignment styles
-    for (let rowIndex = 0; rowIndex < rows; rowIndex++) {
-      for (let colIndex = 0; colIndex < columns; colIndex++) {
-        styleRequests.push({
-          updateTableCellStyle: {
-            tableCellStyle: {
-              paddingTop: { magnitude: 5, unit: 'PT' },
-              paddingBottom: { magnitude: 5, unit: 'PT' },
-              paddingLeft: { magnitude: 5, unit: 'PT' },
-              paddingRight: { magnitude: 5, unit: 'PT' },
-              contentAlignment: 'MIDDLE'
-            },
-            tableRange: {
-              tableCellLocation: {
-                tableStartLocation: { index: tableElement.startIndex },
-                rowIndex,
-                columnIndex: colIndex
-              }
-            },
-            fields: 'paddingTop,paddingBottom,paddingLeft,paddingRight,contentAlignment'
-          }
-        });
-
-        // Add paragraph alignment for horizontal centering
-        const cell = tableElement.table.tableRows[rowIndex].tableCells[colIndex];
-        styleRequests.push({
-          updateParagraphStyle: {
-            paragraphStyle: {
-              alignment: 'CENTER'
-            },
-            range: {
-              startIndex: cell.startIndex,
-              endIndex: cell.endIndex
-            },
-            fields: 'alignment'
-          }
-        });
-      }
-    }
-
-    // Apply styles
-    if (styleRequests.length > 0) {
-      await docs.documents.batchUpdate({
-        documentId,
-        requestBody: { requests: styleRequests }
-      });
-    }
-
-    // Insert images into cells
-    const imageRequests = [];
-    let imageIndex = 0;
-
-    for (let rowIndex = 0; rowIndex < rows && imageIndex < gallery.length; rowIndex++) {
-      for (let colIndex = 0; colIndex < columns && imageIndex < gallery.length; colIndex++) {
-        const cell = tableElement.table.tableRows[rowIndex].tableCells[colIndex];
-        const imageUrl = gallery[imageIndex];
-
-        if (imageUrl && cell) {
-          imageRequests.push({
-            insertInlineImage: {
-              location: { index: cell.startIndex + 1 },
-              uri: imageUrl,
-              objectSize: {
-                height: { magnitude: 150, unit: 'PT' },
-                width: { magnitude: 150, unit: 'PT' }
-              }
-            }
-          });
+    // Delete gallery placeholder
+    const requests = [{
+      deleteContentRange: {
+        range: {
+          startIndex: galleryIndex,
+          endIndex: galleryIndex + '{{gallery}}'.length
         }
+      }
+    }];
 
-        imageIndex++;
+    // Insert section title
+    requests.push({
+      insertText: {
+        location: { index: galleryIndex },
+        text: "Similar Artworks\n"
+      }
+    });
+
+    // Style section title
+    requests.push({
+      updateParagraphStyle: {
+        range: {
+          startIndex: galleryIndex,
+          endIndex: galleryIndex + "Similar Artworks\n".length
+        },
+        paragraphStyle: {
+          alignment: 'CENTER',
+          namedStyleType: 'HEADING_3'
+        },
+        fields: 'alignment,namedStyleType'
+      }
+    });
+
+    // Insert images with spacing
+    let currentIndex = galleryIndex + "Similar Artworks\n".length;
+    
+    for (let i = 0; i < gallery.length; i++) {
+      // Add image
+      requests.push({
+        insertInlineImage: {
+          location: { index: currentIndex },
+          uri: gallery[i],
+          objectSize: {
+            height: { magnitude: 150, unit: 'PT' },
+            width: { magnitude: 150, unit: 'PT' }
+          }
+        }
+      });
+
+      // Add spacing after image
+      requests.push({
+        insertText: {
+          location: { index: currentIndex + 1 },
+          text: '   '  // 3 spaces for horizontal spacing
+        }
+      });
+
+      // Add line break after every 3 images
+      if ((i + 1) % 3 === 0) {
+        requests.push({
+          insertText: {
+            location: { index: currentIndex + 4 },
+            text: '\n\n'  // Double line break for vertical spacing
+          }
+        });
+        currentIndex += 6;  // Account for image + spaces + line breaks
+      } else {
+        currentIndex += 4;  // Account for image + spaces
       }
     }
 
-    // Execute image insertion if we have any images
-    if (imageRequests.length > 0) {
-      await docs.documents.batchUpdate({
-        documentId,
-        requestBody: { requests: imageRequests }
-      });
-    }
+    // Execute all requests
+    await docs.documents.batchUpdate({
+      documentId,
+      requestBody: { requests }
+    });
 
-    console.log(`Added ${imageIndex} images to gallery`);
+    console.log(`Successfully inserted ${gallery.length} images in grid layout`);
   } catch (error) {
     console.error('Error adding gallery images:', error);
     throw error;
@@ -367,14 +302,6 @@ async function replacePlaceholdersInDocument(documentId, data) {
               }
             }
           }
-        } else if (element.table) {
-          for (const row of element.table.tableRows) {
-            for (const cell of row.tableCells) {
-              if (cell.content) {
-                findAndReplace(cell.content);
-              }
-            }
-          }
         }
       }
     };
@@ -419,14 +346,6 @@ async function adjustTitleFontSize(documentId, titleText) {
               return true;
             }
           }
-        } else if (element.table) {
-          for (const row of element.table.tableRows) {
-            for (const cell of row.tableCells) {
-              if (findTitleInElements(cell.content)) {
-                return true;
-              }
-            }
-          }
         }
       }
       return false;
@@ -469,105 +388,6 @@ async function adjustTitleFontSize(documentId, titleText) {
     console.log(`Title font size adjusted to ${fontSize}pt`);
   } catch (error) {
     console.error('Error adjusting title font size:', error);
-    throw error;
-  }
-}
-
-// Insert formatted metadata
-async function insertFormattedMetadata(documentId, placeholder, tableData) {
-  try {
-    const document = await docs.documents.get({ documentId });
-    const content = document.data.body.content;
-    let placeholderFound = false;
-    let placeholderIndex = -1;
-
-    const findPlaceholder = (elements) => {
-      for (const element of elements) {
-        if (element.paragraph && element.paragraph.elements) {
-          for (const elem of element.paragraph.elements) {
-            if (elem.textRun && elem.textRun.content.includes(`{{${placeholder}}}`)) {
-              placeholderFound = true;
-              placeholderIndex = elem.startIndex;
-              return true;
-            }
-          }
-        } else if (element.table) {
-          for (const row of element.table.tableRows) {
-            for (const cell of row.tableCells) {
-              if (cell.content && findPlaceholder(cell.content)) {
-                return true;
-              }
-            }
-          }
-        }
-      }
-      return false;
-    };
-
-    findPlaceholder(content);
-
-    if (!placeholderFound) {
-      console.warn(`Placeholder "{{${placeholder}}}" not found in document.`);
-      return;
-    }
-
-    const rows = tableData.split('-').map(item => item.trim()).filter(item => item);
-    const formattedText = rows.map(row => {
-      const [key, value] = row.split(':').map(s => s.trim());
-      if (key && value) {
-        return `**${key}:** ${value}`;
-      } else if (key) {
-        return `**${key}:**`;
-      } else {
-        return value;
-      }
-    }).join('\n');
-
-    await docs.documents.batchUpdate({
-      documentId: documentId,
-      requestBody: {
-        requests: [
-          {
-            deleteContentRange: {
-              range: {
-                startIndex: placeholderIndex,
-                endIndex: placeholderIndex + `{{${placeholder}}}`.length,
-              },
-            },
-          },
-          {
-            insertText: {
-              text: formattedText,
-              location: {
-                index: placeholderIndex,
-              },
-            },
-          },
-          ...rows.map((row, idx) => {
-            const [key] = row.split(':').map(s => s.trim());
-            if (key) {
-              const beforeText = rows.slice(0, idx).join('\n').length;
-              const keyStartIndex = placeholderIndex + beforeText + (idx > 0 ? 1 : 0);
-              return {
-                updateTextStyle: {
-                  range: {
-                    startIndex: keyStartIndex,
-                    endIndex: keyStartIndex + key.length + 1,
-                  },
-                  textStyle: {
-                    bold: true,
-                  },
-                  fields: 'bold',
-                },
-              };
-            }
-            return null;
-          }).filter(req => req !== null)
-        ],
-      },
-    });
-  } catch (error) {
-    console.error('Error inserting formatted metadata:', error);
     throw error;
   }
 }
@@ -619,13 +439,12 @@ async function uploadPDFToDrive(pdfBuffer, filename, folderId) {
 
 module.exports = {
   initializeGoogleApis,
+  insertImageAtPlaceholder,
+  addGalleryImages,
   cloneTemplate,
   moveFileToFolder,
   replacePlaceholdersInDocument,
   adjustTitleFontSize,
-  insertFormattedMetadata,
-  addGalleryImages,
-  insertImageAtPlaceholder,
   exportToPDF,
   uploadPDFToDrive
 };

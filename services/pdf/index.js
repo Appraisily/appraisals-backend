@@ -50,14 +50,6 @@ async function addGalleryImages(documentId, gallery) {
               return true;
             }
           }
-        } else if (element.table) {
-          for (const row of element.table.tableRows) {
-            for (const cell of row.tableCells) {
-              if (cell.content && findGalleryPlaceholder(cell.content)) {
-                return true;
-              }
-            }
-          }
         }
       }
       return false;
@@ -71,8 +63,8 @@ async function addGalleryImages(documentId, gallery) {
     }
 
     // Insert gallery grid
-    const insertedImages = await insertGalleryGrid(docs, documentId, galleryIndex, gallery);
-    console.log(`Gallery insertion complete. Added ${insertedImages} images.`);
+    await insertGalleryGrid(docs, documentId, galleryIndex, gallery);
+    console.log('Gallery insertion complete');
   } catch (error) {
     console.error('Error adding gallery images:', error);
     throw error;
