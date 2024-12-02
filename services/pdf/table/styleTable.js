@@ -1,3 +1,4 @@
+// services/pdf/table/styleTable.js
 async function applyTableStyles(docs, documentId, tableElement) {
   const requests = [];
   const tableRows = tableElement.table.tableRows;
@@ -6,7 +7,7 @@ async function applyTableStyles(docs, documentId, tableElement) {
     throw new Error('The table has no rows.');
   }
 
-  console.log(`Applying styles to table with ${tableRows.length} rows`);
+  console.log(`Applying text alignment to table with ${tableRows.length} rows`);
 
   for (let rowIndex = 0; rowIndex < tableRows.length; rowIndex++) {
     const tableRow = tableRows[rowIndex];
@@ -21,28 +22,7 @@ async function applyTableStyles(docs, documentId, tableElement) {
       const cell = tableCells[colIndex];
 
       if (cell) {
-        console.log(`Processing cell at row ${rowIndex}, column ${colIndex}`);
-
-        // Cell padding and alignment using tableCellLocation directly
-        requests.push({
-          updateTableCellStyle: {
-            tableCellLocation: {
-              tableStartLocation: { index: tableElement.startIndex },
-              rowIndex: rowIndex,
-              columnIndex: colIndex
-            },
-            tableCellStyle: {
-              paddingTop: { magnitude: 5, unit: 'PT' },
-              paddingBottom: { magnitude: 5, unit: 'PT' },
-              paddingLeft: { magnitude: 5, unit: 'PT' },
-              paddingRight: { magnitude: 5, unit: 'PT' },
-              contentAlignment: 'MIDDLE'
-            },
-            fields: 'paddingTop,paddingBottom,paddingLeft,paddingRight,contentAlignment'
-          }
-        });
-
-        // Horizontal text alignment
+        // Only apply paragraph alignment
         requests.push({
           updateParagraphStyle: {
             range: {
@@ -56,7 +36,7 @@ async function applyTableStyles(docs, documentId, tableElement) {
           }
         });
 
-        console.log(`Styled cell at row ${rowIndex}, column ${colIndex}`);
+        console.log(`Applied text alignment to cell at row ${rowIndex}, column ${colIndex}`);
       } else {
         console.warn(`Cell at row ${rowIndex}, column ${colIndex} is undefined.`);
       }
@@ -69,10 +49,10 @@ async function applyTableStyles(docs, documentId, tableElement) {
         documentId,
         requestBody: { requests }
       });
-      console.log(`Applied ${requests.length} style updates to table`);
+      console.log(`Applied ${requests.length} text alignment updates to table`);
     } catch (error) {
-      console.error('Error applying table styles:', error);
-      throw new Error(`Failed to apply table styles: ${error.message}`);
+      console.error('Error applying text alignment:', error);
+      throw new Error(`Failed to apply text alignment: ${error.message}`);
     }
   }
 }

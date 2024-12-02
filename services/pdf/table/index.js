@@ -1,3 +1,4 @@
+// services/pdf/table/index.js
 const { createTable } = require('./createTable');
 const { applyTableStyles } = require('./styleTable');
 const { insertTableImages } = require('./insertImages');
@@ -11,10 +12,10 @@ async function processGalleryTable(docs, documentId, galleryIndex, gallery) {
     console.log(`Processing gallery table with ${rows} rows and ${columns} columns`);
     console.log(`Total images: ${gallery.length}`);
 
-    // Create table
+    // Create table with styles
     const tableElement = await createTable(docs, documentId, galleryIndex, rows, columns);
 
-    // Apply styles
+    // Apply text alignment
     await applyTableStyles(docs, documentId, tableElement);
 
     // Insert images

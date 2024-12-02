@@ -1,3 +1,4 @@
+// services/pdf/table/insertImages.js
 async function insertTableImages(docs, documentId, tableElement, gallery) {
   const requests = [];
   let imageIndex = 0;

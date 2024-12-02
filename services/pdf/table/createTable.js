@@ -1,3 +1,4 @@
+// services/pdf/table/createTable.js
 const { google } = require('googleapis');
 
 async function createTable(docs, documentId, galleryIndex, rows, columns) {
@@ -19,7 +20,14 @@ async function createTable(docs, documentId, galleryIndex, rows, columns) {
           insertTable: {
             rows,
             columns,
-            location: { index: galleryIndex }
+            location: { index: galleryIndex },
+            tableCellStyle: {
+              paddingTop: { magnitude: 5, unit: 'PT' },
+              paddingBottom: { magnitude: 5, unit: 'PT' },
+              paddingLeft: { magnitude: 5, unit: 'PT' },
+              paddingRight: { magnitude: 5, unit: 'PT' },
+              contentAlignment: 'MIDDLE'
+            }
           }
         }
       ]
