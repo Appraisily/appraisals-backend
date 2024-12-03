@@ -1,7 +1,5 @@
 const { google } = require('googleapis');
 
-<<<<<<< Updated upstream
-=======
 async function getTemplateId(drive, postId) {
   try {
     // Get the value field to determine if it's TaxArt
@@ -31,7 +29,6 @@ async function getTemplateId(drive, postId) {
   }
 }
 
->>>>>>> Stashed changes
 async function cloneTemplate(drive, templateId) {
   try {
     if (!templateId || typeof templateId !== 'string') {
@@ -221,10 +218,7 @@ async function adjustTitleFontSize(docs, documentId, titleText) {
 }
 
 module.exports = {
-<<<<<<< Updated upstream
-=======
   getTemplateId,
->>>>>>> Stashed changes
   cloneTemplate,
   moveFileToFolder,
   replacePlaceholdersInDocument,

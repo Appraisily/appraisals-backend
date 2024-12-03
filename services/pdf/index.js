@@ -1,15 +1,9 @@
 const { google } = require('googleapis');
 const config = require('../../config');
-<<<<<<< Updated upstream
-const { insertGalleryGrid } = require('./gallery');
-const { insertImageAtPlaceholder } = require('./imageUtils');
-const { cloneTemplate, moveFileToFolder, replacePlaceholdersInDocument, adjustTitleFontSize } = require('./documentUtils');
-=======
 const { getTemplateId } = require('./documentUtils');
 const { insertGalleryGrid } = require('./gallery');
 const { insertImageAtPlaceholder } = require('./imageUtils');
 const { cloneTemplate: cloneTemplateBase, moveFileToFolder, replacePlaceholdersInDocument, adjustTitleFontSize } = require('./documentUtils');
->>>>>>> Stashed changes
 const { exportToPDF, uploadPDFToDrive } = require('./exportUtils');
 
 let docs;
@@ -79,14 +73,9 @@ async function addGalleryImages(documentId, gallery) {
 }
 
 // Wrapper functions that provide initialized clients
-<<<<<<< Updated upstream
-function cloneTemplateWrapper(templateId) {
-  return cloneTemplate(drive, templateId);
-=======
 async function cloneTemplateWrapper(postId) {
   const templateId = await getTemplateId(drive, postId);
   return cloneTemplateBase(drive, templateId);
->>>>>>> Stashed changes
 }
 
 function moveFileToFolderWrapper(fileId, folderId) {
