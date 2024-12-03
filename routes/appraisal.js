@@ -31,7 +31,9 @@ router.post('/complete-appraisal-report', async (req, res) => {
     }
 
     const data = await response.json();
-    const serviceType = data.acf?.service_type?.trim() || '';
+    // Ensure exact "TaxArt" string if that's the service type
+    const rawServiceType = data.acf?.service_type?.trim() || '';
+    const serviceType = rawServiceType === ' TaxArt' ? 'TaxArt' : rawServiceType;
     
     // Update WordPress with the service type
     await updateWordPressMetadata(postId, 'appraisaltype', serviceType);
