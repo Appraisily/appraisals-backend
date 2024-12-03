@@ -3,6 +3,7 @@ const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const { 
   initializeGoogleApis,
+  getTemplateId,
   cloneTemplate,
   moveFileToFolder,
   insertImageAtPlaceholder,
@@ -36,14 +37,24 @@ router.post('/generate-pdf', async (req, res) => {
     await initializeGoogleApis();
 
     // Step 2: Get environment variables
+<<<<<<< Updated upstream
     const templateId = process.env.GOOGLE_DOCS_TEMPLATE_ID;
     const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+=======
+    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+    const templateId = await getTemplateId(postId);
+>>>>>>> Stashed changes
 
     console.log(`GOOGLE_DOCS_TEMPLATE_ID: '${templateId}'`);
     console.log(`GOOGLE_DRIVE_FOLDER_ID: '${folderId}'`);
 
+<<<<<<< Updated upstream
     if (!templateId || !folderId) {
       throw new Error('GOOGLE_DOCS_TEMPLATE_ID and GOOGLE_DRIVE_FOLDER_ID must be set in environment variables.');
+=======
+    if (!folderId) {
+      throw new Error('GOOGLE_DRIVE_FOLDER_ID must be set in environment variables.');
+>>>>>>> Stashed changes
     }
 
     // Step 3: Get metadata fields

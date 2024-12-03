@@ -1,5 +1,37 @@
 const { google } = require('googleapis');
 
+<<<<<<< Updated upstream
+=======
+async function getTemplateId(drive, postId) {
+  try {
+    // Get the value field to determine if it's TaxArt
+    const response = await fetch(`${process.env.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
+      headers: {
+        'Authorization': `Basic ${Buffer.from(`${process.env.WORDPRESS_USERNAME}:${process.env.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to fetch post data');
+    }
+
+    const data = await response.json();
+    const value = data.acf?.value;
+
+    // If value exists, it's a TaxArt service
+    if (value) {
+      return process.env.GOOGLE_DOCS_TEMPLATE_TAX_ID;
+    }
+
+    return process.env.GOOGLE_DOCS_TEMPLATE_ID;
+  } catch (error) {
+    console.error('Error determining template ID:', error);
+    // Fallback to default template
+    return process.env.GOOGLE_DOCS_TEMPLATE_ID;
+  }
+}
+
+>>>>>>> Stashed changes
 async function cloneTemplate(drive, templateId) {
   try {
     if (!templateId || typeof templateId !== 'string') {
@@ -189,6 +221,10 @@ async function adjustTitleFontSize(docs, documentId, titleText) {
 }
 
 module.exports = {
+<<<<<<< Updated upstream
+=======
+  getTemplateId,
+>>>>>>> Stashed changes
   cloneTemplate,
   moveFileToFolder,
   replacePlaceholdersInDocument,
