@@ -1,9 +1,14 @@
 const { google } = require('googleapis');
 const config = require('../../config');
-const { getTemplateId } = require('./documentUtils');
 const { insertGalleryGrid } = require('./gallery');
 const { insertImageAtPlaceholder } = require('./imageUtils');
-const { cloneTemplate: cloneTemplateBase, moveFileToFolder, replacePlaceholdersInDocument, adjustTitleFontSize } = require('./documentUtils');
+const { 
+  cloneTemplate: cloneTemplateBase, 
+  moveFileToFolder, 
+  replacePlaceholdersInDocument, 
+  adjustTitleFontSize,
+  getTemplateId: getTemplateIdBase 
+} = require('./documentUtils');
 const { exportToPDF, uploadPDFToDrive } = require('./exportUtils');
 
 let docs;
@@ -74,7 +79,7 @@ async function addGalleryImages(documentId, gallery) {
 
 // Wrapper functions that provide initialized clients
 async function cloneTemplateWrapper(postId) {
-  const templateId = await getTemplateId(drive, postId);
+  const templateId = await getTemplateIdBase(drive, postId);
   return cloneTemplateBase(drive, templateId);
 }
 
@@ -105,6 +110,7 @@ function uploadPDFToDriveWrapper(pdfBuffer, filename, folderId) {
 module.exports = {
   initializeGoogleApis,
   cloneTemplate: cloneTemplateWrapper,
+  getTemplateId: (postId) => getTemplateIdBase(drive, postId),
   moveFileToFolder: moveFileToFolderWrapper,
   replacePlaceholdersInDocument: replacePlaceholdersInDocumentWrapper,
   adjustTitleFontSize: adjustTitleFontSizeWrapper,

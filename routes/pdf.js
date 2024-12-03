@@ -2,8 +2,8 @@ const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const { 
-  initializeGoogleApis,
   getTemplateId,
+  initializeGoogleApis,
   cloneTemplate,
   moveFileToFolder,
   insertImageAtPlaceholder,
