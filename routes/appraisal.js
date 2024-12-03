@@ -19,23 +19,27 @@ router.post('/complete-appraisal-report', async (req, res) => {
   try {
     console.log(`Processing appraisal report for post: ${postId}`);
 
-    // Get service type from column B
-    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
+    console.log('WordPress API URL:', config.WORDPRESS_API_URL);
+    const endpoint = `${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`;
+    console.log('Fetching from endpoint:', endpoint);
+
+    const response = await fetch(endpoint, {
       headers: {
         'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
       }
     });
 
     if (!response.ok) {
+      console.error('Response status:', response.status);
+      console.error('Response headers:', response.headers);
       throw new Error(`Failed to fetch post data: ${await response.text()}`);
     }
 
     const data = await response.json();
-    // Ensure exact "TaxArt" string if that's the service type
+    console.log('ACF data:', data.acf);
     const rawServiceType = data.acf?.service_type?.trim() || '';
     const serviceType = rawServiceType === ' TaxArt' ? 'TaxArt' : rawServiceType;
     
-    // Update WordPress with the service type
     await updateWordPressMetadata(postId, 'appraisaltype', serviceType);
     console.log(`Updated appraisaltype to: ${serviceType}`);
 

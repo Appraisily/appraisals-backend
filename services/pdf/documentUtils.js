@@ -4,18 +4,24 @@ const config = require('../../config');
 
 async function getTemplateId(drive, postId) {
   try {
-    // Get the appraisal service type
-    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
+    console.log('WordPress API URL:', config.WORDPRESS_API_URL);
+    const endpoint = `${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`;
+    console.log('Fetching from endpoint:', endpoint);
+    
+    const response = await fetch(endpoint, {
       headers: {
         'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
       }
     });
 
     if (!response.ok) {
+      console.error('Response status:', response.status);
+      console.error('Response headers:', response.headers);
       throw new Error(`Failed to fetch post data: ${await response.text()}`);
     }
 
     const data = await response.json();
+    console.log('ACF data:', data.acf);
     const serviceType = data.acf?.appraisaltype?.trim() || '';
 
     console.log(`Service type for post ${postId}:`, serviceType);
