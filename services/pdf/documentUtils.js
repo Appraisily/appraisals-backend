@@ -16,12 +16,12 @@ async function getTemplateId(drive, postId) {
     }
 
     const data = await response.json();
-    const serviceType = data.acf?.service_type?.trim();
+    const serviceType = data.acf?.appraisaltype?.trim();
 
     console.log(`Service type for post ${postId}:`, serviceType);
 
     // Check if it's a TaxArt service (case insensitive comparison)
-    if (serviceType?.toLowerCase() === 'taxart') {
+    if (serviceType?.toLowerCase().includes('taxart')) {
       const templateId = process.env.GOOGLE_DOCS_TEMPLATE_TAX_ID;
       console.log('Using TaxArt template:', templateId);
       return templateId;

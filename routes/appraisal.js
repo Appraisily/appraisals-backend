@@ -2,7 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { processAllMetadata } = require('../services/metadata');
 const { processMainImageWithGoogleVision } = require('../services/vision');
-const { getPostTitle, getPostImages } = require('../services/wordpress');
+const { getPostTitle, getPostImages, updateWordPressMetadata } = require('../services/wordpress');
+const config = require('../config');
+const fetch = require('node-fetch');
 
 router.post('/complete-appraisal-report', async (req, res) => {
   const { postId } = req.body;
@@ -16,6 +18,24 @@ router.post('/complete-appraisal-report', async (req, res) => {
 
   try {
     console.log(`Processing appraisal report for post: ${postId}`);
+
+    // Get service type from column B
+    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
+      headers: {
+        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch post data: ${await response.text()}`);
+    }
+
+    const data = await response.json();
+    const serviceType = data.acf?.service_type?.trim() || '';
+    
+    // Update WordPress with the service type
+    await updateWordPressMetadata(postId, 'appraisaltype', serviceType);
+    console.log(`Updated appraisaltype to: ${serviceType}`);
 
     // Get post title and images in parallel
     const [postTitle, images] = await Promise.all([
