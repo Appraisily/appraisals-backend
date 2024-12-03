@@ -4,7 +4,7 @@ const config = require('../../config');
 
 async function getTemplateId(drive, postId) {
   try {
-    // Get the appraisal type from column B
+    // Get the appraisal service type
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
       headers: {
         'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
@@ -16,12 +16,12 @@ async function getTemplateId(drive, postId) {
     }
 
     const data = await response.json();
-    const appraisalType = data.acf?.appraisal_type;
+    const serviceType = data.acf?.service_type?.trim();
 
-    console.log(`Appraisal type for post ${postId}:`, appraisalType);
+    console.log(`Service type for post ${postId}:`, serviceType);
 
-    // Check if it's a TaxArt service
-    if (appraisalType === 'TaxArt') {
+    // Check if it's a TaxArt service (case insensitive comparison)
+    if (serviceType?.toLowerCase() === 'taxart') {
       const templateId = process.env.GOOGLE_DOCS_TEMPLATE_TAX_ID;
       console.log('Using TaxArt template:', templateId);
       return templateId;
