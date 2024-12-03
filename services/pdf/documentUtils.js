@@ -5,7 +5,7 @@ const config = require('../../config');
 async function getTemplateId(drive, postId) {
   try {
     console.log('WordPress API URL:', config.WORDPRESS_API_URL);
-    const endpoint = `${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`;
+    const endpoint = `${config.WORDPRESS_API_URL}/wp/v2/appraisals/${postId}?_fields=acf`;
     console.log('Fetching from endpoint:', endpoint);
     
     const response = await fetch(endpoint, {
@@ -22,12 +22,12 @@ async function getTemplateId(drive, postId) {
 
     const data = await response.json();
     console.log('ACF data:', data.acf);
-    const serviceType = data.acf?.appraisaltype?.trim() || '';
+    const serviceType = data.acf?.column_b?.trim() || '';
 
     console.log(`Service type for post ${postId}:`, serviceType);
 
     // Check if it's a TaxArt service (exact match for "TaxArt")
-    if (serviceType === 'TaxArt') {
+    if (serviceType.trim() === 'TaxArt') {
       const templateId = process.env.GOOGLE_DOCS_TEMPLATE_TAX_ID;
       console.log('Using TaxArt template:', templateId);
       return templateId;

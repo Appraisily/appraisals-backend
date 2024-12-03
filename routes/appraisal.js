@@ -20,7 +20,7 @@ router.post('/complete-appraisal-report', async (req, res) => {
     console.log(`Processing appraisal report for post: ${postId}`);
 
     console.log('WordPress API URL:', config.WORDPRESS_API_URL);
-    const endpoint = `${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`;
+    const endpoint = `${config.WORDPRESS_API_URL}/wp/v2/appraisals/${postId}?_fields=acf`;
     console.log('Fetching from endpoint:', endpoint);
 
     const response = await fetch(endpoint, {
@@ -37,8 +37,8 @@ router.post('/complete-appraisal-report', async (req, res) => {
 
     const data = await response.json();
     console.log('ACF data:', data.acf);
-    const rawServiceType = data.acf?.service_type?.trim() || '';
-    const serviceType = rawServiceType === ' TaxArt' ? 'TaxArt' : rawServiceType;
+    const rawServiceType = data.acf?.column_b?.trim() || '';
+    const serviceType = rawServiceType.trim() === 'TaxArt' ? 'TaxArt' : rawServiceType;
     
     await updateWordPressMetadata(postId, 'appraisaltype', serviceType);
     console.log(`Updated appraisaltype to: ${serviceType}`);
