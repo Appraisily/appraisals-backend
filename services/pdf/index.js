@@ -78,8 +78,11 @@ async function addGalleryImages(documentId, gallery) {
 }
 
 // Wrapper functions that provide initialized clients
-async function cloneTemplateWrapper(postId) {
-  const templateId = await getTemplateIdBase(drive, postId);
+async function getTemplateIdWrapper(appraisalType) {
+  return getTemplateIdBase(appraisalType);
+}
+
+async function cloneTemplateWrapper(templateId) {
   return cloneTemplateBase(drive, templateId);
 }
 
@@ -110,7 +113,7 @@ function uploadPDFToDriveWrapper(pdfBuffer, filename, folderId) {
 module.exports = {
   initializeGoogleApis,
   cloneTemplate: cloneTemplateWrapper,
-  getTemplateId: (postId) => getTemplateIdBase(drive, postId),
+  getTemplateId: getTemplateIdWrapper,
   moveFileToFolder: moveFileToFolderWrapper,
   replacePlaceholdersInDocument: replacePlaceholdersInDocumentWrapper,
   adjustTitleFontSize: adjustTitleFontSizeWrapper,
