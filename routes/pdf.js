@@ -49,8 +49,7 @@ router.post('/generate-pdf', async (req, res) => {
     }
 
     const serviceTypeData = await serviceTypeResponse.json();
-    const rawServiceType = serviceTypeData.acf?.column_b?.trim() || '';
-    const serviceType = rawServiceType === 'TaxArt' ? 'TaxArt' : rawServiceType;
+    const serviceType = serviceTypeData.acf?.column_b || '';
     
     const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
     const templateId = await getTemplateId(serviceType);

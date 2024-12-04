@@ -4,7 +4,8 @@ const TEMPLATE_TYPES = {
 };
 
 function getTemplateIdByType(serviceType) {
-  if (!serviceType) {
+  // Handle null, undefined, or non-string values
+  if (!serviceType || typeof serviceType !== 'string') {
     console.log('No service type provided, using default template');
     return process.env.GOOGLE_DOCS_TEMPLATE_ID;
   }
