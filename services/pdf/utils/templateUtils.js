@@ -3,14 +3,14 @@ const TEMPLATE_TYPES = {
   DEFAULT: 'default'
 };
 
-function getTemplateIdByType(serviceType) {
+function getTemplateIdByType(appraisalType) {
   // Handle null, undefined, or non-string values
-  if (!serviceType || typeof serviceType !== 'string') {
+  if (!appraisalType || typeof appraisalType !== 'string') {
     console.log('No service type provided, using default template');
     return process.env.GOOGLE_DOCS_TEMPLATE_ID;
   }
 
-  const normalizedType = serviceType.trim();
+  const normalizedType = appraisalType.trim();
   
   if (normalizedType === TEMPLATE_TYPES.TAXART) {
     const templateId = process.env.GOOGLE_DOCS_TEMPLATE_TAX_ID;
@@ -24,7 +24,7 @@ function getTemplateIdByType(serviceType) {
   }
 
   const defaultTemplateId = process.env.GOOGLE_DOCS_TEMPLATE_ID;
-  console.log(`Using default template for service type "${normalizedType}":`, defaultTemplateId);
+  console.log(`Using default template for appraisal type "${normalizedType}":`, defaultTemplateId);
   
   if (!defaultTemplateId) {
     throw new Error('Default template ID not configured in environment variables');

@@ -37,11 +37,6 @@ router.post('/complete-appraisal-report', async (req, res) => {
 
     const data = await response.json();
     console.log('ACF data:', data.acf);
-    const rawServiceType = data.acf?.column_b?.trim() || '';
-    const serviceType = rawServiceType.trim() === 'TaxArt' ? 'TaxArt' : rawServiceType;
-    
-    await updateWordPressMetadata(postId, 'appraisaltype', serviceType);
-    console.log(`Updated appraisaltype to: ${serviceType}`);
 
     // Get post title and images in parallel
     const [postTitle, images] = await Promise.all([

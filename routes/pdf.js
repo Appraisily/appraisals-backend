@@ -37,22 +37,11 @@ router.post('/generate-pdf', async (req, res) => {
     // Step 1: Initialize Google APIs
     await initializeGoogleApis();
 
-    // Step 2: Get service type and template ID
-    const serviceTypeResponse = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
-      headers: {
-        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
-      }
-    });
-
-    if (!serviceTypeResponse.ok) {
-      throw new Error(`Failed to fetch post data: ${await serviceTypeResponse.text()}`);
-    }
-
-    const serviceTypeData = await serviceTypeResponse.json();
-    const serviceType = serviceTypeData.acf?.column_b || '';
+    // Step 2: Get template ID based on appraisal type
+    const appraisalType = await getPostMetadata(postId, 'appraisaltype');
     
     const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
-    const templateId = await getTemplateId(serviceType);
+    const templateId = await getTemplateId(appraisalType);
 
     console.log(`GOOGLE_DOCS_TEMPLATE_ID: '${templateId}'`);
 
