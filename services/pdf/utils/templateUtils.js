@@ -6,11 +6,13 @@ const TEMPLATE_TYPES = {
 function getTemplateIdByType(appraisalType) {
   // Handle null, undefined, or non-string values
   if (!appraisalType || typeof appraisalType !== 'string') {
+    console.log('appraisalType received:', appraisalType);
     console.log('No service type provided, using default template');
     return process.env.GOOGLE_DOCS_TEMPLATE_ID;
   }
 
   const normalizedType = appraisalType.trim();
+  console.log('Normalized appraisalType:', normalizedType);
   
   if (normalizedType === TEMPLATE_TYPES.TAXART) {
     const templateId = process.env.GOOGLE_DOCS_TEMPLATE_TAX_ID;

@@ -39,6 +39,7 @@ router.post('/generate-pdf', async (req, res) => {
 
     // Step 2: Get template ID based on appraisal type
     const appraisalType = await getPostMetadata(postId, 'appraisaltype');
+    console.log('Retrieved appraisaltype:', appraisalType);
     
     const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
     const templateId = await getTemplateId(appraisalType);
