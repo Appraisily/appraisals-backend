@@ -1,5 +1,13 @@
 const fetch = require('node-fetch');
 const sizeOf = require('image-size');
+const {
+  MAX_IMAGES_PER_ROW,
+  DEFAULT_IMAGE_DIMENSIONS,
+  createGalleryTitle,
+  createImageRequest,
+  createSpacingRequest,
+  calculateBatchSize
+} = require('./formatUtils');
 
 async function calculateImageDimensions(url, maxWidth = 200, maxHeight = 150) {
   try {
@@ -59,10 +67,9 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
     const validImages = processedImages.filter(img => img !== null);
 
     console.log(`Successfully processed ${validImages.length} out of ${gallery.length} images`);
-
+    
     if (validImages.length === 0) {
       console.warn('No valid images found for gallery');
-      // Remove gallery placeholder and exit
       await docs.documents.batchUpdate({
         documentId,
         requestBody: {
@@ -79,9 +86,14 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
       return 0;
     }
 
+    let currentIndex = galleryIndex;
     const requests = [];
 
-    // Delete gallery placeholder
+    // Add gallery title
+    requests.push(...createGalleryTitle(currentIndex));
+    currentIndex += requests[0].insertText.text.length;
+
+    // Remove original placeholder
     requests.push({
       deleteContentRange: {
         range: {
@@ -91,75 +103,31 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
       }
     });
 
-    // Insert section title
-    requests.push({
-      insertText: {
-        location: { index: galleryIndex },
-        text: "Similar Artworks\n"
-      }
-    });
-
-    // Style section title
-    requests.push({
-      updateParagraphStyle: {
-        range: {
-          startIndex: galleryIndex,
-          endIndex: galleryIndex + "Similar Artworks\n".length
-        },
-        paragraphStyle: {
-          alignment: 'CENTER',
-          namedStyleType: 'HEADING_3'
-        },
-        fields: 'alignment,namedStyleType'
-      }
-    });
-
-    // Insert images with spacing
-    let currentIndex = galleryIndex + "Similar Artworks\n".length;
     let insertedCount = 0;
-    const batchSize = 10; // Process images in smaller batches
+    const batchSize = calculateBatchSize(validImages.length);
     
     // Process images in batches
     for (let i = 0; i < validImages.length; i += batchSize) {
       const batch = validImages.slice(i, i + batchSize);
       const batchRequests = [];
 
-      for (const imageData of batch) {
+      for (let j = 0; j < batch.length; j++) {
+        const imageData = batch[j];
+        const isEndOfRow = (insertedCount + 1) % MAX_IMAGES_PER_ROW === 0;
+        
         try {
-          // Add image
-          batchRequests.push({
-            insertInlineImage: {
-              location: { index: currentIndex },
-              uri: gallery[i], // Original URL
-              objectSize: {
-                height: { magnitude: imageData.height, unit: 'PT' },
-                width: { magnitude: imageData.width, unit: 'PT' }
-              }
-            }
-          });
+          // Add image with proper dimensions
+          batchRequests.push(createImageRequest(
+            currentIndex,
+            gallery[i + j],
+            imageData || DEFAULT_IMAGE_DIMENSIONS
+          ));
 
-          // Add spacing after image
-          batchRequests.push({
-            insertText: {
-              location: { index: currentIndex + 1 },
-              text: '   ' // 3 spaces for horizontal spacing
-            }
-          });
+          // Add appropriate spacing
+          batchRequests.push(createSpacingRequest(currentIndex + 1, isEndOfRow));
 
           insertedCount++;
-
-          // Add line break after every 3 images
-          if (insertedCount % 3 === 0) {
-            batchRequests.push({
-              insertText: {
-                location: { index: currentIndex + 4 },
-                text: '\n\n' // Double line break for vertical spacing
-              }
-            });
-            currentIndex += 6; // Account for image + spaces + line breaks
-          } else {
-            currentIndex += 4; // Account for image + spaces
-          }
+          currentIndex += isEndOfRow ? 6 : 4; // Adjust index based on spacing
         } catch (error) {
           console.warn(`Failed to prepare image request:`, error.message);
           continue;
@@ -173,7 +141,7 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
             documentId,
             requestBody: { requests: batchRequests }
           });
-          console.log(`Successfully inserted batch of ${batchRequests.length / 2} images`);
+          console.log(`Successfully inserted batch of ${batch.length} images`);
         } catch (error) {
           console.error(`Error inserting batch:`, error.message);
           // Continue with next batch
