@@ -1,42 +1,9 @@
 const { google } = require('googleapis');
-const fetch = require('node-fetch');
-const config = require('../../config');
+const { getTemplateIdByType } = require('./utils/templateUtils');
 
-async function getTemplateId(drive, postId) {
+async function getTemplateId(serviceType) {
   try {
-    console.log('WordPress API URL:', config.WORDPRESS_API_URL);
-    const endpoint = `${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`;
-    console.log('Fetching from endpoint:', endpoint);
-    
-    const response = await fetch(endpoint, {
-      headers: {
-        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
-      }
-    });
-
-    if (!response.ok) {
-      console.error('Response status:', response.status);
-      console.error('Response headers:', response.headers);
-      throw new Error(`Failed to fetch post data: ${await response.text()}`);
-    }
-
-    const data = await response.json();
-    console.log('ACF data:', data.acf);
-    const serviceType = data.acf?.column_b?.trim() || '';
-
-    console.log(`Service type for post ${postId}:`, serviceType);
-
-    // Check if it's a TaxArt service (exact match for "TaxArt")
-    if (serviceType.trim() === 'TaxArt') {
-      const templateId = process.env.GOOGLE_DOCS_TEMPLATE_TAX_ID;
-      console.log('Using TaxArt template:', templateId);
-      return templateId;
-    }
-
-    // Default template for other types
-    const defaultTemplateId = process.env.GOOGLE_DOCS_TEMPLATE_ID;
-    console.log(`Using default template for service type "${serviceType}":`, defaultTemplateId);
-    return defaultTemplateId;
+    return getTemplateIdByType(serviceType);
   } catch (error) {
     console.error('Error determining template ID:', error);
     throw error;

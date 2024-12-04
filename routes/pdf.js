@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
+const config = require('../config');
 const { 
   getTemplateId,
   initializeGoogleApis,
@@ -36,12 +37,25 @@ router.post('/generate-pdf', async (req, res) => {
     // Step 1: Initialize Google APIs
     await initializeGoogleApis();
 
-    // Step 2: Get environment variables
+    // Step 2: Get service type and template ID
+    const serviceTypeResponse = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
+      headers: {
+        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      }
+    });
+
+    if (!serviceTypeResponse.ok) {
+      throw new Error(`Failed to fetch post data: ${await serviceTypeResponse.text()}`);
+    }
+
+    const serviceTypeData = await serviceTypeResponse.json();
+    const rawServiceType = serviceTypeData.acf?.column_b?.trim() || '';
+    const serviceType = rawServiceType === 'TaxArt' ? 'TaxArt' : rawServiceType;
+    
     const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
-    const templateId = await getTemplateId(postId);
+    const templateId = await getTemplateId(serviceType);
 
     console.log(`GOOGLE_DOCS_TEMPLATE_ID: '${templateId}'`);
-    console.log(`GOOGLE_DRIVE_FOLDER_ID: '${folderId}'`);
 
     if (!folderId) {
       throw new Error('GOOGLE_DRIVE_FOLDER_ID must be set in environment variables.');
