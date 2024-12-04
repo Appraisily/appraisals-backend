@@ -4,6 +4,7 @@ const he = require('he');
 
 async function getPostMetadata(postId, metadataKey) {
   try {
+    console.log(`Getting metadata '${metadataKey}' for post ID ${postId}`);
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
       method: 'GET',
       headers: {
@@ -21,6 +22,11 @@ async function getPostMetadata(postId, metadataKey) {
     const postData = await response.json();
     const acfFields = postData.acf || {};
     let metadataValue = acfFields[metadataKey];
+    
+    if (metadataKey === 'appraisaltype') {
+      console.log('Raw appraisaltype value:', metadataValue);
+      console.log('appraisaltype type:', typeof metadataValue);
+    }
 
     // Handle different types of values
     if (metadataValue === null || metadataValue === undefined) {
