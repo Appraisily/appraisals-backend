@@ -109,11 +109,6 @@ async function uploadImageToWordPress(imageUrl) {
     const buffer = await response.buffer();
     const filename = `similar-image-${uuidv4()}.jpg`;
 
-    // Log the WordPress endpoint and auth details (excluding sensitive info)
-    console.log(`Uploading to WordPress endpoint: ${config.WORDPRESS_API_URL}/media`);
-    console.log('Auth header present:', !!config.WORDPRESS_USERNAME && !!config.WORDPRESS_APP_PASSWORD);
-
-    // Log the WordPress endpoint and auth details (excluding sensitive info)
     console.log(`Uploading to WordPress endpoint: ${config.WORDPRESS_API_URL}/media`);
     console.log('Auth header present:', !!config.WORDPRESS_USERNAME && !!config.WORDPRESS_APP_PASSWORD);
 
@@ -123,9 +118,6 @@ async function uploadImageToWordPress(imageUrl) {
       contentType: response.headers.get('content-type') || 'image/jpeg'
     });
 
-    // Store the response text separately to avoid "body used already" error
-    let uploadResponseText;
-    // Store the response text separately to avoid "body used already" error
     let uploadResponseText;
     const uploadResponse = await fetch(`${config.WORDPRESS_API_URL}/media`, {
       method: 'POST',
@@ -136,25 +128,20 @@ async function uploadImageToWordPress(imageUrl) {
       body: form
     });
 
-    // Get response text first
     uploadResponseText = await uploadResponse.text();
 
-    // Get response text first
-    uploadResponseText = await uploadResponse.text();
+    if (!uploadResponse.ok) {
 
       console.warn(`Failed to upload image to WordPress (Status ${uploadResponse.status}):`, uploadResponseText);
       
       if (uploadResponse.status === 401 || uploadResponse.status === 403) {
         console.error('Authentication error - Please check WordPress credentials');
         console.error('Response:', uploadResponseText);
-        console.error('Response:', uploadResponseText);
       }
       
       return null;
     }
 
-    // Try to parse the response as JSON
-    // Try to parse the response as JSON
     let mediaData;
     try {
       mediaData = JSON.parse(uploadResponseText);
@@ -167,14 +154,12 @@ async function uploadImageToWordPress(imageUrl) {
     if (!mediaData || !mediaData.id) {
       console.error('Invalid media response from WordPress:', mediaData);
       console.log('Full response:', uploadResponseText);
-      console.log('Full response:', uploadResponseText);
       return null;
     }
 
     return mediaData.id;
   } catch (error) {
     console.error('Error uploading image to WordPress:', error);
-    console.error('Stack:', error.stack);
     console.error('Stack:', error.stack);
     return null;
   }
