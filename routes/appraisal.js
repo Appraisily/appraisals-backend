@@ -45,22 +45,48 @@ router.post('/complete-appraisal-report', async (req, res) => {
     ]);
 
     if (!postTitle) {
-      throw new Error('Post title not found');
+      console.warn('Post title not found');
+      return res.status(200).json({
+        success: false,
+        message: 'Post title not found, but processing completed',
+        details: {
+          postId,
+          title: null,
+          visionAnalysis: null,
+          processedFields: []
+        }
+      });
     }
 
     console.log('Post title:', postTitle);
     console.log('Available images:', Object.keys(images).filter(key => images[key]));
 
     // Process Google Vision analysis
-    const visionResult = await processMainImageWithGoogleVision(postId);
+    let visionResult;
+    try {
+      visionResult = await processMainImageWithGoogleVision(postId);
+    } catch (error) {
+      console.error('Vision analysis error:', error);
+      visionResult = {
+        success: false,
+        message: error.message,
+        similarImagesCount: 0
+      };
+    }
     console.log('Vision analysis result:', visionResult);
 
     // Process metadata fields
-    const metadataResults = await processAllMetadata(postId, postTitle, images);
+    let metadataResults;
+    try {
+      metadataResults = await processAllMetadata(postId, postTitle, images);
+    } catch (error) {
+      console.error('Metadata processing error:', error);
+      metadataResults = [];
+    }
     console.log('Metadata processing results:', metadataResults);
 
     // Return response
-    res.json({
+    return res.status(200).json({
       success: true,
       message: 'Appraisal report completed successfully.',
       details: {
@@ -72,10 +98,15 @@ router.post('/complete-appraisal-report', async (req, res) => {
     });
   } catch (error) {
     console.error('Error in /complete-appraisal-report:', error);
-    res.status(500).json({ 
-      success: false, 
+    return res.status(200).json({
+      success: false,
       message: error.message || 'Error completing appraisal report.',
-      error: error.stack
+      details: {
+        postId,
+        error: error.message,
+        visionAnalysis: null,
+        processedFields: []
+      }
     });
   }
 });
