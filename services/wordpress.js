@@ -2,6 +2,12 @@ const fetch = require('node-fetch');
 const config = require('../config');
 const he = require('he');
 
+const DEFAULT_HEADERS = {
+  'Content-Type': 'application/json',
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+};
+
 async function getPostMetadata(postId, metadataKey) {
   try {
     console.log(`Getting metadata '${metadataKey}' for post ID ${postId}`);
@@ -10,10 +16,7 @@ async function getPostMetadata(postId, metadataKey) {
 
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
-      }
+      headers: DEFAULT_HEADERS
     });
 
     console.log('Response status:', response.status);
@@ -87,10 +90,7 @@ async function getPostTitle(postId) {
   try {
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=title`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
-      }
+      headers: DEFAULT_HEADERS
     });
 
     if (!response.ok) {
@@ -112,10 +112,7 @@ async function getPostDate(postId) {
   try {
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=date`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
-      }
+      headers: DEFAULT_HEADERS
     });
 
     if (!response.ok) {
@@ -136,10 +133,7 @@ async function getImageUrl(mediaId) {
   try {
     const response = await fetch(`${config.WORDPRESS_API_URL}/media/${mediaId}?_fields=source_url`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
-      }
+      headers: DEFAULT_HEADERS
     });
 
     if (!response.ok) {
@@ -160,10 +154,7 @@ async function getImageFieldUrlFromPost(postId, fieldName) {
   try {
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
-      }
+      headers: DEFAULT_HEADERS
     });
 
     if (!response.ok) {
@@ -198,10 +189,7 @@ async function getPostGallery(postId) {
   try {
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
       method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
-      }
+      headers: DEFAULT_HEADERS
     });
 
     if (!response.ok) {
@@ -231,10 +219,7 @@ async function updateWordPressMetadata(postId, metadataKey, metadataValue) {
   try {
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
-      },
+      headers: DEFAULT_HEADERS,
       body: JSON.stringify({
         acf: {
           [metadataKey]: metadataValue
@@ -257,10 +242,7 @@ async function updatePostACFFields(postId, pdfLink, docLink) {
   try {
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
-      },
+      headers: DEFAULT_HEADERS,
       body: JSON.stringify({
         acf: {
           pdflink: pdfLink,
