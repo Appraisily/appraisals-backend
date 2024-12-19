@@ -5,6 +5,9 @@ const he = require('he');
 async function getPostMetadata(postId, metadataKey) {
   try {
     console.log(`Getting metadata '${metadataKey}' for post ID ${postId}`);
+    const endpoint = `${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`;
+    console.log('Fetching from endpoint:', endpoint);
+
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
       method: 'GET',
       headers: {
@@ -13,13 +16,31 @@ async function getPostMetadata(postId, metadataKey) {
       }
     });
 
+    console.log('Response status:', response.status);
+    console.log('Response headers:', response.headers.raw());
+
     if (!response.ok) {
       const errorText = await response.text();
+      console.error('WordPress API error response:', errorText);
+      console.error('WordPress API endpoint:', endpoint);
+      console.error('Response status:', response.status);
+      console.error('Response headers:', response.headers.raw());
       console.error(`Error getting post from WordPress:`, errorText);
       throw new Error('Error getting post from WordPress.');
     }
 
-    const postData = await response.json();
+    const responseText = await response.text();
+    console.log('Raw response:', responseText);
+
+    let postData;
+    try {
+      postData = JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse WordPress response as JSON:', parseError);
+      console.error('Raw response received:', responseText);
+      throw new Error('Invalid JSON response from WordPress');
+    }
+
     const acfFields = postData.acf || {};
     let metadataValue = acfFields[metadataKey];
     
