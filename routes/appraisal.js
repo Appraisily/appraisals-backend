@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { processAllMetadata } = require('../services/metadata');
 const { processMainImageWithGoogleVision } = require('../services/vision');
+const { testWithCurl } = require('../services/wordpress/curlTest');
 const { testWordPressConnection } = require('../services/wordpress/connectionTest');
 const wordpress = require('../services/wordpress');
 const config = require('../config');
@@ -23,6 +24,21 @@ router.get('/test-wordpress/:postId', async (req, res) => {
       code: error.code,
       type: error.type,
       errno: error.errno,
+      stack: error.stack
+    });
+  }
+});
+
+router.get('/test-curl/:postId', async (req, res) => {
+  const { postId } = req.params;
+  
+  try {
+    const result = await testWithCurl(postId);
+    res.json(result);
+  } catch (error) {
+    console.error('Curl test error:', error);
+    res.status(500).json({
+      error: error.message,
       stack: error.stack
     });
   }
