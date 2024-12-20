@@ -61,7 +61,11 @@ router.post('/generate-pdf', async (req, res) => {
     // Get all ACF data in one request
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf,title,date`, {
       method: 'GET',
-      headers: DEFAULT_HEADERS
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      },
+      timeout: 10000
     });
 
     if (!response.ok) {
