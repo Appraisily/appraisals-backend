@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
+const https = require('https');
 const config = require('../config');
 const { 
   getTemplateId,
@@ -37,26 +38,55 @@ router.post('/generate-pdf', async (req, res) => {
     // Step 1: Initialize Google APIs
     await initializeGoogleApis();
 
-    // Step 2: Get template ID based on appraisal type
-    const appraisalType = await getPostMetadata(postId, 'appraisaltype');
-    console.log('Retrieved appraisaltype:', appraisalType);
-    
     const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
-    const templateId = await getTemplateId(appraisalType);
-
-    console.log(`GOOGLE_DOCS_TEMPLATE_ID: '${templateId}'`);
-
     if (!folderId) {
       throw new Error('GOOGLE_DRIVE_FOLDER_ID must be set in environment variables.');
     }
 
-    // Step 3: Get metadata fields
+    // Get all WordPress data in a single request
+    console.log('Fetching WordPress data for post:', postId);
+    const endpoint = `${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf,title,date`;
+    
+    const agent = new https.Agent({
+      rejectUnauthorized: false,
+      timeout: 10000
+    });
+
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      },
+      agent,
+      timeout: 10000
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('WordPress API error:', {
+        status: response.status,
+        headers: response.headers.raw(),
+        body: errorText
+      });
+      throw new Error(`Failed to fetch post data: ${errorText}`);
+    }
+
+    const postData = await response.json();
+    console.log('WordPress data retrieved successfully');
+
+    // Extract metadata fields
     const metadataKeys = [
       'test', 'ad_copy', 'age_text', 'age1', 'condition',
       'signature1', 'signature2', 'style', 'valuation_method',
       'conclusion1', 'conclusion2', 'authorship', 'table',
       'glossary', 'value'
     ];
+    
+    const metadata = metadataKeys.reduce((acc, key) => {
+      acc[key] = postData.acf?.[key] || '';
+      return acc;
+    }, {});
 
     // Get all ACF data in one request
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf,title,date`, {
@@ -73,13 +103,9 @@ router.post('/generate-pdf', async (req, res) => {
     }
 
     const postData = await response.json();
-    const acfData = postData.acf || {};
-
-    // Extract metadata from ACF data
-    const metadata = metadataKeys.reduce((acc, key) => {
-      acc[key] = acfData[key] || '';
-      return acc;
-    }, {});
+    // Get template ID based on appraisal type
+    const templateId = await getTemplateId(postData.acf?.appraisaltype);
+    console.log('Using template ID:', templateId);
 
     // Format value if present
     if (metadata.value) {
@@ -98,14 +124,23 @@ router.post('/generate-pdf', async (req, res) => {
 
     // Extract title and date from response
     const postTitle = postData.title?.rendered || '';
+    // Extract title and date
+    const postTitle = postData.title?.rendered || '';
     const postDate = new Date(postData.date).toISOString().split('T')[0];
 
-    // Get image URLs from ACF data
+    // Get image URLs in parallel
     const [ageImageUrl, signatureImageUrl, mainImageUrl] = await Promise.all([
-      acfData.age ? getImageUrl(acfData.age) : null,
-      acfData.signature ? getImageUrl(acfData.signature) : null,
-      acfData.main ? getImageUrl(acfData.main) : null
-    ]);
+      postData.acf?.age ? getImageUrl(postData.acf.age) : null,
+      postData.acf?.signature ? getImageUrl(postData.acf.signature) : null,
+      postData.acf?.main ? getImageUrl(postData.acf.main) : null
+    ].map(async (promise) => {
+      try {
+        return await promise;
+      } catch (error) {
+        console.warn('Error fetching image URL:', error);
+        return null;
+      }
+    }));
 
     // Step 5: Get gallery images
     const gallery = await getPostGallery(postId);
