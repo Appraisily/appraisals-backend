@@ -1,6 +1,6 @@
 const { getPost, getMedia, updatePost } = require('./client');
 const { fetchPostData } = require('./dataFetching');
-const { updatePostACFFields } = require('./updates');
+const { updatePostACFFields, updateWordPressMetadata } = require('./updates');
 const { testWordPressConnection } = require('./connectionTest');
 const { testWithCurl } = require('./curlTest');
 const { runNetworkDiagnostics } = require('./networkDiagnostics');
@@ -15,6 +15,7 @@ module.exports = {
   fetchPostData,
   // Updates
   updatePostACFFields,
+  updateWordPressMetadata,
   // Testing and diagnostics
   testWordPressConnection,
   testWithCurl,

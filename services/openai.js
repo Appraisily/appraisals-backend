@@ -4,38 +4,39 @@ const config = require('../config');
 async function generateContent(prompt, postTitle, images = {}) {
   try {
     console.log('Generating content with OpenAI...');
-    console.log('Title:', postTitle);
-    console.log('Available images:', Object.keys(images).filter(key => images[key]));
+    
+    // Filter out invalid image URLs
+    const validImages = Object.entries(images)
+      .filter(([_, url]) => url && typeof url === 'string' && url.startsWith('http'))
+      .map(([type, url]) => ({ type, url }));
+    
+    console.log('Valid images for content generation:', 
+      validImages.map(img => img.type)
+    );
 
     const messages = [
       {
         role: "system",
         content: "You are a professional art expert specializing in appraisals and artwork analysis."
       },
-      {
+      { 
         role: "user",
-        content: [
+        content: [ 
           { type: "text", text: `Title: ${postTitle}\n\n${prompt}` }
         ]
       }
     ];
 
-    // Add available images to the message
-    const validImages = ['main', 'age', 'signature'].filter(type => 
-      images[type] && typeof images[type] === 'string' && images[type].startsWith('http')
-    );
-
     if (validImages.length > 0) {
-      validImages.forEach(type => {
+      validImages.forEach(({ type, url }) => {
         messages[1].content.push({
           type: "image_url",
-          image_url: { url: images[type] }
+          image_url: { url }
         });
       });
       console.log(`Added ${validImages.length} images to OpenAI request`);
     } else {
       console.log('No valid images available for content generation');
-    }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
