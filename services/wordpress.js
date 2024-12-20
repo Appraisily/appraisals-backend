@@ -1,6 +1,7 @@
 const fetch = require('node-fetch');
 const config = require('../config');
 const he = require('he');
+const util = require('util');
 
 const DEFAULT_HEADERS = {
   'Content-Type': 'application/json',
@@ -15,12 +16,18 @@ async function getPostMetadata(postId, metadataKey) {
     console.log('Fetching from endpoint:', endpoint);
 
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
+      timeout: 10000,
       method: 'GET',
       headers: DEFAULT_HEADERS
     });
 
     console.log('Response status:', response.status);
     console.log('Response headers:', response.headers.raw());
+    console.log('Full request details:', {
+      url: endpoint,
+      headers: DEFAULT_HEADERS,
+      timeout: 10000
+    });
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -82,6 +89,15 @@ async function getPostMetadata(postId, metadataKey) {
     return metadataValue;
   } catch (error) {
     console.error(`Error getting metadata '${metadataKey}' for post ID ${postId}:`, error);
+    console.error('Detailed fetch error:', {
+      message: error.message,
+      code: error.code,
+      type: error.type,
+      errno: error.errno,
+      url: `${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`,
+      stack: error.stack,
+      fullError: util.inspect(error, { depth: null, colors: true })
+    });
     throw error;
   }
 }
