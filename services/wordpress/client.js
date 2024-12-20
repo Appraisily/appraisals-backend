@@ -59,8 +59,13 @@ async function fetchWordPress(endpoint, options = {}) {
   }
 }
 
-async function getPost(postId, fields = ['acf']) {
-  const response = await fetchWordPress(`/appraisals/${postId}?_fields=${fields.join(',')}`);
+async function getPost(postId, fields = ['acf'], params = {}) {
+  const queryParams = new URLSearchParams({
+    _fields: fields.join(','),
+    ...params
+  });
+  
+  const response = await fetchWordPress(`/appraisals/${postId}?${queryParams}`);
   return response.json();
 }
 

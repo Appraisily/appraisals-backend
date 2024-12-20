@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
 const wordpress = require('../services/wordpress');
+const { processMetadata } = require('../services/pdf/metadata/processing');
 const { 
   getTemplateId,
   initializeGoogleApis,
@@ -34,72 +35,28 @@ router.post('/generate-pdf', async (req, res) => {
       throw new Error('GOOGLE_DRIVE_FOLDER_ID must be set in environment variables.');
     }
 
-    // Get all WordPress data in a single request
-    console.log('Fetching WordPress data for post:', postId);
-    const postData = await wordpress.getPost(postId, ['acf', 'title', 'date']);
-    console.log('WordPress data retrieved successfully');
+    // Fetch all data in a single request
+    const { postData, images, title: postTitle, date: postDate } = await wordpress.fetchPostData(postId);
 
-    // Extract metadata fields
-    const metadataKeys = [
-      'test', 'ad_copy', 'age_text', 'age1', 'condition',
-      'signature1', 'signature2', 'style', 'valuation_method',
-      'conclusion1', 'conclusion2', 'authorship', 'table',
-      'glossary', 'value'
-    ];
-    
-    const metadata = metadataKeys.reduce((acc, key) => {
-      acc[key] = postData.acf?.[key] || '';
-      return acc;
-    }, {});
+    // Process and validate metadata
+    const { metadata, validation } = await processMetadata(postData);
+    if (!validation.isValid) {
+      return res.status(400).json({
+        success: false,
+        message: `Missing required metadata fields: ${validation.missingFields.join(', ')}`,
+        validation
+      });
+    }
 
     // Get template ID based on appraisal type
     const templateId = await getTemplateId(postData.acf?.appraisaltype);
     console.log('Using template ID:', templateId);
 
-    // Format value if present
-    if (metadata.value) {
-      const numericValue = parseFloat(metadata.value);
-      if (!isNaN(numericValue)) {
-        metadata.appraisal_value = numericValue.toLocaleString('es-ES', {
-          style: 'currency',
-          currency: 'USD',
-        });
-      } else {
-        metadata.appraisal_value = metadata.value;
-      }
-    } else {
-      metadata.appraisal_value = '';
-    }
-
-    // Extract title and date
-    const postTitle = postData.title?.rendered || '';
-    const postDate = new Date(postData.date).toISOString().split('T')[0];
-
-    // Get image URLs in parallel
-    const [ageImageUrl, signatureImageUrl, mainImageUrl] = await Promise.all([
-      postData.acf?.age ? wordpress.getImageUrl(postData.acf.age) : null,
-      postData.acf?.signature ? wordpress.getImageUrl(postData.acf.signature) : null,
-      postData.acf?.main ? wordpress.getImageUrl(postData.acf.main) : null
-    ].map(async (promise) => {
-      try {
-        return await promise;
-      } catch (error) {
-        console.warn('Error fetching image URL:', error);
-        return null;
-      }
-    }));
-
-    // Step 5: Get gallery images
-    const gallery = await wordpress.getPostGallery(postId);
-
     // Log all retrieved data
     console.log('Metadata:', metadata);
     console.log('Post title:', postTitle);
     console.log('Post date:', postDate);
-    console.log('Gallery images:', gallery);
-    console.log('Age image URL:', ageImageUrl);
-    console.log('Signature image URL:', signatureImageUrl);
-    console.log('Main image URL:', mainImageUrl);
+    console.log('Images:', images);
 
     // Step 6: Clone template
     const clonedDoc = await cloneTemplate(templateId);
@@ -121,19 +78,19 @@ router.post('/generate-pdf', async (req, res) => {
     await adjustTitleFontSize(clonedDocId, postTitle);
 
     // Step 10: Add gallery images
-    if (gallery.length > 0) {
-      await addGalleryImages(clonedDocId, gallery);
+    if (images.gallery.length > 0) {
+      await addGalleryImages(clonedDocId, images.gallery);
     }
 
     // Step 11: Insert specific images
-    if (ageImageUrl) {
-      await insertImageAtPlaceholder(clonedDocId, 'age_image', ageImageUrl);
+    if (images.age) {
+      await insertImageAtPlaceholder(clonedDocId, 'age_image', images.age);
     }
-    if (signatureImageUrl) {
-      await insertImageAtPlaceholder(clonedDocId, 'signature_image', signatureImageUrl);
+    if (images.signature) {
+      await insertImageAtPlaceholder(clonedDocId, 'signature_image', images.signature);
     }
-    if (mainImageUrl) {
-      await insertImageAtPlaceholder(clonedDocId, 'main_image', mainImageUrl);
+    if (images.main) {
+      await insertImageAtPlaceholder(clonedDocId, 'main_image', images.main);
     }
 
     // Step 12: Export to PDF
