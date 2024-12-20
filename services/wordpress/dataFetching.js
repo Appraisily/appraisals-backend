@@ -1,4 +1,5 @@
 const { getPost, getMedia } = require('./client');
+const { parseDate } = require('./utils/dateUtils');
 
 async function fetchPostData(postId) {
   console.log('Fetching complete post data for:', postId);
@@ -23,7 +24,7 @@ async function fetchPostData(postId) {
     postData,
     images,
     title: postData.title?.rendered || '',
-    date: new Date(postData.date).toISOString().split('T')[0]
+    date: parseDate(postData.date)
   };
 }
 
