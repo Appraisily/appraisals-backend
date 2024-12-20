@@ -58,13 +58,24 @@ router.post('/generate-pdf', async (req, res) => {
       'glossary', 'value'
     ];
 
-    const metadataPromises = metadataKeys.map(key => getPostMetadata(postId, key));
-    const metadataValues = await Promise.all(metadataPromises);
-
-    const metadata = {};
-    metadataKeys.forEach((key, index) => {
-      metadata[key] = metadataValues[index];
+    // Get all ACF data in one request
+    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf,title,date`, {
+      method: 'GET',
+      headers: DEFAULT_HEADERS
     });
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch post data: ${await response.text()}`);
+    }
+
+    const postData = await response.json();
+    const acfData = postData.acf || {};
+
+    // Extract metadata from ACF data
+    const metadata = metadataKeys.reduce((acc, key) => {
+      acc[key] = acfData[key] || '';
+      return acc;
+    }, {});
 
     // Format value if present
     if (metadata.value) {
@@ -81,13 +92,15 @@ router.post('/generate-pdf', async (req, res) => {
       metadata.appraisal_value = '';
     }
 
-    // Step 4: Get title, date, and image URLs
-    const [postTitle, postDate, ageImageUrl, signatureImageUrl, mainImageUrl] = await Promise.all([
-      getPostTitle(postId),
-      getPostDate(postId),
-      getImageFieldUrlFromPost(postId, 'age'),
-      getImageFieldUrlFromPost(postId, 'signature'),
-      getImageFieldUrlFromPost(postId, 'main'),
+    // Extract title and date from response
+    const postTitle = postData.title?.rendered || '';
+    const postDate = new Date(postData.date).toISOString().split('T')[0];
+
+    // Get image URLs from ACF data
+    const [ageImageUrl, signatureImageUrl, mainImageUrl] = await Promise.all([
+      acfData.age ? getImageUrl(acfData.age) : null,
+      acfData.signature ? getImageUrl(acfData.signature) : null,
+      acfData.main ? getImageUrl(acfData.main) : null
     ]);
 
     // Step 5: Get gallery images
