@@ -5,10 +5,10 @@ async function generateContent(prompt, postTitle, images = {}) {
   try {
     console.log('Generating content with OpenAI...');
     
-    // Filter out invalid image URLs
-    const validImages = Object.entries(images)
-      .filter(([_, url]) => url && typeof url === 'string' && url.startsWith('http'))
-      .map(([type, url]) => ({ type, url }));
+    // Extract valid image URLs (main, age, signature only)
+    const validImages = ['main', 'age', 'signature']
+      .filter(type => images[type] && typeof images[type] === 'string' && images[type].startsWith('http'))
+      .map(type => ({ type, url: images[type] }));
     
     console.log('Valid images for content generation:', 
       validImages.map(img => img.type)
@@ -31,7 +31,7 @@ async function generateContent(prompt, postTitle, images = {}) {
       validImages.forEach(({ type, url }) => {
         messages[1].content.push({
           type: "image_url",
-          image_url: { url }
+          image_url: url
         });
       });
       console.log(`Added ${validImages.length} images to OpenAI request`);
@@ -46,7 +46,7 @@ async function generateContent(prompt, postTitle, images = {}) {
         'Authorization': `Bearer ${config.OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'gpt-4-vision-preview',
+        model: 'gpt-4o',
         messages: messages,
         max_tokens: 1000,
         temperature: 0.7
