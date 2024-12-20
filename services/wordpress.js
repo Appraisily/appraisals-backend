@@ -1,6 +1,8 @@
 const fetch = require('node-fetch');
 const client = require('./wordpress/client');
 const he = require('he');
+const util = require('util');
+const config = require('../config');
 
 async function getPostMetadata(postId, metadataKey) {
   try {
@@ -196,5 +198,9 @@ module.exports = {
   getPostGallery,
   updateWordPressMetadata,
   updatePostACFFields,
-  getPostImages
+  getPostImages,
+  // Export client methods directly
+  getPost: client.getPost,
+  getMedia: client.getMedia,
+  updatePost: client.updatePost
 };
