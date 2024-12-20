@@ -21,17 +21,16 @@ async function generateContent(prompt, postTitle, images = {}) {
       },
       { 
         role: "user",
-        content: [ 
-          { type: "text", text: `Title: ${postTitle}\n\n${prompt}` }
-        ]
+        content: `Title: ${postTitle}\n\n${prompt}`
       }
     ];
 
+    // Add image references as separate messages
     if (validImages.length > 0) {
       validImages.forEach(({ type, url }) => {
-        messages[1].content.push({
-          type: "image_url",
-          image_url: url
+        messages.push({
+          role: "user",
+          content: `Image (${type}): ${url}`
         });
       });
       console.log(`Added ${validImages.length} images to OpenAI request`);
