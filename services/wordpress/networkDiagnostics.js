@@ -45,4 +45,3 @@ async function runNetworkDiagnostics(host) {
       error: error.message
     };
   }
-}
