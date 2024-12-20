@@ -46,7 +46,6 @@ router.post('/generate-pdf', async (req, res) => {
     // Get all WordPress data in a single request
     console.log('Fetching WordPress data for post:', postId);
     const endpoint = `${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf,title,date`;
-    
     const agent = new https.Agent({
       rejectUnauthorized: false,
       timeout: 10000
@@ -88,21 +87,6 @@ router.post('/generate-pdf', async (req, res) => {
       return acc;
     }, {});
 
-    // Get all ACF data in one request
-    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf,title,date`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
-      },
-      timeout: 10000
-    });
-
-    if (!response.ok) {
-      throw new Error(`Failed to fetch post data: ${await response.text()}`);
-    }
-
-    const postData = await response.json();
     // Get template ID based on appraisal type
     const templateId = await getTemplateId(postData.acf?.appraisaltype);
     console.log('Using template ID:', templateId);
@@ -122,8 +106,6 @@ router.post('/generate-pdf', async (req, res) => {
       metadata.appraisal_value = '';
     }
 
-    // Extract title and date from response
-    const postTitle = postData.title?.rendered || '';
     // Extract title and date
     const postTitle = postData.title?.rendered || '';
     const postDate = new Date(postData.date).toISOString().split('T')[0];
