@@ -22,6 +22,9 @@ async function runNetworkDiagnostics(host) {
       stderr: `DNS lookup failed: ${err.message}`
     }));
 
+    // Test TCP connection
+    const tcpTest = await testTcpConnection(host);
+
     return {
       success: true,
       diagnostics: {
@@ -36,7 +39,8 @@ async function runNetworkDiagnostics(host) {
         dns: {
           output: nslookup.stdout,
           error: nslookup.stderr
-        }
+        },
+        tcp: tcpTest
       }
     };
   } catch (error) {
@@ -45,3 +49,27 @@ async function runNetworkDiagnostics(host) {
       error: error.message
     };
   }
+}
+
+async function testTcpConnection(host, port = 443) {
+  try {
+    const netcat = await execAsync(`nc -zv -w 5 ${host} ${port}`).catch(err => ({
+      stdout: '',
+      stderr: `TCP connection test failed: ${err.message}`
+    }));
+
+    return {
+      output: netcat.stdout,
+      error: netcat.stderr
+    };
+  } catch (error) {
+    return {
+      output: '',
+      error: `TCP test error: ${error.message}`
+    };
+  }
+}
+
+module.exports = {
+  runNetworkDiagnostics
+};
