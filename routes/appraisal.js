@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { processAllMetadata } = require('../services/metadata');
 const { processMainImageWithGoogleVision } = require('../services/vision');
+const { runNetworkDiagnostics } = require('../services/wordpress/networkDiagnostics');
 const { testWithCurl } = require('../services/wordpress/curlTest');
 const { testWordPressConnection } = require('../services/wordpress/connectionTest');
 const wordpress = require('../services/wordpress');
@@ -37,6 +38,21 @@ router.get('/test-curl/:postId', async (req, res) => {
     res.json(result);
   } catch (error) {
     console.error('Curl test error:', error);
+    res.status(500).json({
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
+router.get('/network-diagnostics/:host', async (req, res) => {
+  const { host } = req.params;
+  
+  try {
+    const result = await runNetworkDiagnostics(host);
+    res.json(result);
+  } catch (error) {
+    console.error('Network diagnostics error:', error);
     res.status(500).json({
       error: error.message,
       stack: error.stack
