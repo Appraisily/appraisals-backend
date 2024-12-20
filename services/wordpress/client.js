@@ -10,7 +10,8 @@ const agent = new https.Agent({
 const DEFAULT_HEADERS = {
   'Content-Type': 'application/json',
   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+  'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`,
+  'Accept': 'application/json'
 };
 
 const DEFAULT_OPTIONS = {
@@ -23,6 +24,11 @@ const DEFAULT_OPTIONS = {
 async function fetchWordPress(endpoint, options = {}) {
   const url = `${config.WORDPRESS_API_URL}${endpoint}`;
   console.log(`Fetching WordPress endpoint: ${url}`);
+  console.log('Request headers:', {
+    ...DEFAULT_OPTIONS.headers,
+    ...options.headers,
+    'Authorization': '[REDACTED]'
+  });
   
   try {
     const response = await fetch(url, {
@@ -64,10 +70,14 @@ async function getMedia(mediaId, fields = ['source_url']) {
 }
 
 async function updatePost(postId, data) {
+  console.log(`Updating post ${postId} with data:`, JSON.stringify(data, null, 2));
+  
   const response = await fetchWordPress(`/appraisals/${postId}`, {
     method: 'POST',
     body: JSON.stringify(data)
   });
+  
+  console.log(`Update response status: ${response.status}`);
   return response.json();
 }
 

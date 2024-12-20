@@ -1,55 +1,18 @@
 const fetch = require('node-fetch');
-const config = require('../config');
+const client = require('./wordpress/client');
 const he = require('he');
 const util = require('util');
-
-const DEFAULT_HEADERS = {
-  'Content-Type': 'application/json',
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-  'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
-};
 
 async function getPostMetadata(postId, metadataKey) {
   try {
     console.log(`Getting metadata '${metadataKey}' for post ID ${postId}`);
-    const endpoint = `${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`;
-    console.log('Fetching from endpoint:', endpoint);
+    const postData = await client.getPost(postId, ['acf']);
 
-    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
-      timeout: 10000,
-      method: 'GET',
-      headers: DEFAULT_HEADERS
-    });
-
-    console.log('Response status:', response.status);
-    console.log('Response headers:', response.headers.raw());
+    console.log('Response status:', postData.status);
     console.log('Full request details:', {
-      url: endpoint,
-      headers: DEFAULT_HEADERS,
+      url: `${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`,
       timeout: 10000
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('WordPress API error response:', errorText);
-      console.error('WordPress API endpoint:', endpoint);
-      console.error('Response status:', response.status);
-      console.error('Response headers:', response.headers.raw());
-      console.error(`Error getting post from WordPress:`, errorText);
-      throw new Error('Error getting post from WordPress.');
-    }
-
-    const responseText = await response.text();
-    console.log('Raw response:', responseText);
-
-    let postData;
-    try {
-      postData = JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('Failed to parse WordPress response as JSON:', parseError);
-      console.error('Raw response received:', responseText);
-      throw new Error('Invalid JSON response from WordPress');
-    }
 
     const acfFields = postData.acf || {};
     let metadataValue = acfFields[metadataKey];
@@ -233,20 +196,15 @@ async function getPostGallery(postId) {
 
 async function updateWordPressMetadata(postId, metadataKey, metadataValue) {
   try {
-    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}`, {
-      method: 'POST',
-      headers: DEFAULT_HEADERS,
-      body: JSON.stringify({
-        acf: {
-          [metadataKey]: metadataValue
-        }
-      })
+    console.log(`Updating metadata for post ${postId}, field: ${metadataKey}`);
+    
+    await client.updatePost(postId, {
+      acf: {
+        [metadataKey]: metadataValue
+      }
     });
 
-    if (!response.ok) {
-      throw new Error(`Error updating WordPress metadata: ${await response.text()}`);
-    }
-
+    console.log(`Successfully updated metadata for post ${postId}, field: ${metadataKey}`);
     return true;
   } catch (error) {
     console.error(`Error updating WordPress metadata for ${metadataKey}:`, error);
