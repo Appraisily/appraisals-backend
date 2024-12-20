@@ -31,3 +31,5 @@ async function testWithCurl(postId) {
     };
   }
 }
+
+module.exports = { testWithCurl };
