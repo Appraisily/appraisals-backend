@@ -1,10 +1,10 @@
-const client = require('./client');
+const { getPost } = require('./client');
 
 async function fetchPostData(postId) {
   console.log('Fetching complete post data for:', postId);
   
   // Get all data in a single request including ACF fields and media
-  const postData = await client.getPost(postId, [
+  const postData = await getPost(postId, [
     'acf',
     'title',
     'date',
