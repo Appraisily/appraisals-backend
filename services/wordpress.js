@@ -1,18 +1,12 @@
 const fetch = require('node-fetch');
 const client = require('./wordpress/client');
 const he = require('he');
-const util = require('util');
 
 async function getPostMetadata(postId, metadataKey) {
   try {
     console.log(`Getting metadata '${metadataKey}' for post ID ${postId}`);
     const postData = await client.getPost(postId, ['acf']);
-
-    console.log('Response status:', postData.status);
-    console.log('Full request details:', {
-      url: `${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`,
-      timeout: 10000
-    });
+    console.log('Post data received');
 
     const acfFields = postData.acf || {};
     let metadataValue = acfFields[metadataKey];
@@ -67,18 +61,7 @@ async function getPostMetadata(postId, metadataKey) {
 
 async function getPostTitle(postId) {
   try {
-    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=title`, {
-      method: 'GET',
-      headers: DEFAULT_HEADERS
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Error getting post from WordPress:`, errorText);
-      throw new Error('Error getting post from WordPress.');
-    }
-
-    const postData = await response.json();
+    const postData = await client.getPost(postId, ['title']);
     // Decode HTML entities in the title
     return he.decode(postData.title.rendered || '');
   } catch (error) {
@@ -89,18 +72,7 @@ async function getPostTitle(postId) {
 
 async function getPostDate(postId) {
   try {
-    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=date`, {
-      method: 'GET',
-      headers: DEFAULT_HEADERS
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Error getting post from WordPress:`, errorText);
-      throw new Error('Error getting post from WordPress.');
-    }
-
-    const postData = await response.json();
+    const postData = await client.getPost(postId, ['date']);
     return new Date(postData.date).toISOString().split('T')[0];
   } catch (error) {
     console.error(`Error getting date for post ID ${postId}:`, error);
@@ -110,18 +82,7 @@ async function getPostDate(postId) {
 
 async function getImageUrl(mediaId) {
   try {
-    const response = await fetch(`${config.WORDPRESS_API_URL}/media/${mediaId}?_fields=source_url`, {
-      method: 'GET',
-      headers: DEFAULT_HEADERS
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Error getting media from WordPress:`, errorText);
-      return null;
-    }
-
-    const mediaData = await response.json();
+    const mediaData = await client.getMedia(mediaId);
     return mediaData.source_url || null;
   } catch (error) {
     console.error(`Error getting URL for media ID ${mediaId}:`, error);
@@ -131,18 +92,7 @@ async function getImageUrl(mediaId) {
 
 async function getImageFieldUrlFromPost(postId, fieldName) {
   try {
-    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
-      method: 'GET',
-      headers: DEFAULT_HEADERS
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Error getting post from WordPress:`, errorText);
-      throw new Error('Error getting post from WordPress.');
-    }
-
-    const postData = await response.json();
+    const postData = await client.getPost(postId, ['acf']);
     const acfFields = postData.acf || {};
     const imageField = acfFields[fieldName];
 
@@ -166,18 +116,7 @@ async function getImageFieldUrlFromPost(postId, fieldName) {
 
 async function getPostGallery(postId) {
   try {
-    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
-      method: 'GET',
-      headers: DEFAULT_HEADERS
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error getting post from WordPress:', errorText);
-      throw new Error('Error getting post from WordPress.');
-    }
-
-    const postData = await response.json();
+    const postData = await client.getPost(postId, ['acf']);
     const galleryField = postData.acf?.googlevision || [];
 
     if (Array.isArray(galleryField) && galleryField.length > 0) {
@@ -214,22 +153,12 @@ async function updateWordPressMetadata(postId, metadataKey, metadataValue) {
 
 async function updatePostACFFields(postId, pdfLink, docLink) {
   try {
-    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}`, {
-      method: 'POST',
-      headers: DEFAULT_HEADERS,
-      body: JSON.stringify({
-        acf: {
-          pdflink: pdfLink,
-          doclink: docLink
-        }
-      })
+    await client.updatePost(postId, {
+      acf: {
+        pdflink: pdfLink,
+        doclink: docLink
+      }
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`Error updating ACF fields in WordPress:`, errorText);
-      throw new Error('Error updating ACF fields in WordPress.');
-    }
 
     console.log(`ACF fields 'pdflink' and 'doclink' updated successfully for post ID ${postId}.`);
     return true;

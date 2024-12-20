@@ -1,8 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
-const config = require('../config');
-const wordPressClient = require('../services/wordpress/client');
+const wordpress = require('../services/wordpress');
 const { 
   getTemplateId,
   initializeGoogleApis,
@@ -15,14 +14,6 @@ const {
   exportToPDF,
   uploadPDFToDrive
 } = require('../services/pdf');
-const { 
-  getPostMetadata, 
-  getPostTitle, 
-  getPostDate, 
-  getImageFieldUrlFromPost, 
-  getPostGallery, 
-  updatePostACFFields 
-} = require('../services/wordpress');
 
 router.post('/generate-pdf', async (req, res) => {
   const { postId, session_ID } = req.body;
@@ -45,7 +36,7 @@ router.post('/generate-pdf', async (req, res) => {
 
     // Get all WordPress data in a single request
     console.log('Fetching WordPress data for post:', postId);
-    const postData = await wordPressClient.getPost(postId, ['acf', 'title', 'date']);
+    const postData = await wordpress.getPost(postId, ['acf', 'title', 'date']);
     console.log('WordPress data retrieved successfully');
 
     // Extract metadata fields
@@ -86,9 +77,9 @@ router.post('/generate-pdf', async (req, res) => {
 
     // Get image URLs in parallel
     const [ageImageUrl, signatureImageUrl, mainImageUrl] = await Promise.all([
-      postData.acf?.age ? getImageUrl(postData.acf.age) : null,
-      postData.acf?.signature ? getImageUrl(postData.acf.signature) : null,
-      postData.acf?.main ? getImageUrl(postData.acf.main) : null
+      postData.acf?.age ? wordpress.getImageUrl(postData.acf.age) : null,
+      postData.acf?.signature ? wordpress.getImageUrl(postData.acf.signature) : null,
+      postData.acf?.main ? wordpress.getImageUrl(postData.acf.main) : null
     ].map(async (promise) => {
       try {
         return await promise;
@@ -99,7 +90,7 @@ router.post('/generate-pdf', async (req, res) => {
     }));
 
     // Step 5: Get gallery images
-    const gallery = await getPostGallery(postId);
+    const gallery = await wordpress.getPostGallery(postId);
 
     // Log all retrieved data
     console.log('Metadata:', metadata);
@@ -157,7 +148,7 @@ router.post('/generate-pdf', async (req, res) => {
     const pdfLink = await uploadPDFToDrive(pdfBuffer, pdfFilename, folderId);
 
     // Step 15: Update WordPress
-    await updatePostACFFields(postId, pdfLink, clonedDocLink);
+    await wordpress.updatePostACFFields(postId, pdfLink, clonedDocLink);
 
     // Return response
     console.log('PDF Link:', pdfLink);
