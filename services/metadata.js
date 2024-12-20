@@ -3,16 +3,9 @@ const { updateWordPressMetadata } = require('./wordpress');
 const { getPrompt, buildContextualPrompt } = require('./utils/promptUtils');
 const { PROMPT_PROCESSING_ORDER, REPORT_INTRODUCTION } = require('./constants/reportStructure');
 
-async function processMetadataField(postId, fieldName, postTitle, postData = {}, context = {}) {
+async function processMetadataField(postId, fieldName, postTitle, images = {}, context = {}) {
   try {
     console.log(`Processing field: ${fieldName}`);
-    
-    // Extract only the image URLs we need
-    const images = {
-      main: postData.images?.main,
-      age: postData.images?.age,
-      signature: postData.images?.signature
-    };
     
     console.log(`Available images for ${fieldName}:`, 
       Object.entries(images)
@@ -55,19 +48,24 @@ async function processMetadataField(postId, fieldName, postTitle, postData = {},
   }
 }
 
-async function processAllMetadata(postId, postTitle, images = {}) {
+async function processAllMetadata(postId, postTitle, postData) {
   try {
     console.log(`Processing metadata fields for post ${postId} in specified order`);
+    
+    // Extract only the image URLs we need from postData
+    const images = {
+      main: postData.images?.main,
+      age: postData.images?.age,
+      signature: postData.images?.signature
+    };
+    
     console.log('Available images:', Object.keys(images).filter(key => images[key]));
 
     const context = {};
     const results = [];
 
-    // Extract images from postData
-    const { images } = postData;
-
     for (const fieldName of PROMPT_PROCESSING_ORDER) {
-      const result = await processMetadataField(postId, fieldName, postTitle, { images }, context);
+      const result = await processMetadataField(postId, fieldName, postTitle, images, context);
       results.push(result);
 
       // Add successful generations to context for next iterations

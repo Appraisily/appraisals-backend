@@ -52,7 +52,7 @@ router.post('/complete-appraisal-report', async (req, res) => {
     // Process metadata fields
     let metadataResults;
     try {
-      metadataResults = await processAllMetadata(postId, postTitle, postData.acf, images);
+      metadataResults = await processAllMetadata(postId, postTitle, { postData, images });
     } catch (error) {
       console.error('Metadata processing error:', error);
       metadataResults = [];
