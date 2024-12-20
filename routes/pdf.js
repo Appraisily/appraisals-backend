@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
-const https = require('https');
 const config = require('../config');
+const wordPressClient = require('../services/wordpress/client');
 const { 
   getTemplateId,
   initializeGoogleApis,
@@ -45,33 +45,7 @@ router.post('/generate-pdf', async (req, res) => {
 
     // Get all WordPress data in a single request
     console.log('Fetching WordPress data for post:', postId);
-    const endpoint = `${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf,title,date`;
-    const agent = new https.Agent({
-      rejectUnauthorized: false,
-      timeout: 10000
-    });
-
-    const response = await fetch(endpoint, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
-      },
-      agent,
-      timeout: 10000
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('WordPress API error:', {
-        status: response.status,
-        headers: response.headers.raw(),
-        body: errorText
-      });
-      throw new Error(`Failed to fetch post data: ${errorText}`);
-    }
-
-    const postData = await response.json();
+    const postData = await wordPressClient.getPost(postId, ['acf', 'title', 'date']);
     console.log('WordPress data retrieved successfully');
 
     // Extract metadata fields
