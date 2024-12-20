@@ -5,6 +5,71 @@ const { processMainImageWithGoogleVision } = require('../services/vision');
 const { getPostTitle, getPostImages, updateWordPressMetadata } = require('../services/wordpress');
 const config = require('../config');
 const fetch = require('node-fetch');
+const https = require('https');
+
+router.get('/test-wordpress/:postId', async (req, res) => {
+  const { postId } = req.params;
+  const endpoint = `${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`;
+  
+  try {
+    console.log('Testing connection to:', endpoint);
+    console.log('Headers:', DEFAULT_HEADERS);
+    
+    const agent = new https.Agent({
+      rejectUnauthorized: false,
+      timeout: 10000
+    });
+
+    const startTime = Date.now();
+    
+    const response = await fetch(endpoint, {
+      method: 'GET',
+      headers: DEFAULT_HEADERS,
+      agent,
+      timeout: 10000
+    });
+
+    const endTime = Date.now();
+    const responseText = await response.text();
+    
+    const connectionInfo = {
+      url: endpoint,
+      timing: {
+        total: endTime - startTime,
+        unit: 'ms'
+      },
+      request: {
+        method: 'GET',
+        headers: DEFAULT_HEADERS
+      },
+      response: {
+        status: response.status,
+        statusText: response.statusText,
+        headers: Object.fromEntries(response.headers.entries()),
+        size: responseText.length,
+        body: responseText.substring(0, 1000) + (responseText.length > 1000 ? '...' : '')
+      },
+      dns: {
+        lookup: await new Promise((resolve) => {
+          require('dns').lookup(new URL(endpoint).hostname, (err, address) => {
+            resolve({ error: err?.message, address });
+          });
+        })
+      }
+    };
+
+    res.json(connectionInfo);
+  } catch (error) {
+    console.error('Test connection error:', error);
+    res.status(500).json({
+      error: error.message,
+      code: error.code,
+      type: error.type,
+      errno: error.errno,
+      stack: error.stack
+    });
+  }
+});
 
 router.post('/complete-appraisal-report', async (req, res) => {
   const { postId } = req.body;
