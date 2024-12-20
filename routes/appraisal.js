@@ -2,10 +2,12 @@ const express = require('express');
 const router = express.Router();
 const { processAllMetadata } = require('../services/metadata');
 const { processMainImageWithGoogleVision } = require('../services/vision');
-const { getPostTitle, getPostImages, updateWordPressMetadata } = require('../services/wordpress');
+const wordpress = require('../services/wordpress');
 const config = require('../config');
 const fetch = require('node-fetch');
 const https = require('https');
+
+const { DEFAULT_HEADERS } = wordpress;
 
 router.get('/test-wordpress/:postId', async (req, res) => {
   const { postId } = req.params;
@@ -105,8 +107,8 @@ router.post('/complete-appraisal-report', async (req, res) => {
 
     // Get post title and images in parallel
     const [postTitle, images] = await Promise.all([
-      getPostTitle(postId),
-      getPostImages(postId)
+      wordpress.getPostTitle(postId),
+      wordpress.getPostImages(postId)
     ]);
 
     if (!postTitle) {
