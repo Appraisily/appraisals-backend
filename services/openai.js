@@ -37,6 +37,7 @@ async function generateContent(prompt, postTitle, images = {}) {
       console.log(`Added ${validImages.length} images to OpenAI request`);
     } else {
       console.log('No valid images available for content generation');
+    }
 
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -45,7 +46,7 @@ async function generateContent(prompt, postTitle, images = {}) {
         'Authorization': `Bearer ${config.OPENAI_API_KEY}`
       },
       body: JSON.stringify({
-        model: 'gpt-4o', //gpt-4o is a new model advanced, that is more powerfull it is used as gpt-4-vision
+        model: 'gpt-4-vision-preview',
         messages: messages,
         max_tokens: 1000,
         temperature: 0.7
