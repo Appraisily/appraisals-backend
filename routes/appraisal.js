@@ -20,7 +20,7 @@ router.post('/complete-appraisal-report', async (req, res) => {
 
     if (!postTitle) {
       console.warn('Post title not found');
-      return res.status(200).json({
+      return res.status(404).json({
         success: false,
         message: 'Post title not found, but processing completed',
         details: {
@@ -60,7 +60,7 @@ router.post('/complete-appraisal-report', async (req, res) => {
     console.log('Metadata processing results:', metadataResults);
 
     // Return response
-    return res.status(200).json({
+    res.status(200).json({
       success: true,
       message: 'Appraisal report completed successfully.',
       details: {
@@ -72,7 +72,7 @@ router.post('/complete-appraisal-report', async (req, res) => {
     });
   } catch (error) {
     console.error('Error in /complete-appraisal-report:', error);
-    return res.status(200).json({
+    res.status(500).json({
       success: false,
       message: error.message || 'Error completing appraisal report.',
       details: {
