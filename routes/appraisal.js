@@ -19,10 +19,10 @@ router.post('/complete-appraisal-report', async (req, res) => {
     const { postData, images, title: postTitle } = await wordpress.fetchPostData(postId);
 
     if (!postTitle) {
-      console.warn('Post title not found');
+      console.warn('Post title not found. Raw response:', JSON.stringify(postData, null, 2));
       return res.status(404).json({
         success: false,
-        message: 'Post title not found, but processing completed',
+        message: 'Post not found or title is missing',
         details: {
           postId,
           title: null,

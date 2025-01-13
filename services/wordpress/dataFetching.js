@@ -5,17 +5,13 @@ async function fetchPostData(postId) {
   console.log('Fetching complete post data for:', postId);
   
   // Get all data in a single request including ACF fields and media
-  const postData = await getPost(postId, [
-    'acf',
-    'title',
-    'date',
-    '_links',
-    '_embedded'
-  ], {
+  const postData = await getPost(postId, ['acf', 'title', 'date'], {
     _embed: 'wp:featuredmedia,wp:term'
   });
 
   console.log('Post data retrieved successfully');
+  console.log('Title:', postData.title?.rendered);
+  console.log('Date:', postData.date);
 
   // Extract image URLs from embedded media
   const images = await extractImages(postData.acf);
@@ -23,7 +19,7 @@ async function fetchPostData(postId) {
   return {
     postData,
     images,
-    title: postData.title?.rendered || '',
+    title: postData.title?.rendered || null,
     date: parseDate(postData.date)
   };
 }
