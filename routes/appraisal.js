@@ -3,8 +3,12 @@ const router = express.Router();
 const wordpress = require('../services/wordpress');
 const { processMainImageWithGoogleVision } = require('../services/vision');
 const { processAllMetadata } = require('../services/metadata');
+const { getClientIp } = require('request-ip');
 
 router.post('/complete-appraisal-report', async (req, res) => {
+  const clientIp = getClientIp(req);
+  console.log('Client IP:', clientIp);
+
   const { postId } = req.body;
 
   if (!postId) {
@@ -20,6 +24,7 @@ router.post('/complete-appraisal-report', async (req, res) => {
 
     if (!postTitle) {
       console.warn('Post title not found. Raw response:', JSON.stringify(postData, null, 2));
+      console.log('Request blocked. Client IP:', clientIp);
       return res.status(404).json({
         success: false,
         message: 'Post not found or title is missing',
