@@ -27,17 +27,24 @@ async function getPrompt(custom_post_type_name) {
     throw error;
   }
 }
+const STYLE_GUIDANCE = `Style: Provide concise, confident, and well-structured text without self-referential disclaimers (e.g., "I cannot see the image" or "I'm unable to determine…"). If direct evidence is not provided, logically infer or leave it out succinctly.
+No Apologies or Personal Inability: Do not state disclaimers about lacking data or being unable to analyze images. Simply produce the best possible text under the assumption that enough context was provided.
+No Extra Headings: Avoid adding headings or subtitles beyond what the user's prompt explicitly requires.
+Stay on Topic: Write text as if you have full authority on the matter, focusing on the content requested.
+Structure: Output in well-formed paragraphs without extraneous labeling like "Introduction," "Conclusion," or "Analysis of the Collectible."
+Length: Keep the text within the length or paragraph constraints specified by the user's prompt.
+Objective: Provide thorough but succinct text that adheres to the context (e.g., analyzing age, style, or condition) while omitting disclaimers about missing info.\n\n`;
 
 function buildContextualPrompt(prompt, context) {
   if (Object.keys(context).length === 0) {
-    return prompt;
+    return STYLE_GUIDANCE + prompt;
   }
 
   return `Previous content generated for this report:\n\n${
     Object.entries(context)
       .map(([field, content]) => `${field}:\n${content}\n`)
       .join('\n')
-  }\n\nUsing the context above and maintaining consistency, ${prompt}`;
+  }\n\n${STYLE_GUIDANCE}Using the context above and maintaining consistency, ${prompt}`;
 }
 
 module.exports = {
