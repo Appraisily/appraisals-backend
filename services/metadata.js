@@ -7,6 +7,7 @@ const staticMetadata = require('./constants/staticMetadata');
 async function processMetadataField(postId, fieldName, postTitle, images = {}, context = {}) {
   try {
     console.log(`Processing field: ${fieldName}`);
+    console.log(`Loading prompt for: ${fieldName}`);
     
     console.log(`Available images for ${fieldName}:`, 
       Object.entries(images)
@@ -16,8 +17,10 @@ async function processMetadataField(postId, fieldName, postTitle, images = {}, c
 
     const prompt = await getPrompt(fieldName);
     if (!prompt) {
-      throw new Error(`Prompt file not found for ${fieldName}`);
+      console.error(`No prompt file found for ${fieldName}`);
+      throw new Error(`Unable to load prompt file for ${fieldName}`);
     }
+    console.log(`Successfully loaded prompt for ${fieldName}`);
 
     // Add report introduction to context for the first field
     if (fieldName === PROMPT_PROCESSING_ORDER[0]) {

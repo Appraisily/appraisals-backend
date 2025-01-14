@@ -4,10 +4,22 @@ const path = require('path');
 async function getPrompt(custom_post_type_name) {
   const promptsDir = path.join(__dirname, '..', '..', 'prompts');
   const promptFilePath = path.join(promptsDir, `${custom_post_type_name}.txt`);
+  
+  console.log(`Attempting to load prompt from: ${promptFilePath}`);
+  
   try {
-    return await fs.readFile(promptFilePath, 'utf8');
+    const promptContent = await fs.readFile(promptFilePath, 'utf8');
+    if (!promptContent) {
+      throw new Error('Empty prompt file');
+    }
+    console.log(`Successfully loaded prompt for ${custom_post_type_name}`);
+    return promptContent;
   } catch (error) {
-    console.error(`Error reading prompt file for ${custom_post_type_name}:`, error);
+    console.error(`Error reading prompt file for ${custom_post_type_name}:`, {
+      error: error.message,
+      path: promptFilePath,
+      exists: await fs.access(promptFilePath).then(() => true).catch(() => false)
+    });
     throw error;
   }
 }
