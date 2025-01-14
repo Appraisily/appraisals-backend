@@ -58,6 +58,31 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
   try {
     console.log(`Processing ${gallery.length} images for gallery`);
 
+    // If no gallery images, replace placeholder with message
+    if (gallery.length === 0) {
+      console.log('No gallery images found, replacing with message');
+      try {
+        await docs.documents.batchUpdate({
+          documentId,
+          requestBody: {
+            requests: [{
+              replaceAllText: {
+                containsText: {
+                  text: '{{gallery}}',
+                  matchCase: true
+                },
+                replaceText: 'No similar images were found during the analysis of this artwork.'
+              }
+            }]
+          }
+        });
+        console.log('Gallery placeholder replaced with message');
+      } catch (error) {
+        console.error('Error replacing gallery placeholder:', error);
+      }
+      return 0;
+    }
+
     // Process all images first
     const processedImages = await Promise.all(
       gallery.map(url => verifyAndProcessImage(url))
@@ -141,10 +166,26 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
             documentId,
             requestBody: { requests: batchRequests }
           });
-          console.log(`Successfully inserted batch of ${batch.length} images`);
+          console.log(`Successfully inserted batch of ${batch.length} images at index ${currentIndex}`);
         } catch (error) {
-          console.error(`Error inserting batch:`, error.message);
-          // Continue with next batch
+          console.error(`Error inserting batch at index ${currentIndex}:`, error.message);
+          // If image is not accessible, replace with placeholder text
+          try {
+            await docs.documents.batchUpdate({
+              documentId,
+              requestBody: {
+                requests: [{
+                  insertText: {
+                    location: { index: currentIndex },
+                    text: '[Image not available]'
+                  }
+                }]
+              }
+            });
+            console.log('Replaced failed image with placeholder text');
+          } catch (innerError) {
+            console.error('Error adding placeholder text:', innerError);
+          }
         }
       }
     }

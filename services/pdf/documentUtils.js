@@ -22,7 +22,7 @@ async function cloneTemplate(drive, templateId) {
     const copiedFile = await drive.files.copy({
       fileId: sanitizedTemplateId,
       requestBody: {
-        name: `Informe_Tasacion_${new Date().toISOString()}`,
+        name: `Appraisal_Report_${new Date().toISOString()}`,
       },
       fields: 'id, webViewLink',
       supportsAllDrives: true,
@@ -63,25 +63,35 @@ async function moveFileToFolder(drive, fileId, folderId) {
 
 async function replacePlaceholdersInDocument(docs, documentId, data) {
   try {
+    console.log('Starting placeholder replacement');
     const document = await docs.documents.get({ documentId });
     const content = document.data.body.content;
     const requests = [];
 
     const findAndReplace = (elements) => {
       for (const element of elements) {
+        console.log('Processing element:', element.paragraph ? 'paragraph' : element.table ? 'table' : 'other');
         if (element.paragraph && element.paragraph.elements) {
           for (const textElement of element.paragraph.elements) {
             if (textElement.textRun && textElement.textRun.content) {
               for (const [key, value] of Object.entries(data)) {
                 const placeholder = `{{${key}}}`;
                 if (textElement.textRun.content.includes(placeholder)) {
+                  console.log(`Found placeholder: ${placeholder}`);
+                  const cleanValue = value !== undefined && value !== null 
+                    ? String(value)
+                        .replace(/\n/g, '\n\n')  // Convert single newlines to double
+                        .replace(/\s+/g, ' ')    // Normalize whitespace
+                        .trim()
+                    : '';
+                  console.log(`Replacing with cleaned value (first 100 chars): ${cleanValue.substring(0, 100)}`);
                   requests.push({
                     replaceAllText: {
                       containsText: {
                         text: placeholder,
                         matchCase: true,
                       },
-                      replaceText: value !== undefined && value !== null ? String(value) : '',
+                      replaceText: cleanValue,
                     },
                   });
                 }
@@ -105,11 +115,9 @@ async function replacePlaceholdersInDocument(docs, documentId, data) {
     if (requests.length > 0) {
       await docs.documents.batchUpdate({
         documentId: documentId,
-        requestBody: {
-          requests: requests,
-        },
+        requestBody: { requests },
       });
-      console.log(`Placeholders replaced in document ID: ${documentId}`);
+      console.log(`${requests.length} placeholders replaced in document ID: ${documentId}`);
     } else {
       console.log('No placeholders found to replace.');
     }

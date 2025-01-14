@@ -78,9 +78,7 @@ router.post('/generate-pdf', async (req, res) => {
     await adjustTitleFontSize(clonedDocId, postTitle);
 
     // Step 10: Add gallery images
-    if (images.gallery.length > 0) {
-      await addGalleryImages(clonedDocId, images.gallery);
-    }
+    await addGalleryImages(clonedDocId, images.gallery);
 
     // Step 11: Insert specific images
     if (images.age) {
@@ -99,7 +97,7 @@ router.post('/generate-pdf', async (req, res) => {
     // Step 13: Generate filename
     const pdfFilename = session_ID?.trim()
       ? `${session_ID}.pdf`
-      : `Informe_Tasacion_Post_${postId}_${uuidv4()}.pdf`;
+      : `Appraisal_Report_Post_${postId}_${uuidv4()}.pdf`;
 
     // Step 14: Upload PDF
     const pdfLink = await uploadPDFToDrive(pdfBuffer, pdfFilename, folderId);

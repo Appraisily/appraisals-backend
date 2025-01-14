@@ -5,20 +5,27 @@ const he = require('he');
 function stripHtml(html) {
   if (!html) return '';
   
+  console.log('Original HTML content:', html);
+  
   // First decode HTML entities
   let text = he.decode(html);
+  console.log('After HTML entity decoding:', text);
   
   // Remove HTML tags
   text = text.replace(/<[^>]*>/g, '');
+  console.log('After removing HTML tags:', text);
   
   // Replace multiple newlines/spaces with single ones
   text = text.replace(/\s+/g, ' ');
+  console.log('After normalizing whitespace:', text);
   
   // Add proper paragraph spacing
   text = text.replace(/<\/p>\s*<p[^>]*>/gi, '\n\n');
+  console.log('After adding paragraph spacing:', text);
   
   // Trim extra whitespace
   text = text.trim();
+  console.log('Final cleaned text:', text);
   
   return text;
 }
@@ -35,13 +42,15 @@ async function processMetadata(postData) {
 
   // Extract metadata fields
   const metadata = REQUIRED_METADATA_FIELDS.reduce((acc, key) => {
+    console.log(`\nProcessing field: ${key}`);
+    console.log('Raw content:', postData.acf?.[key]);
     acc[key] = stripHtml(postData.acf?.[key] || '');
-    console.log(`Field ${key}:`, acc[key] ? 'Present' : 'Empty');
-    console.log(`Cleaned content for ${key}:`, acc[key].substring(0, 100) + '...');
+    console.log(`Field ${key} after cleaning:`, acc[key] ? 'Present' : 'Empty');
     return acc;
   }, {});
 
   // Add static metadata fields
+  console.log('\nProcessing static metadata fields');
   metadata.Introduction = staticContent.Introduction || '';
   metadata.ImageAnalysisText = staticContent.ImageAnalysisText || '';
   metadata.SignatureText = staticContent.SignatureText || '';
@@ -50,17 +59,28 @@ async function processMetadata(postData) {
   metadata.LiabilityText = staticContent.LiabilityText || '';
   metadata.SellingGuideText = staticContent.SellingGuideText || '';
   
+  console.log('\nCleaning static metadata fields');
   // Clean HTML from static metadata
+  console.log('\nProcessing Introduction');
   metadata.Introduction = stripHtml(metadata.Introduction);
+  console.log('\nProcessing ImageAnalysisText');
   metadata.ImageAnalysisText = stripHtml(metadata.ImageAnalysisText);
+  console.log('\nProcessing SignatureText');
   metadata.SignatureText = stripHtml(metadata.SignatureText);
+  console.log('\nProcessing ValuationText');
   metadata.ValuationText = stripHtml(metadata.ValuationText);
+  console.log('\nProcessing AppraiserText');
   metadata.AppraiserText = stripHtml(metadata.AppraiserText);
+  console.log('\nProcessing LiabilityText');
   metadata.LiabilityText = stripHtml(metadata.LiabilityText);
+  console.log('\nProcessing SellingGuideText');
   metadata.SellingGuideText = stripHtml(metadata.SellingGuideText);
 
-  console.log('Static metadata fields added:', 
-    Object.keys(staticContent).filter(key => metadata[key]));
+  console.log('\nFinal metadata content:');
+  Object.entries(metadata).forEach(([key, value]) => {
+    console.log(`\n${key}:`);
+    console.log(value.substring(0, 100) + (value.length > 100 ? '...' : ''));
+  });
 
   // Format value if present
   if (metadata.value) {
