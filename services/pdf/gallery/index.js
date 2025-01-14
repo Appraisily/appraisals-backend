@@ -3,6 +3,7 @@ const sizeOf = require('image-size');
 const {
   MAX_IMAGES_PER_ROW,
   DEFAULT_IMAGE_DIMENSIONS,
+  GALLERY_TITLE,
   createGalleryTitle,
   createImageRequest,
   createSpacingRequest,
@@ -59,19 +60,24 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
     console.log(`Processing ${gallery.length} images for gallery`);
     
     // First, remove the gallery placeholder
-    await docs.documents.batchUpdate({
-      documentId,
-      requestBody: {
-        requests: [{
-          deleteContentRange: {
-            range: {
-              startIndex: galleryIndex,
-              endIndex: galleryIndex + '{{gallery}}'.length
+    try {
+      await docs.documents.batchUpdate({
+        documentId,
+        requestBody: {
+          requests: [{
+            deleteContentRange: {
+              range: {
+                startIndex: galleryIndex,
+                endIndex: galleryIndex + '{{gallery}}'.length
+              }
             }
-          }
-        }]
-      }
-    });
+          }]
+        }
+      });
+    } catch (error) {
+      console.error('Error removing gallery placeholder:', error);
+      return 0;
+    }
 
     // If no gallery images, replace placeholder with message
     if (gallery.length === 0) {

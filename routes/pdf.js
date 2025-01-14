@@ -78,7 +78,12 @@ router.post('/generate-pdf', async (req, res) => {
     await adjustTitleFontSize(clonedDocId, postTitle);
 
     // Step 10: Add gallery images
-    await addGalleryImages(clonedDocId, images.gallery);
+    try {
+      await addGalleryImages(clonedDocId, images.gallery);
+    } catch (error) {
+      console.error('Error adding gallery images:', error);
+      console.log('Continuing with PDF generation despite gallery error');
+    }
 
     // Step 11: Insert specific images
     if (images.age) {

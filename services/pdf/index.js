@@ -69,11 +69,31 @@ async function addGalleryImages(documentId, gallery) {
     }
 
     // Insert gallery grid
-    await insertGalleryGrid(docs, documentId, galleryIndex, gallery);
+    try {
+      await insertGalleryGrid(docs, documentId, galleryIndex, gallery);
+    } catch (error) {
+      console.error('Error in gallery grid insertion:', error);
+      // Try to add a message instead
+      try {
+        await docs.documents.batchUpdate({
+          documentId,
+          requestBody: {
+            requests: [{
+              insertText: {
+                location: { index: galleryIndex },
+                text: 'Similar images section could not be generated.'
+              }
+            }]
+          }
+        });
+      } catch (fallbackError) {
+        console.error('Error adding fallback message:', fallbackError);
+      }
+    }
     console.log('Gallery insertion complete');
   } catch (error) {
     console.error('Error adding gallery images:', error);
-    throw error;
+    // Don't throw the error, let the process continue
   }
 }
 
