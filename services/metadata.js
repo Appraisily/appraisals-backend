@@ -1,7 +1,8 @@
 const { generateContent } = require('./openai');
-const { updateWordPressMetadata } = require('./wordpress');
+const { updateWordPressMetadata, getPost } = require('./wordpress');
 const { getPrompt, buildContextualPrompt } = require('./utils/promptUtils');
 const { PROMPT_PROCESSING_ORDER, REPORT_INTRODUCTION } = require('./constants/reportStructure');
+const staticMetadata = require('./constants/staticMetadata');
 
 async function processMetadataField(postId, fieldName, postTitle, images = {}, context = {}) {
   try {
@@ -31,7 +32,11 @@ async function processMetadataField(postId, fieldName, postTitle, images = {}, c
       throw new Error(`No content generated for ${fieldName}`);
     }
 
+    // Update WordPress with generated content
     await updateWordPressMetadata(postId, fieldName, content);
+
+    // After content generation, update static metadata if needed
+    await updateStaticMetadata(postId, fieldName);
     
     return {
       field: fieldName,
@@ -45,6 +50,79 @@ async function processMetadataField(postId, fieldName, postTitle, images = {}, c
       status: 'error',
       error: error.message
     };
+  }
+}
+
+async function updateStaticMetadata(postId, fieldName) {
+  try {
+    // Get post data to check appraisal type
+    const postData = await getPost(postId, ['acf']);
+    const appraisalType = postData.acf?.appraisaltype?.toLowerCase() || 'regular';
+
+    // Get metadata content for the appraisal type
+    let metadataContent;
+    switch (appraisalType) {
+      case 'irs':
+        metadataContent = staticMetadata.irs;
+        break;
+      case 'insurance':
+        metadataContent = staticMetadata.insurance;
+        break;
+      default:
+        metadataContent = staticMetadata.regular;
+    }
+
+    if (!metadataContent) {
+      console.warn(`No static metadata found for appraisal type: ${appraisalType}`);
+      return;
+    }
+
+    // Direct mapping between WordPress fields and static metadata fields
+    const fieldMapping = {
+      'introduction': {
+        metadataField: 'Introduction',
+        required: true
+      },
+      'image_analysis': {
+        metadataField: 'ImageAnalysisText',
+        required: true
+      },
+      'signature_analysis': {
+        metadataField: 'SignatureText',
+        required: true
+      },
+      'valuation_method': {
+        metadataField: 'ValuationText',
+        required: true
+      },
+      'appraiser_info': {
+        metadataField: 'AppraiserText',
+        required: true
+      },
+      'liability_conflict': {
+        metadataField: 'LiabilityText',
+        required: true
+      },
+      'selling_guide': {
+        metadataField: 'SellingGuideText',
+        required: true
+      }
+    };
+
+    // Get the mapping for the current field
+    const mapping = fieldMapping[fieldName];
+    if (mapping) {
+      const content = metadataContent[mapping.metadataField];
+      if (content) {
+        await updateWordPressMetadata(postId, fieldName, content);
+        console.log(`Updated static metadata for ${fieldName} (${appraisalType} type)`);
+      } else if (mapping.required) {
+        console.error(`Required static metadata missing: ${mapping.metadataField} for ${appraisalType} type`);
+      }
+    }
+  } catch (error) {
+    console.error(`Error updating static metadata for ${fieldName}:`, error);
+    throw error;
   }
 }
 

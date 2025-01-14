@@ -284,3 +284,61 @@ The service is deployed on Google Cloud Run:
 - Container-based deployment
 - Environment variable management
 - Logging and monitoring included
+
+### Processing Steps for /complete-appraisal-report
+
+The endpoint follows these steps when processing a request:
+
+1. Input Validation
+   - Verifies postId is provided in request body
+   - Returns 400 error if postId is missing
+
+2. Fetch Post Data
+   - Retrieves post data from WordPress in a single request
+   - Gets title, ACF fields, and images
+   - Returns 404 if post not found or title missing
+
+3. Google Vision Analysis
+   - Checks if gallery is already populated
+   - If not populated:
+     - Retrieves main image URL
+     - Analyzes image with Vision API
+     - Finds visually similar images
+     - Uploads similar images to WordPress media library
+     - Updates post's gallery field with new image IDs
+
+4. Metadata Processing
+   - Processes each metadata field in order:
+     ```javascript
+     [
+       'test', 'age1', 'age2', 'age_text', 'authorship',
+       'condition', 'signature1', 'signature2', 'style',
+       'valuation_method', 'conclusion1', 'conclusion2',
+       'ad_copy', 'table', 'glossary'
+     ]
+     ```
+   - For each field:
+     - Loads appropriate prompt template
+     - Generates content using OpenAI GPT-4
+     - Updates WordPress post with generated content
+     - Updates static metadata based on appraisal type:
+       - Introduction text
+       - Image analysis description
+       - Signature analysis details
+       - Valuation method explanation
+       - Appraiser information
+       - Liability and conflict statements
+       - Selling guide information
+     - Tracks success/failure status
+
+5. Response Generation
+   - Returns JSON response with:
+     - Success status
+     - Post ID and title
+     - Vision analysis results
+     - Processed fields status
+   - Includes error details if any step fails
+
+### POST /generate-pdf
+
+Generates a PDF report from the appraisal data.
