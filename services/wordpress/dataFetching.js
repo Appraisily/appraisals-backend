@@ -84,6 +84,6 @@ async function getMediaUrl(mediaId) {
 }
 
 module.exports = {
-  fetchPostData
+  fetchPostData,
   getImageUrl
 };
