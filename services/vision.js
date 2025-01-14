@@ -167,6 +167,8 @@ async function uploadImageToWordPress(imageUrl) {
 
 async function updateWordPressGallery(postId, imageIds) {
   try {
+    console.log(`Updating gallery for post ${postId} with image IDs:`, imageIds);
+
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}`, {
       method: 'POST',
       headers: {
@@ -175,7 +177,7 @@ async function updateWordPressGallery(postId, imageIds) {
       },
       body: JSON.stringify({
         acf: {
-          googlevision: imageIds,
+          googlevision: imageIds.map(id => id.toString()),
           _gallery_populated: '1'
         }
       })
@@ -183,6 +185,7 @@ async function updateWordPressGallery(postId, imageIds) {
 
     if (!response.ok) {
       throw new Error(`Error updating gallery: ${await response.text()}`);
+      console.error('Response status:', response.status);
     }
 
     console.log(`Gallery updated for post ${postId} with ${imageIds.length} images`);
@@ -190,6 +193,7 @@ async function updateWordPressGallery(postId, imageIds) {
   } catch (error) {
     console.error('Error updating WordPress gallery:', error);
     throw error;
+    console.error('Full error:', error);
   }
 }
 

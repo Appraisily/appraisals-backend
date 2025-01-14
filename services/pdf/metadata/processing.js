@@ -1,5 +1,27 @@
 const { validateMetadata, REQUIRED_METADATA_FIELDS } = require('./validation');
 const staticMetadata = require('../../constants/staticMetadata');
+const he = require('he');
+
+function stripHtml(html) {
+  if (!html) return '';
+  
+  // First decode HTML entities
+  let text = he.decode(html);
+  
+  // Remove HTML tags
+  text = text.replace(/<[^>]*>/g, '');
+  
+  // Replace multiple newlines/spaces with single ones
+  text = text.replace(/\s+/g, ' ');
+  
+  // Add proper paragraph spacing
+  text = text.replace(/<\/p>\s*<p[^>]*>/gi, '\n\n');
+  
+  // Trim extra whitespace
+  text = text.trim();
+  
+  return text;
+}
 
 async function processMetadata(postData) {
   console.log('Processing metadata fields...');
@@ -13,8 +35,9 @@ async function processMetadata(postData) {
 
   // Extract metadata fields
   const metadata = REQUIRED_METADATA_FIELDS.reduce((acc, key) => {
-    acc[key] = postData.acf?.[key] || '';
+    acc[key] = stripHtml(postData.acf?.[key] || '');
     console.log(`Field ${key}:`, acc[key] ? 'Present' : 'Empty');
+    console.log(`Cleaned content for ${key}:`, acc[key].substring(0, 100) + '...');
     return acc;
   }, {});
 
@@ -26,6 +49,15 @@ async function processMetadata(postData) {
   metadata.AppraiserText = staticContent.AppraiserText || '';
   metadata.LiabilityText = staticContent.LiabilityText || '';
   metadata.SellingGuideText = staticContent.SellingGuideText || '';
+  
+  // Clean HTML from static metadata
+  metadata.Introduction = stripHtml(metadata.Introduction);
+  metadata.ImageAnalysisText = stripHtml(metadata.ImageAnalysisText);
+  metadata.SignatureText = stripHtml(metadata.SignatureText);
+  metadata.ValuationText = stripHtml(metadata.ValuationText);
+  metadata.AppraiserText = stripHtml(metadata.AppraiserText);
+  metadata.LiabilityText = stripHtml(metadata.LiabilityText);
+  metadata.SellingGuideText = stripHtml(metadata.SellingGuideText);
 
   console.log('Static metadata fields added:', 
     Object.keys(staticContent).filter(key => metadata[key]));
