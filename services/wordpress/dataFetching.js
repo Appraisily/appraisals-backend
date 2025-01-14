@@ -47,14 +47,14 @@ async function extractImages(acf) {
 
   // Get media URLs in parallel
   const [main, age, signature] = await Promise.all([
-    getMediaUrl(acf.main),
-    getMediaUrl(acf.age),
-    getMediaUrl(acf.signature)
+    getImageUrl(acf.main),
+    getImageUrl(acf.age),
+    getImageUrl(acf.signature)
   ]);
 
   // Get gallery URLs
   const gallery = Array.isArray(acf.googlevision) 
-    ? await Promise.all(acf.googlevision.map(id => getMediaUrl(id)))
+    ? await Promise.all(acf.googlevision.map(id => getImageUrl(id)))
     : [];
 
   return {
@@ -63,24 +63,6 @@ async function extractImages(acf) {
     signature,
     gallery: gallery.filter(url => url !== null)
   };
-}
-
-async function getMediaUrl(mediaId) {
-  if (!mediaId) return null;
-
-  // If it's already a URL, return it
-  if (typeof mediaId === 'string' && mediaId.startsWith('http')) {
-    return mediaId;
-  }
-
-  try {
-    // Get media data from WordPress
-    const media = await getMedia(mediaId);
-    return media?.source_url || null;
-  } catch (error) {
-    console.warn(`Failed to get media URL for ID ${mediaId}:`, error.message);
-    return null;
-  }
 }
 
 module.exports = {

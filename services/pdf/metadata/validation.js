@@ -2,7 +2,11 @@ const REQUIRED_METADATA_FIELDS = [
   'test', 'ad_copy', 'age_text', 'age1', 'condition',
   'signature1', 'signature2', 'style', 'valuation_method',
   'conclusion1', 'conclusion2', 'authorship', 'table',
-  'glossary', 'value'
+  'glossary', 'value',
+  // Static metadata fields
+  'Introduction', 'ImageAnalysisText', 'SignatureText',
+  'ValuationText', 'AppraiserText', 'LiabilityText',
+  'SellingGuideText'
 ];
 
 function validateMetadata(metadata) {

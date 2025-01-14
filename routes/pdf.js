@@ -49,7 +49,7 @@ router.post('/generate-pdf', async (req, res) => {
     }
 
     // Get template ID based on appraisal type
-    const templateId = await getTemplateId(postData.acf?.appraisaltype);
+    const templateId = await getTemplateId();
     console.log('Using template ID:', templateId);
 
     // Log all retrieved data
