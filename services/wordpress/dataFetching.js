@@ -1,6 +1,24 @@
 const { getPost, getMedia } = require('./client');
 const { parseDate } = require('./utils/dateUtils');
 
+async function getImageUrl(mediaId) {
+  if (!mediaId) return null;
+
+  // If it's already a URL, return it
+  if (typeof mediaId === 'string' && mediaId.startsWith('http')) {
+    return mediaId;
+  }
+
+  try {
+    // Get media data from WordPress
+    const media = await getMedia(mediaId);
+    return media?.source_url || null;
+  } catch (error) {
+    console.warn(`Failed to get media URL for ID ${mediaId}:`, error.message);
+    return null;
+  }
+}
+
 async function fetchPostData(postId) {
   console.log('Fetching complete post data for:', postId);
   
@@ -67,4 +85,5 @@ async function getMediaUrl(mediaId) {
 
 module.exports = {
   fetchPostData
+  getImageUrl
 };
