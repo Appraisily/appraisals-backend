@@ -1,22 +1,59 @@
-Use the provided images (front of the artwork, back, or signature) and the report title to compose two focused paragraphs discussing the authorship of the artwork. Concentrate on identifying and explaining the type of authorship, such as whether it is an original hand-painted piece, attributed to a specific artist, a print, or any other relevant category. Emphasize key characteristics that define the authorship, detailing any markers or traits that support this classification. Ensure that your response is concise, rich with relevant information strictly pertaining to the authorship aspect, and avoids unrelated details.
+Use the provided images (front view, back view, or detail/signature images) and the report title to compose two focused paragraphs discussing the authorship or origin of the item. Concentrate on identifying and explaining the type of authorship, such as:
+
+For Artworks:
+- Original hand-painted piece
+- Print or reproduction
+- Studio work or collaboration
+- Workshop attribution
+- School or style attribution
+
+For Antiques:
+- Maker or manufacturer
+- Workshop or atelier
+- Regional origin
+- Period of production
+- Manufacturing technique
+
+For Collectibles:
+- Brand or manufacturer
+- Designer attribution
+- Production series
+- Limited edition details
+- Manufacturing location
+
+Emphasize key characteristics that define the authorship, detailing any markers or traits that support this classification. Ensure that your response is concise, rich with relevant information strictly pertaining to the authorship aspect, and avoids unrelated details.
 
 # Output Format
 
-Two focused paragraphs, each containing detailed yet concise analysis of the artwork's authorship.
+Two focused paragraphs, each containing detailed yet concise analysis of the item's authorship or origin.
 
 # Examples
 
-**Example Input:**
+**Example 1 - Artwork:**
 Report Title: "18th Century Oil Painting by John Smith - A Serene Landscape"
-
-Front Image: [URL to front image]
-Back Image: [URL to back image]
-Signature Image: [URL to signature image]
-
-**Example Output:**
 
 The artwork showcased, titled "A Serene Landscape," is attributed to John Smith, a renowned 18th-century painter known for his exquisite oil paintings. Upon examining the front of the artwork, the brushstrokes and use of light reflect Smith's distinctive style, characterized by fine details and a naturalistic approach. The oil medium adds a rich texture, indicative of Smith's technique. Additionally, the color palette aligns with Smith's other works from the same period, reinforcing the attribution.
 
 On the reverse side, the canvas's aged appearance and labeling also suggest an 18th-century origin. The signature on the front further corroborates authorship, matching verified examples of John Smith's signature found in authenticated works. These combined elements—signature, stylistic features, and material composition—strongly support the classification of the artwork as an original piece by John Smith, reflecting his mastery in landscape painting.
+
+**Example 2 - Antique:**
+Report Title: "Victorian Mahogany Dining Table by Thomas Chippendale II, London, circa 1820"
+
+This distinguished dining table bears the unmistakable hallmarks of Thomas Chippendale II's London workshop, active in the early 19th century. The sophisticated design elements and superior craftsmanship align perfectly with documented pieces from his workshop, while the distinctive joinery techniques and choice of premium mahogany exemplify the high standards maintained by the Chippendale firm. The maker's stamp found on the underside of the table confirms its prestigious origin, matching known examples from the workshop's most productive period.
+
+Further examination reveals characteristic construction methods unique to Chippendale's London workshop, including specific dovetail patterns and hardware mounting techniques. The quality of materials and execution of decorative elements demonstrate the refined skills of master craftsmen working under Chippendale II's direction. These features, combined with the documented provenance and period-appropriate construction techniques, definitively establish this piece as an authentic creation from the renowned Chippendale workshop of the early 1820s.
+
+**Example 3 - Collectible:**
+Report Title: "Lalique Crystal Vase, 'Bacchantes' Pattern, France, 1970s"
+
+The vase exhibits all the defining characteristics of authentic Lalique crystal production from the 1970s. The 'Bacchantes' pattern, one of René Lalique's most celebrated designs, has been executed with the precision and clarity typical of the company's post-war production. The maker's mark, etched into the base reading "Lalique ® France," conforms to the company's signature style from this period. The quality of the crystal and the crisp detail in the relief work demonstrate the high manufacturing standards maintained by the Lalique company.
+
+The production techniques evident in this piece, including the characteristic satin finish and the clarity of the crystal, are consistent with Lalique's manufacturing processes of the 1970s. The mold seams and pattern definition match documented examples from this era, while the weight and sound of the crystal align with known authentic pieces. These technical aspects, combined with the properly executed maker's marks and period-appropriate manufacturing characteristics, confirm this vase as a genuine Lalique production from their French facilities.
+
+# Notes
+
+- Ensure the analysis focuses on authorship-related evidence and avoids discussing unrelated aspects such as condition or value.
+- Maintain a professional tone throughout the analysis.
+- Use specific terminology appropriate to the type of item being analyzed.
 
 Title:

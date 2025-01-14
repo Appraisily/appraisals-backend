@@ -1,21 +1,33 @@
-Create two engaging ad copy paragraphs that highlight the unique features and value of an artwork to entice potential buyers. Use the provided images (front of the artwork, back, or signature) and the accompanying report title, which includes information about the artwork's age, author, composition, and style. Do not include paragraph numbering.
+Create two engaging ad copy paragraphs that highlight the unique features and value of an item (artwork, antique, or collectible) to entice potential buyers. Use the provided images (front view, back view, or detail/signature images) and the accompanying report title, which includes information about the item's age, creator/maker, composition/materials, and style. Do not include paragraph numbering.
 
 If any of the provided images are missing, use a duplicate image in their place.
 
 # Steps
 
 1. **Analyze the Images and Report Title:**
-   - Carefully review each provided image to determine the front, back, or signature of the artwork.
+   - Carefully review each provided image to understand the item's visual characteristics.
    - Note any missing images and use duplicates if needed.
-   - Extract key details from the report title such as age, author, composition, and style.
+   - Extract key details from the report title such as age, creator/maker, materials, and style.
+   - Identify whether the item is an artwork, antique, or collectible based on the report title.
 
 2. **Highlight Key Features:**
-   - Identify and describe in engaging language the unique features of the artwork (e.g., historical significance, artistic technique, provenance).
-   - Use descriptive and persuasive language to create a sense of value and rarity.
+   - For artworks:
+     - Focus on artistic technique, style, and visual impact
+     - Emphasize the artist's reputation and significance
+     - Highlight unique artistic elements and composition
+   - For antiques:
+     - Emphasize historical significance and period authenticity
+     - Highlight craftsmanship and materials quality
+     - Focus on rarity and condition for the age
+   - For collectibles:
+     - Stress uniqueness and desirability within its category
+     - Highlight condition and completeness
+     - Emphasize any special features or limited availability
 
 3. **Draft Two Paragraphs:**
-   - Ensure each paragraph focuses on different aspects of the artwork to provide a comprehensive and enticing description.
-   - Maintain a formal yet captivating tone suitable for art buyers.
+   - Ensure each paragraph focuses on different aspects to provide a comprehensive description
+   - Maintain a formal yet captivating tone suitable for collectors and buyers
+   - Adapt language to the specific type of item (artwork/antique/collectible)
 
 # Output Format
 
@@ -23,12 +35,20 @@ Two paragraphs in plain text, without numbering.
 
 # Examples
 
-**Example Input:**
+**Example 1 - Artwork:**
 Images: [URLs of front, back, signature]
 Report Title: "Circa 1885, John Doe, Oil on Canvas, Impressionist Style"
 
-**Example Output:**
-
 Immerse yourself in the late 19th century with this extraordinary oil on canvas by the renowned artist John Doe. Created in 1885, this masterpiece represents the pinnacle of the Impressionist movement, capturing the delicate interplay of light and color with stunning precision. John Doe's brushwork breathes life into the canvas, offering a glimpse into a bygone era. The rich textures and vibrant hues are a testament to Doe's unparalleled skill and artistic vision.
 
-Beyond its beauty, this artwork holds significant historical value, reflecting the artistic trends and cultural dynamics of its time. The impeccable provenance and the artist's distinguished reputation further cement its status as a valuable and rare acquisition. Whether adorning a private collection or enhancing an art gallery, this piece is sure to captivate and inspire admiration from connoisseurs and casual viewers alike. Title:
+Beyond its beauty, this artwork holds significant historical value, reflecting the artistic trends and cultural dynamics of its time. The impeccable provenance and the artist's distinguished reputation further cement its status as a valuable and rare acquisition. Whether adorning a private collection or enhancing an art gallery, this piece is sure to captivate and inspire admiration from connoisseurs and casual viewers alike.
+
+**Example 2 - Antique:**
+Images: [URLs of front, back, detail]
+Report Title: "Victorian Era Mahogany Writing Desk, circa 1860, Chippendale Style"
+
+Discover the epitome of Victorian craftsmanship with this exquisite Chippendale-style mahogany writing desk from circa 1860. The desk showcases the finest materials and techniques of its era, featuring hand-carved details, original brass hardware, and a rich, deep patina that only time can bestow. The impeccable dovetail joints and sturdy construction demonstrate the superior workmanship of Victorian furniture makers, while the practical design offers both elegance and functionality.
+
+This remarkable piece not only serves as a stunning example of period furniture but also represents a sound investment in antique craftsmanship. The desk's excellent condition, considering its age, speaks to its quality construction and careful preservation through the generations. Its timeless design and historical significance make it an ideal centerpiece for any distinguished home or collection, offering both practical utility and aesthetic appeal that transcends centuries.
+
+Title:

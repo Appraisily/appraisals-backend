@@ -1,19 +1,81 @@
-Compose two comprehensive paragraphs that extend, clarify, and explain the specific artwork type of the piece under analysis, using the available images and the accompanying report title. Focus solely on the artwork type, ensuring no discussion of other topics. The explanation should be detailed, coherent, and professionally articulated to provide a clear understanding of the artwork's classification and its defining characteristics.
+Compose two comprehensive paragraphs that extend, clarify, and explain the specific type and characteristics of the item under analysis (artwork, antique, or collectible), using the available images and the accompanying report title. Focus solely on the item type and its defining features, ensuring no discussion of other topics. The explanation should be detailed, coherent, and professionally articulated to provide a clear understanding of the item's classification and its defining characteristics.
 
 # Steps
 
-- Analyze the provided images, noting any details relevant to the artwork type.
-- Consider the information from the report title regarding the artwork's age, author, composition, and style.
-- Combine insights from the images and report title to develop a detailed explanation of the artwork type.
-- Ensure the explanation covers characteristics and historical context without diverging into unrelated topics.
-- Structure the explanation into two paragraphs with a logical flow and professional tone.
+1. **Analyze the Images**: Evaluate the provided images based on item type:
+
+   For Artworks:
+   - Medium and techniques used
+   - Artistic style and execution
+   - Visual composition and elements
+   - Size and format
+
+   For Antiques:
+   - Materials and construction
+   - Period-specific features
+   - Manufacturing techniques
+   - Design elements
+
+   For Collectibles:
+   - Manufacturing details
+   - Brand characteristics
+   - Series or edition features
+   - Design elements
+
+2. **Review Report Title**: Extract key information about:
+   - Age/period
+   - Creator/maker/manufacturer
+   - Materials/composition
+   - Style/design movement
+
+3. **Analyze Type-Specific Characteristics**:
+   
+   For Artworks:
+   - Artistic movement or school
+   - Technical execution
+   - Subject matter treatment
+   - Compositional approach
+
+   For Antiques:
+   - Period-specific design elements
+   - Manufacturing methods
+   - Regional characteristics
+   - Functional aspects
+
+   For Collectibles:
+   - Production methods
+   - Series characteristics
+   - Brand-specific features
+   - Edition details
+
+4. **Structure the Explanation**:
+   - First Paragraph: Focus on physical characteristics and classification
+   - Second Paragraph: Elaborate on historical context and significance
 
 # Output Format
 
-Produce two well-developed paragraphs that are cohesive, detailed, and formally written. These paragraphs should convey a clear and professional understanding of the artwork's type and defining features.
+Produce two well-developed paragraphs that are cohesive, detailed, and formally written. These paragraphs should convey a clear and professional understanding of the item's type and defining features.
+
+# Examples
+
+**Example 1 - Artwork:**
+This piece represents a masterful example of Impressionist oil painting, characterized by its distinctive brushwork and atmospheric treatment of light and color. The canvas size and preparation are typical of plein-air painting practices of the late 19th century, while the application of paint demonstrates the spontaneous, gestural technique that defines the Impressionist movement. The composition reveals careful attention to the effects of natural light and atmospheric conditions, hallmark characteristics of this artistic style.
+
+The work's execution places it firmly within the mature phase of Impressionism, when artists had fully developed their techniques for capturing fleeting moments and atmospheric effects. The handling of paint, with its visible brushstrokes and vibrant color relationships, exemplifies the movement's break from academic traditions. This approach to painting, revolutionary for its time, demonstrates the artist's commitment to modern techniques of representation and their mastery of the Impressionist style.
+
+**Example 2 - Antique:**
+This piece exemplifies the finest traditions of Georgian cabinetmaking, specifically a Chippendale-style mahogany secretary desk from the late 18th century. The construction methods, including the use of hand-cut dovetail joints and traditional mortise-and-tenon joinery, are characteristic of high-end furniture production from this period. The choice of Cuban mahogany, the quality of the brass hardware, and the sophisticated design elements all point to manufacture by a premier London workshop.
+
+The desk's design incorporates classical elements typical of the Georgian period, including the proportional harmony and architectural details that characterize Chippendale's work. The sophisticated integration of functional elements, such as the slant-front writing surface and interior compartments, demonstrates the advanced furniture-making techniques of the era. These features, combined with the superior quality of materials and craftsmanship, identify this piece as a prime example of 18th-century English furniture making at its zenith.
+
+**Example 3 - Collectible:**
+This item represents a prime example of Tiffany Studios' iconic lamp production from the early 20th century, specifically from their highly regarded Dragonfly series. The construction showcases the studio's revolutionary glass-making techniques, featuring their signature leaded glass work and patinated bronze base. The scale, proportions, and intricate detail work are characteristic of Tiffany's premium production line, while the materials and manufacturing methods are consistent with pieces from their most celebrated period.
+
+The lamp's design exemplifies the height of American Art Nouveau craftsmanship, incorporating the naturalistic themes and innovative techniques that made Tiffany Studios internationally renowned. The sophisticated use of varied glass types, including their signature Favrile glass, and the complex pattern work demonstrate the advanced manufacturing capabilities that set Tiffany pieces apart from contemporary producers. These technical and artistic elements clearly identify this piece as a significant example from one of America's most important decorative arts manufacturers.
 
 # Notes
 
-- Avoid any mention of the artwork's condition, provenance, or appraisal value.
-- Ensure the information is seamlessly presented within two paragraphs, with no headings or section titles.
-- Maintain a formal tone appropriate for a professional appraisal report.
+- Avoid any mention of the item's condition, provenance, or appraisal value
+- Ensure the information is seamlessly presented within two paragraphs, with no headings or section titles
+- Maintain a formal tone appropriate for a professional appraisal report
+- Focus solely on type classification and defining characteristics

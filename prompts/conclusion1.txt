@@ -1,11 +1,32 @@
-Create two engaging ad copy paragraphs that highlight the unique features and value of an artwork using the provided images (front, back, or signature) and the accompanying report title. Each paragraph should focus on different aspects of the artwork, ensuring they are distinct and compelling. If any of the images are missing, duplicates may have been supplied.
+Create two engaging ad copy paragraphs that highlight the unique features and value of an item (artwork, antique, or collectible) using the provided images (front view, back view, or detail/signature images) and the accompanying report title. Each paragraph should focus on different aspects of the item, ensuring they are distinct and compelling. If any of the images are missing, duplicates may have been supplied.
 
 # Steps
 
 1. Review the provided images and report title.
-2. Identify key features from the images and details from the report title related to the artwork's age, author, composition, and style.
-3. Craft the first paragraph focusing on one set of unique features (e.g., historical significance, author).
-4. Craft the second paragraph focusing on another set of features (e.g., visual elements, style).
+2. Identify key features from the images and details from the report title related to:
+   For Artworks:
+   - Historical significance
+   - Artist's reputation
+   - Artistic technique
+   - Visual impact
+   - Style and period
+
+   For Antiques:
+   - Historical period
+   - Craftsmanship
+   - Materials quality
+   - Design significance
+   - Maker's reputation
+
+   For Collectibles:
+   - Brand heritage
+   - Design significance
+   - Manufacturing quality
+   - Series or edition details
+   - Market significance
+
+3. Craft the first paragraph focusing on one set of unique features (e.g., historical significance, maker).
+4. Craft the second paragraph focusing on another set of features (e.g., technical qualities, market appeal).
 5. Ensure both paragraphs are engaging and distinct from each other.
 
 # Output Format
@@ -14,16 +35,35 @@ Two distinct ad copy paragraphs suitable for enticing potential buyers, with no 
 
 # Examples
 
-**Example Input:**
-- Images: [Image of artwork front], [Image of artwork back with signature]
-- Report Title: "Timeless Elegance by John Doe, 1923, Oil on Canvas, Art Nouveau"
-
-**Example Output:**
+**Example 1 - Artwork:**
+Images: [Image of artwork front], [Image of artwork back with signature]
+Report Title: "Timeless Elegance by John Doe, 1923, Oil on Canvas, Art Nouveau"
 
 Immerse yourself in the enchanting world of "Timeless Elegance," a 1923 masterpiece by the renowned John Doe. This exquisite oil on canvas captures the essence of the Art Nouveau movement, with its fluid lines and intricate details embodying the beauty and sophistication of early 20th-century artistry. The rich colors and delicate forms invite the viewer to experience the elegance and charm of a bygone era, making it a perfect addition to any fine art collection.
 
 This distinguished piece is not only a visual delight but also a testament to John Doe's exceptional talent and vision. The well-preserved condition of the artwork, coupled with the artist's signature on the back, adds significant value and authenticity. "Timeless Elegance" is a rare and valuable find for discerning collectors seeking to elevate their collection with a piece of genuine historical and artistic significance.
 
-(Note: Ensure the real examples align with provided images and report titles.)
+**Example 2 - Antique:**
+Images: [Front view], [Detail of craftsmanship], [Maker's mark]
+Report Title: "Georgian Mahogany Secretary Desk, Thomas Chippendale, circa 1760"
+
+Discover an exceptional piece of 18th-century craftsmanship with this magnificent Georgian mahogany secretary desk by Thomas Chippendale. Dating to circa 1760, this masterwork exemplifies the pinnacle of English furniture making, featuring exquisitely carved details, original brass hardware, and the unmistakable quality that defines Chippendale's most prestigious creations. The rich, deep patina of the mahogany and the sophisticated design elements speak to its distinguished provenance and historical significance.
+
+This remarkable desk represents not only a testament to Georgian-era furniture making but also a sound investment in fine period antiques. The excellent state of preservation, including the original interior fittings and working mechanisms, demonstrates the superior construction methods employed by Chippendale's workshop. As a documented piece from one of history's most celebrated cabinetmakers, this secretary desk offers both practical utility and exceptional aesthetic appeal that will continue to appreciate in value.
+
+**Example 3 - Collectible:**
+Images: [Front view], [Detail shot], [Maker's mark]
+Report Title: "Tiffany Studios Dragonfly Table Lamp, Bronze and Glass, circa 1910"
+
+Experience the timeless allure of this exceptional Tiffany Studios Dragonfly table lamp, a masterpiece of American Art Nouveau design from circa 1910. The intricate bronze framework, adorned with meticulously crafted dragonflies, showcases the unparalleled artistry of Tiffany's craftsmen. Each piece of hand-selected glass creates a mesmerizing play of light and color, demonstrating the revolutionary techniques that made Tiffany Studios legendary in the decorative arts world.
+
+This lamp represents the pinnacle of Tiffany's most sought-after designs, featuring an original patinated bronze base and a stunning leaded glass shade in pristine condition. The presence of the authentic Tiffany Studios maker's mark and the exceptional quality of craftsmanship make this piece a prime example of early 20th-century decorative arts. As Tiffany lamps continue to command premium prices in the collector's market, this exceptional example offers both aesthetic beauty and investment potential.
+
+# Notes
+
+- Ensure the paragraphs align with the specific type of item being described
+- Maintain a professional yet engaging tone
+- Focus on features that appeal to collectors and buyers
+- Highlight unique selling points based on the item category
 
 Title:

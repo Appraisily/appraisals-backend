@@ -1,4 +1,4 @@
-Create a comprehensive glossary of terms for the art appraisal report based on the provided images and accompanying report title. The glossary should enhance the understanding of readers by defining relevant terminology used within the report. 
+Create a comprehensive glossary of terms for the appraisal report based on the provided images and accompanying report title. The glossary should enhance the understanding of readers by defining relevant terminology used within the report. Include terms specific to the type of item being appraised (artwork, antique, or collectible).
 
 - Ensure each glossary term is highlighted in bold using the HTML `<strong>` tag.
 - Follow each term with a clear and concise definition.
@@ -6,8 +6,8 @@ Create a comprehensive glossary of terms for the art appraisal report based on t
 
 # Steps
 
-1. Review the provided images (front, back, or signature of the artwork) and note any duplicates replacing missing items.
-2. Analyze the report title to gather information about the artwork's age, author, composition, and style.
+1. Review the provided images (front, back, or detail images) and note any duplicates replacing missing items.
+2. Analyze the report title to gather information about the item's age, creator/maker, composition/materials, and style.
 3. Identify key terms and phrases used in the title and across any additional report content that require clarification.
 4. For each term, create an entry in the glossary:
    - Capitalize only the term itself and use the `<strong>` tag to highlight it.
@@ -17,7 +17,35 @@ Create a comprehensive glossary of terms for the art appraisal report based on t
 
 The output should be a bulleted list where each item contains a glossary term.
 
+# Examples
+
+**Example 1 - Artwork:**
+Report Title: "Impressionist Oil Painting, Claude Monet, En Plein Air Landscape, circa 1880"
+
+- <strong>Impressionism</strong>: A 19th-century art movement characterized by loose brushwork and emphasis on light effects, focusing on capturing momentary and sensory impressions of a scene.
+- <strong>En Plein Air</strong>: French term meaning "in the open air," referring to the practice of painting outdoors to capture natural light and atmospheric conditions.
+- <strong>Impasto</strong>: A technique where paint is laid on thickly, creating texture and dimensionality on the canvas surface.
+- <strong>Provenance</strong>: The documented history of an artwork's ownership, crucial for establishing authenticity and value.
+
+**Example 2 - Antique:**
+Report Title: "Georgian Mahogany Pembroke Table, Chippendale Workshop, circa 1760"
+
+- <strong>Georgian Period</strong>: The era of British history from 1714 to 1830, known for its distinctive furniture and architectural styles.
+- <strong>Pembroke Table</strong>: A light table with drop leaves on either side, typically supported by gates or brackets.
+- <strong>Dovetail Joint</strong>: A woodworking technique using interlocking wedge-shaped components, indicating period construction methods.
+- <strong>Patina</strong>: The natural aging and wear of materials, particularly desirable in antique furniture when even and authentic.
+
+**Example 3 - Collectible:**
+Report Title: "Tiffany Studios Favrile Glass Lamp, Dragonfly Pattern, circa 1910"
+
+- <strong>Favrile Glass</strong>: A type of iridescent art glass developed by Louis Comfort Tiffany, characterized by its metallic luster.
+- <strong>Leaded Glass</strong>: Glass pieces joined together using copper foil and lead solder, a technique perfected by Tiffany Studios.
+- <strong>Art Nouveau</strong>: A decorative art style popular from 1890-1910, characterized by organic, flowing lines and nature-inspired motifs.
+- <strong>Maker's Mark</strong>: A distinctive signature, stamp, or label used by manufacturers to authenticate their products.
+
 # Notes
 
 - Ensure the glossary is comprehensive and includes all terminology that might be needed for reader clarity.
-- The glossary should be accessible for individuals without specialized background knowledge in art.
+- The glossary should be accessible for individuals without specialized background knowledge.
+- Include terms specific to the item type (artwork/antique/collectible) being appraised.
+- Focus on terms that are directly relevant to the item's description, construction, or historical context.

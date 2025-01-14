@@ -1,24 +1,49 @@
-Analyze the available images and the accompanying report title to determine the age of the artwork, including descriptions and analysis of materials, artistic techniques, style, and signature features in a coherent, well-structured paragraph.
+Analyze the available images and the accompanying report title to determine the age of the item (artwork, antique, or collectible), including descriptions and analysis of materials, construction techniques, style, and identifying features in a coherent, well-structured paragraph.
 
-Ensure your methodology is detailed and follows these steps:
-  - Examine materials used such as canvas, paper, and paint composition.
-  - Analyze the artistic techniques and style observed in the artwork.
-  - Identify distinctive features in the signature that might indicate its era.
-  - Highlight how each element contributes to the final age estimation.
+Ensure your methodology is detailed and follows these steps based on the item type:
+
+For Artworks:
+  - Examine materials such as canvas, paper, and paint composition
+  - Analyze artistic techniques and style
+  - Identify distinctive features in the signature
+  - Consider the artist's known period of activity
+
+For Antiques:
+  - Assess construction methods and materials
+  - Examine patina, wear patterns, and aging characteristics
+  - Analyze hardware, joinery, or manufacturing techniques
+  - Study design elements typical of the period
+
+For Collectibles:
+  - Evaluate manufacturing techniques and materials
+  - Examine maker's marks, labels, or serial numbers
+  - Analyze design features characteristic of specific eras
+  - Consider production methods and technology of the period
 
 # Output Format
 
-Produce a single well-structured paragraph summarizing the comprehensive analysis and final age estimation of the artwork.
+Produce a single well-structured paragraph summarizing the comprehensive analysis and final age estimation of the item.
 
-# Example
+# Examples
 
-**Input**
+**Example 1 - Artwork**
+Input:
 - Image 1: Front of the artwork
 - Image 2: Back of the artwork
 - Image 3: Artist's signature
 - Report Title: "Renaissance, Leonardo Da Vinci, Oil on Wood, Early 1500s"
 
-**Output**
+Output:
 Based on a thorough examination of the provided images and the report title, the painting's age can be accurately estimated. The use of oil on wood, characteristic of the early Renaissance period, aligns with the materials used by Leonardo Da Vinci. The intricate brushwork and chiaroscuro technique further support this attribution, consistent with Da Vinci's known style. Additionally, the distinct cursive signature matches documented signatures from the early 1500s period, lending further evidence to the painting's origin. Collectively, these observations support the conclusion that the artwork likely dates back to the early 1500s, corroborating the information provided in the report title.
+
+**Example 2 - Antique**
+Input:
+- Image 1: Front view
+- Image 2: Detail of joinery
+- Image 3: Hardware detail
+- Report Title: "Victorian Mahogany Sideboard, Circa 1870, English"
+
+Output:
+Through careful analysis of the provided images and report title, this Victorian sideboard can be dated to approximately 1870. The mahogany's rich patina and oxidation patterns are consistent with 150 years of aging, while the hand-cut dovetail joints and original brass hardware are characteristic of high-quality Victorian cabinetmaking. The ornate carved details and proportions exemplify the High Victorian style popular in English furniture of the 1870s. The construction techniques, including the use of traditional mortise-and-tenon joinery and hand-planed surfaces, further authenticate the piece as a genuine Victorian-era creation, supporting the circa 1870 dating.
 
 Title:

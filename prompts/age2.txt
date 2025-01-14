@@ -1,36 +1,63 @@
-Using the available images and the accompanying report title—which includes information about the artwork's age, author, composition, and style—complete the following phrase to provide a professional estimation of the artwork's age:
+Using the available images and the accompanying report title—which includes information about the item's age, creator/maker, composition/materials, and style—complete the following phrase to provide a professional estimation of the item's age:
 
-"Upon careful consideration of the provided data and the accompanying visual materials, I am able to proffer a professional estimation that this artwork was created"
+"Upon careful consideration of the provided data and the accompanying visual materials, I am able to proffer a professional estimation that this item was created"
 
-Ensure that the completion integrates relevant details from the report title, such as the age range, artist's style, materials used, and any distinctive features that support the estimation. The completed sentence should be clear, concise, and aligned with the overall report.
+Ensure that the completion integrates relevant details from the report title and considers the specific type of item being appraised (artwork, antique, or collectible). The completed sentence should be clear, concise, and aligned with the overall report.
 
 # Steps
 
-1. **Analyze Report Title**: Extract relevant details about the artwork, including age, author, composition, and style.
-2. **Examine Visual Materials**: Review available images, noting any details that match or support the report title information.
-3. **Craft Completion**: Create a professional estimation of the artwork's age, integrating details from the report title and visual materials.
+1. **Analyze Report Title**: Extract relevant details about the item, including:
+   - Age/period information
+   - Creator/maker details
+   - Materials and composition
+   - Style or design characteristics
+
+2. **Examine Visual Materials**: Review available images, noting:
+   For Artworks:
+   - Paint composition and canvas type
+   - Artistic techniques and style
+   - Signature characteristics
+   - Frame period features
+   
+   For Antiques:
+   - Construction methods
+   - Material aging patterns
+   - Hardware and joinery details
+   - Period-specific features
+   
+   For Collectibles:
+   - Manufacturing techniques
+   - Material composition
+   - Production marks
+   - Period-specific design elements
+
+3. **Craft Completion**: Create a professional estimation that integrates the gathered information.
 
 # Output Format
 
-The output should be a single, well-crafted sentence completing the given phrase. The sentence should be clear, concise, and professional, incorporating relevant details where appropriate.
+A single, well-crafted sentence completing the given phrase. The sentence should be clear, concise, and professional, incorporating relevant details where appropriate.
 
 # Examples
 
-**Example 1**
-
-Report Title: "17th-century Baroque painting by Caravaggio, oil on canvas"
-   
-Completion: "Upon careful consideration of the provided data and the accompanying visual materials, I am able to proffer a professional estimation that this artwork was created in the early 17th century, exemplifying Caravaggio's distinct Baroque style with its dramatic use of light and shadow in the oil on canvas medium."
-
-**Example 2**
-
+**Example 1 - Artwork**
 Report Title: "Impressionist landscape by Claude Monet, circa 1875, oil on canvas"
 
-Completion: "Upon careful consideration of the provided data and the accompanying visual materials, I am able to proffer a professional estimation that this artwork was created circa 1875, showcasing Claude Monet's impressionist techniques with delicate brush strokes and vivid colors in oil on canvas."
+Completion: "Upon careful consideration of the provided data and the accompanying visual materials, I am able to proffer a professional estimation that this artwork was created circa 1875, during Monet's pivotal Impressionist period, as evidenced by his characteristic brushwork technique and the use of period-appropriate oil paints and canvas materials."
+
+**Example 2 - Antique**
+Report Title: "Victorian Mahogany Dining Table, English, circa 1860"
+
+Completion: "Upon careful consideration of the provided data and the accompanying visual materials, I am able to proffer a professional estimation that this furniture piece was created circa 1860, during the height of the Victorian era, as demonstrated by its distinctive mahogany patina, period-specific joinery techniques, and characteristic design elements of High Victorian furniture making."
+
+**Example 3 - Collectible**
+Report Title: "Art Deco Bronze Sculpture, 1920s, French"
+
+Completion: "Upon careful consideration of the provided data and the accompanying visual materials, I am able to proffer a professional estimation that this decorative piece was created during the 1920s Art Deco period in France, as evidenced by its distinctive geometric styling, manufacturing techniques, and bronze patination characteristic of that era."
 
 # Notes
 
 - Ensure that any missing images do not affect the accuracy of the estimation by relying on available images and report data.
 - The sentence should be written in a professional tone, suitable for an official report.
+- Maintain consistency with other age-related sections of the report.
 
 Title:

@@ -1,12 +1,37 @@
-Compose two comprehensive paragraphs assessing the condition of a given artwork using the available images and the accompanying report title. Assume that the artwork is in excellent condition. Your assessment should address the following aspects: Overall Condition, Surface Examination, Structural Integrity, Color and Fading, and Frame Condition. Additionally, define relevant art concepts to explain what it means for an artwork to be in good condition. Ensure that the paragraphs are cohesive, professionally articulated, and free of subsection headings.
+Compose two comprehensive paragraphs assessing the condition of the item (artwork, antique, or collectible) using the available images and the accompanying report title. Assume that the item is in excellent condition. Your assessment should address the following aspects based on the item type:
+
+For Artworks:
+- Overall Condition
+- Surface Examination
+- Structural Integrity
+- Color and Fading
+- Frame Condition
+
+For Antiques:
+- Overall Preservation
+- Material Condition
+- Structural Stability
+- Original Components
+- Patina and Wear
+- Hardware and Fittings
+
+For Collectibles:
+- Overall Condition
+- Material Integrity
+- Finish Quality
+- Original Components
+- Packaging (if applicable)
+- Functionality (if relevant)
+
+Additionally, define relevant concepts to explain what constitutes good condition for the specific type of item. Ensure that the paragraphs are cohesive, professionally articulated, and free of subsection headings.
 
 # Steps
 
-1. Analyze the available images of the artwork, which may include the front, back, and signature. If a duplicate image is supplied, consider the context but focus on the assessment criteria.
-2. Consider the information in the report title related to the artwork's age, author, composition, and style to inform your assessment.
+1. Analyze the available images of the item, which may include the front, back, and detail shots. If a duplicate image is supplied, consider the context but focus on the assessment criteria.
+2. Consider the information in the report title related to the item's age, maker/creator, materials, and style to inform your assessment.
 3. Write two paragraphs:
-   - In the first paragraph, cover the overall condition, surface examination, and structural integrity.
-   - In the second paragraph, address color and fading, frame condition, and incorporate definitions of relevant art concepts related to artwork condition.
+   - In the first paragraph, cover the overall condition and physical examination.
+   - In the second paragraph, address specific condition aspects and incorporate definitions of relevant concepts.
 4. Ensure the text is cohesive, flows smoothly, and uses professional articulation.
 
 # Output Format
@@ -15,10 +40,35 @@ The output should be in the form of two well-structured paragraphs without subse
 
 # Examples
 
-**Input**: 
+**Example 1 - Artwork**
+Input:
 Report Title: "18th Century European Oil Painting by [Author], showcasing Baroque Style with natural pigments."
 
-**Output**: 
-The examined artwork, an 18th-century European oil painting by [Author], embodies the grandeur and meticulous detail characteristic of the Baroque style. The overall condition is outstanding, with the surface exhibiting no signs of flaking or abrasion, indicating careful preservation. Structural integrity is evidenced by a stable and taut canvas, free from deformations or tears, which supports the vibrant display of intricate details and lavish textures. 
-  
+Output:
+The examined artwork, an 18th-century European oil painting by [Author], embodies the grandeur and meticulous detail characteristic of the Baroque style. The overall condition is outstanding, with the surface exhibiting no signs of flaking or abrasion, indicating careful preservation. Structural integrity is evidenced by a stable and taut canvas, free from deformations or tears, which supports the vibrant display of intricate details and lavish textures.
+
 In terms of color and fading, the painting retains its original depth and intensity, suggesting it has been shielded from excessive light exposure and environmental factors that commonly induce degradation over centuries. The gilded frame, accompanying the artwork, is equally well-preserved, with no visible cracks or tarnishing on its ornate surface. For an artwork in excellent condition, these factors denote the careful management and safeguarding it has undergone, ensuring that its historical artistry and visual impact remain undiminished.
+
+**Example 2 - Antique**
+Input:
+Report Title: "Victorian Mahogany Dining Table, English, circa 1860"
+
+Output:
+This Victorian mahogany dining table exhibits exceptional preservation that speaks to its quality craftsmanship and careful stewardship over the past 160 years. The mahogany surfaces maintain their original finish with a rich, even patina that only time can create, free from any significant scratches or damage. All structural elements, including the pedestal base and extension mechanism, function smoothly as intended, with the original brass fittings intact and properly secured.
+
+The table's joints remain tight and stable, demonstrating the enduring quality of period construction techniques. The original castors operate smoothly, and the table leaves align perfectly, indicating that the piece has maintained its structural integrity. In the context of Victorian furniture, excellent condition implies not only physical preservation but also the retention of original components and finishes, which this piece exemplifies through its complete set of leaves, untouched mechanical elements, and authentic surface patination.
+
+**Example 3 - Collectible**
+Input:
+Report Title: "Lalique 'Bacchantes' Crystal Vase, France, 1970s"
+
+Output:
+The Lalique crystal vase presents in superb condition, maintaining the pristine clarity and crisp detail characteristic of the manufacturer's finest works. The surface exhibits no chips, cracks, or scratches, and the intricate relief work of the Bacchantes design remains sharply defined throughout. The crystal maintains its original brilliance and transparency, with no signs of clouding or deterioration that can sometimes affect vintage glass pieces.
+
+The base bears a clear, well-preserved Lalique signature, and the entire piece demonstrates the high standard of preservation crucial for premium collectible glassware. In assessing crystal of this caliber, excellent condition requires absolute integrity of the material, preservation of design clarity, and retention of the original surface quality. This example meets all these criteria, displaying the type of preservation that collectors seek, with its original finish intact and no evidence of repairs or alterations.
+
+# Notes
+
+- Ensure all claims and assessments are based directly on visible characteristics and content provided in the report title.
+- Avoid speculation about condition issues not evident in the provided materials.
+- Maintain a professional tone throughout the assessment.

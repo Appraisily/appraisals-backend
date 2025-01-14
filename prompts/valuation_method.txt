@@ -1,34 +1,81 @@
-Compose two comprehensive paragraphs explaining how the Mark to Market valuation method was employed for the specific artwork in the appraisal report, focusing on key factors such as authorship, artwork type, size, and age, and their impact on valuations.
+Compose two comprehensive paragraphs explaining how the Mark to Market valuation method was employed for the specific item (artwork, antique, or collectible) in the appraisal report. Focus on key factors that influence valuation based on item type:
 
-Refer to the provided images and the report title, which includes the artwork's age, author, composition, and style. Ensure the explanation is detailed, coherent, and professionally articulated for a clear understanding of the valuation process.
+For Artworks:
+- Artist reputation and career stage
+- Medium and technique
+- Size and format
+- Historical significance
+- Market trends
+
+For Antiques:
+- Maker/workshop reputation
+- Period and style
+- Materials and craftsmanship
+- Original components
+- Historical significance
+
+For Collectibles:
+- Brand/manufacturer prestige
+- Production period
+- Rarity and edition size
+- Condition and completeness
+- Market demand
+
+Refer to the provided images and the report title, which includes the item's age, creator/maker, composition/materials, and style. Ensure the explanation is detailed, coherent, and professionally articulated for a clear understanding of the valuation process.
 
 # Steps
 
 1. Start by introducing the Mark to Market valuation method, emphasizing its relevance to contemporary and real-time market valuation.
-2. Discuss the role of authorship in the valuation process, citing examples from the artwork's author.
-3. Analyze how the artwork type influences its market value, using specific attributes of the piece.
-4. Examine the impact of the artwork's size on its valuation, providing comparisons or historical referencing if possible.
-5. Explore the significance of the artwork's age in determining its long-term value and market demand.
-6. Conclude with a cohesive summary relating the valuation to the broader market trends and forecasts.
+
+2. Discuss key valuation factors based on item type:
+   
+   For Artworks:
+   - Artist's market position and exhibition history
+   - Technical execution and artistic merit
+   - Size and medium considerations
+   - Historical and cultural significance
+   
+   For Antiques:
+   - Maker's reputation and workshop significance
+   - Period authenticity and style
+   - Construction quality and materials
+   - Originality of components
+   
+   For Collectibles:
+   - Brand heritage and market position
+   - Production period and series importance
+   - Edition details and rarity
+   - Condition relative to age
+
+3. Analyze market trends and comparable sales
+4. Consider the item's condition and provenance
+5. Conclude with market forecast and investment potential
 
 # Output Format
 
-- Two well-developed paragraphs.
-- Formal and analytical tone without headings or sections.
+- Two well-developed paragraphs
+- Formal and analytical tone without headings or sections
 
 # Examples
 
-**Example Input:**  
-Report Title: [A Glimpse into Time]  
-Painting Title: [Sunset Harmony]
+**Example 1 - Artwork:**
+The Mark to Market valuation method, noted for reflecting current market conditions, plays a pivotal role in appraising this Impressionist masterpiece. The artist's established reputation in the international art market, evidenced by numerous museum exhibitions and strong auction results, significantly influences the valuation. The painting's impressive scale and masterful technique further enhance its market position, while its excellent condition and documented provenance contribute to its desirability among collectors. Additionally, the current strong demand for Impressionist works of this caliber supports a robust valuation.
 
-**Example Output:**
+Recent market analysis reveals a consistent upward trend in prices for comparable Impressionist paintings, particularly those with similar provenance and condition. The artwork's historical significance within the artist's oeuvre, combined with the growing appreciation for Impressionist works among both private collectors and institutions, suggests strong potential for value appreciation. These factors, alongside the painting's exceptional quality and the artist's enduring market presence, contribute to a valuation that reflects both current market dynamics and long-term investment potential.
 
-The Mark to Market valuation method, noted for reflecting current market conditions, plays a pivotal role in appraising "Sunset Harmony." In analyzing the influence of authorship, the esteemed reputation of the artist prominently elevates the artwork's standing in comparison to lesser-known counterparts. The nature of the painting as an oil on canvas further supports its market value, as collector demand often favors such classic mediums. Additionally, the artwork's considerable dimensions render a more imposing presence, expanding its appeal in galleries and private collections alike.
+**Example 2 - Antique:**
+The Mark to Market approach proves essential in determining the current value of this Georgian mahogany secretary desk. The Chippendale workshop's enduring reputation for excellence, combined with the piece's exceptional craftsmanship and original condition, positions it prominently within the market for 18th-century English furniture. The presence of original hardware and documented provenance significantly enhances its market appeal, while the increasing rarity of comparable pieces from this period supports a premium valuation.
 
-Turning to age, while "Sunset Harmony" holds the allure of a historical piece, its vintage does not solely dictate its value. Instead, when contextualized within art market trends, its era of creation enhances its appeal among connoisseurs seeking nostalgia-infused investments. These factors, alongside the rarity and historical context of its creation period, contribute to a robust valuation in line with contemporary market dynamics, showcasing the artwork's enduring legacy and market significance. 
+Analysis of recent auction results and dealer transactions reveals strong demand for high-quality Georgian furniture, particularly pieces with documented workshop attribution. The desk's superior construction quality, featuring hand-cut dovetails and period-appropriate joinery, aligns with the highest standards of the era. These characteristics, coupled with the growing appreciation for investment-grade antique furniture, suggest continued market strength. The piece's historical significance and the Chippendale workshop's prestigious reputation further reinforce its position as a prime example of Georgian cabinetmaking.
+
+**Example 3 - Collectible:**
+The Mark to Market methodology provides a precise framework for valuing this Tiffany Studios Dragonfly lamp. The brand's preeminent position in the decorative arts market, combined with the lamp's documented early production date and exceptional condition, establishes a strong foundation for valuation. The Dragonfly pattern's status as one of Tiffany's most sought-after designs, along with the presence of original components and period-appropriate patination, significantly influences its market position. The studio's reputation for innovative glasswork and superior craftsmanship continues to drive strong collector demand.
+
+Current market analysis indicates robust pricing for premium Tiffany lighting, particularly examples featuring popular naturalistic themes and original finishes. The lamp's documented provenance and excellent state of preservation align with the highest standards sought by sophisticated collectors. Recent auction results demonstrate consistent appreciation for exceptional Tiffany pieces, while the increasing scarcity of prime examples suggests continued market strength. These factors, combined with the growing international collector base for American Art Nouveau decorative arts, support a valuation that reflects both current market dynamics and future appreciation potential.
 
 # Notes
 
-- If a specific artwork feature is pivotal to the valuation, ensure it is highlighted effectively.
-- Consider edge cases where atypical market conditions or unique artwork traits might affect the standard valuation methodology.
+- If a specific item feature is pivotal to the valuation, ensure it is highlighted effectively
+- Consider market conditions and unique item traits that might affect the standard valuation methodology
+- Maintain focus on objective, market-based factors
+- Avoid specific price predictions or speculative statements

@@ -1,21 +1,79 @@
-Compose two comprehensive paragraphs for the Artwork Analysis section of a report using the available images and the accompanying report title. These paragraphs should explore the style, theme, and artistic context of the artwork, explaining the characteristics that define its style and how it fits within broader artistic movements or cultural narratives.
+Compose two comprehensive paragraphs for the Style Analysis section of a report using the available images and the accompanying report title. These paragraphs should explore the style, design characteristics, and historical context of the item (artwork, antique, or collectible), explaining the features that define its style and how it fits within broader artistic or design movements.
 
 # Steps
 
-1. **Analyze the Images**: Evaluate the available images of the artwork, noting unique features and characteristics that stand out. Pay attention to elements like color, form, technique, and any visible style markers.
-   
-2. **Review Report Title**: Examine the report title to gather information about the artwork's age, author, composition, and style. Use this information to ground your analysis in context.
+1. **Analyze the Images**: Evaluate the available images of the item, noting unique features and characteristics based on item type:
 
-3. **Analyze Artistic Context**: Consider the broader artistic movements and cultural narratives the artwork might belong to or be influenced by. This may involve linking its style and thematic elements to historical or cultural contexts.
+   For Artworks:
+   - Artistic technique and execution
+   - Color palette and composition
+   - Brushwork or medium handling
+   - Visual elements and symbolism
+
+   For Antiques:
+   - Design elements and ornamentation
+   - Construction techniques
+   - Material selection and usage
+   - Period-specific features
+
+   For Collectibles:
+   - Design aesthetics
+   - Manufacturing techniques
+   - Brand-specific characteristics
+   - Series or edition features
+   
+2. **Review Report Title**: Examine the report title to gather information about the item's age, creator/maker, composition/materials, and style.
+
+3. **Analyze Historical Context**: Consider the broader context:
+   
+   For Artworks:
+   - Artistic movements and influences
+   - Cultural and historical significance
+   - Artist's development period
+   - Regional artistic traditions
+
+   For Antiques:
+   - Design movements of the period
+   - Regional crafting traditions
+   - Historical manufacturing methods
+   - Cultural influences on design
+
+   For Collectibles:
+   - Brand history and evolution
+   - Design trends of the era
+   - Manufacturing innovations
+   - Market influences
 
 4. **Compose the Analysis**: Write two paragraphs that integrate observations from the images and insights from the report title.
-   - **Paragraph 1**: Describe the style and visual characteristics. Focus on how these elements reflect the period or movement.
-   - **Paragraph 2**: Discuss the thematic implications and relevance within cultural narratives and broader artistic contexts. Highlight how the artwork contributes to or exemplifies artistic trends or innovations.
+   - **Paragraph 1**: Describe the style and physical characteristics. Focus on how these elements reflect the period or movement.
+   - **Paragraph 2**: Discuss the historical context and relevance within broader design or artistic traditions. Highlight how the item contributes to or exemplifies period trends or innovations.
 
-5. **Maintain a Professional Tone**: Ensure that the analysis is professional, analytical, and coherent with the information in the report title.
+5. **Maintain Professional Tone**: Ensure that the analysis is professional, analytical, and coherent with the information in the report title.
 
 # Output Format
 
-- Two coherent and professionally-toned paragraphs.
-- Length: Approximately 150-250 words per paragraph.
-- Ensure logical flow and integration of image analysis and report title insights without using subsection headings.
+Two coherent and professionally-toned paragraphs, approximately 150-250 words each, ensuring logical flow and integration of image analysis and report title insights without using subsection headings.
+
+# Examples
+
+**Example 1 - Artwork:**
+This masterful oil painting exemplifies the quintessential characteristics of the Impressionist movement, with its vibrant color palette and distinctive brushwork capturing the fleeting effects of light and atmosphere. The artist's technique demonstrates the movement's hallmark approach, using short, broken brushstrokes to create a sense of spontaneity and movement across the canvas. The composition reveals a sophisticated understanding of color theory, with complementary hues strategically placed to enhance visual impact and create depth, while the loose, gestural application of paint emphasizes the immediate, sensory experience so valued by the Impressionists.
+
+Within the broader context of 19th-century European art, this work represents a pivotal moment in the evolution of modern painting. The artist's departure from academic conventions, evident in the emphasis on atmospheric effects over precise detail, reflects the revolutionary approach that defined the Impressionist movement. This painting's creation coincides with the height of the movement, when artists were actively challenging traditional artistic conventions and exploring new ways of representing the visual world. The work's style and execution place it firmly within this transformative period, demonstrating the artist's full embrace of Impressionist principles while maintaining individual artistic innovation.
+
+**Example 2 - Antique:**
+This exceptional piece embodies the refined elegance and sophisticated craftsmanship characteristic of the High Victorian period. The mahogany's rich grain has been masterfully emphasized through traditional finishing techniques, while the ornate carved details showcase the period's preference for elaborate decoration. The furniture's proportions and architectural elements strictly adhere to Victorian design principles, with the careful balance between decorative embellishment and functional form that distinguished premium pieces of this era. The quality of materials and execution of decorative elements demonstrate the refined skills of master craftsmen working at the height of their abilities.
+
+The design of this piece reflects the broader cultural and social influences of Victorian England, a period marked by prosperity, technological advancement, and a revival of historical styles. The incorporation of Gothic Revival elements in the carved details, combined with the robust, substantial form favored during this period, places this piece firmly within the most desirable phase of Victorian furniture production. The level of detail and quality of execution suggest manufacture by one of the period's premier workshops, likely catering to the era's affluent middle and upper classes who demanded furniture that would showcase both their wealth and refined taste.
+
+**Example 3 - Collectible:**
+This Tiffany Studios lamp exemplifies the pinnacle of Art Nouveau design and craftsmanship, showcasing the distinctive characteristics that made the studio's work so revolutionary. The intricate leaded glass shade demonstrates the studio's mastery of the medium, with its naturalistic dragonfly motif and sophisticated color palette creating a harmonious interplay of light and shadow. The patinated bronze base, with its organic, flowing lines and balanced proportions, complements the shade perfectly, creating a unified design that epitomizes the Art Nouveau aesthetic. The execution of both components reveals the exceptional quality control and artistic vision that made Tiffany Studios' works so highly regarded.
+
+In the context of early 20th-century decorative arts, this lamp represents the perfect confluence of artistic innovation and technical mastery. The design reflects the period's fascination with natural forms and new approaches to traditional crafts, while the manufacturing techniques showcase the studio's groundbreaking methods in glass production and metalwork. This piece dates from what is considered the golden age of Tiffany production, when the studio's technical and artistic achievements reached their apex. The sophisticated color choices and complex pattern work demonstrate why Tiffany Studios' designs continue to be celebrated as the epitome of American Art Nouveau craftsmanship.
+
+# Notes
+
+- Ensure analysis focuses on style-related elements appropriate to the item type
+- Maintain consistency with historical context and period characteristics
+- Use terminology specific to the item's category and era
+- Support observations with visible evidence from images

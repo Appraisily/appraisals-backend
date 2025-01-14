@@ -1,28 +1,55 @@
-Analyze the available images (front of the artwork, back, or signature) and the accompanying report title to generate a concise and well-structured justification for the determined age of the artwork. 
+Analyze the available images (front view, back view, or detail/signature images) and the accompanying report title to generate a concise and well-structured justification for the determined age of the item (artwork, antique, or collectible). 
 
-Use the artwork's age, author, composition, and style information from the report title, and if the age is not explicitly provided, deduce a plausible age range based on the artwork's characteristics. Examine the materials used, artistic techniques, signature details, and stylistic elements to support your conclusion. The justification should align coherently with the overall information provided in the report title.
+Use the item's age, creator/maker, composition/materials, and style information from the report title, and if the age is not explicitly provided, deduce a plausible age range based on the item's characteristics. Examine the materials used, construction or artistic techniques, identifying marks, and stylistic elements to support your conclusion. The justification should align coherently with the overall information provided in the report title.
 
 Write one paragraph only; this will serve as the second paragraph in the age section of the report.
 
 # Steps
 
-1. Review the report title for information on the artwork's age, author, composition, and style.
-2. If age is not provided, infer a plausible age range based on the artwork's characteristics.
-3. Analyze the available images for materials used, artistic techniques, signature details, and stylistic elements.
+1. Review the report title for information on the item's age, creator/maker, composition/materials, and style.
+2. If age is not provided, infer a plausible age range based on the item's characteristics.
+3. Analyze the available images for:
+   For Artworks:
+   - Materials and pigments used
+   - Canvas, paper, or support condition
+   - Artistic techniques and brushwork
+   - Signature style and placement
+   
+   For Antiques:
+   - Construction methods and materials
+   - Hardware and joinery details
+   - Patina and wear patterns
+   - Period-specific manufacturing techniques
+   
+   For Collectibles:
+   - Manufacturing methods
+   - Materials and finishes
+   - Maker's marks or labels
+   - Production-era characteristics
+
 4. Formulate a concise justification that aligns with the information from the report title and the image analysis.
 
 # Output Format
 
 One well-structured paragraph intended to serve as the second paragraph in the age section of the report.
 
-# Example
+# Examples
 
-**Input:**
+**Example 1 - Artwork:**
+Input:
 - Report Title: "Artwork by John Doe, Oil Painting, Realist Style, Early 20th Century"
 - Images: Front of the artwork, Back of the artwork, Signature
 
-**Output:**
+Output:
 Based on the available images and the provided report title, the early 20th-century assessment aligns with the observed characteristics. The use of oil paint and realist style techniques, such as the meticulous attention to detail and naturalistic representation, are consistent with art from this period. Additionally, the signature's style and positioning on the artwork correlate with known practices of John Doe during this era. The condition and materials of the back of the artwork further support this timeframe, indicating congruity with storage and preservation methods typical of the early 1900s. As such, the estimated age of the artwork is well justified.
+
+**Example 2 - Antique:**
+Input:
+- Report Title: "Victorian Mahogany Chest of Drawers, English, circa 1860"
+- Images: Front view, Detail of joinery, Hardware close-up
+
+Output:
+The circa 1860 dating is strongly supported by multiple physical characteristics evident in the provided images. The mahogany's patina development and the hand-cut dovetail joints are consistent with mid-Victorian furniture construction methods. The brass hardware's design and manufacturing technique, featuring hand-finished details typical of the 1860s, further confirms this dating. Additionally, the proportions and decorative elements align perfectly with the High Victorian period's aesthetic preferences, while the wood aging patterns and oxidation of original materials substantiate the approximately 160-year age assessment.
 
 # Notes
 

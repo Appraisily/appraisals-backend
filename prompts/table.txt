@@ -1,4 +1,4 @@
-Extract information from the description text and images to fill out the parameters related to the artwork.
+Extract information from the description text and images to fill out the parameters related to the item (artwork, antique, or collectible).
 
 Prioritize information from the description text, using the images only for fields not covered in the text. Keep responses concise, with each field's response limited to a maximum of five words. Present the filled parameters in the exact order listed.
 
@@ -10,7 +10,7 @@ Prioritize information from the description text, using the images only for fiel
 
 2. **Utilize Images for Missing Information**:
    - If certain parameters are not addressed in the description text, analyze the provided images.
-   - Use the front, back, or signature images to derive necessary details for any remaining fields.
+   - Use the front, back, or detail images to derive necessary details for any remaining fields.
 
 3. **Formatted Output**:
    - Fill in each parameter accurately, based on the derived information.
@@ -19,6 +19,8 @@ Prioritize information from the description text, using the images only for fiel
 # Output Format
 
 - Present the information for each parameter following the bullet point order as listed below:
+
+For Artworks:
   - Artists_Name: [up to 5 words]
   - Artists_Date_of_Birth_and_Death: [up to 5 words]
   - Title_of_Artwork: [up to 5 words]
@@ -39,33 +41,125 @@ Prioritize information from the description text, using the images only for fiel
   - COA?: [Yes/No]
   - Possible_Meaning_of_the_composition: [up to 5 words]
 
+For Antiques:
+  - Maker_Name: [up to 5 words]
+  - Workshop_Period: [up to 5 words]
+  - Item_Type: [up to 5 words]
+  - Period_Age: [up to 5 words]
+  - Materials: [up to 5 words]
+  - Style_Period: [up to 5 words]
+  - Construction_Method: [up to 5 words]
+  - Dimensions: [up to 5 words]
+  - Original_Hardware?: [Yes/No]
+  - Production_Information: [up to 5 words]
+  - Region_of_Origin: [up to 5 words]
+  - Design_Description: [up to 5 words]
+  - Condition: [up to 5 words]
+  - Makers_Mark_Present?: [Yes/No]
+  - Provenance_Information: [up to 5 words]
+  - Registration_Number: [up to 5 words]
+  - Additional_Notes: [up to 5 words]
+  - Documentation?: [Yes/No]
+  - Historical_Significance: [up to 5 words]
+
+For Collectibles:
+  - Brand_Name: [up to 5 words]
+  - Production_Date: [up to 5 words]
+  - Item_Type: [up to 5 words]
+  - Series_Name: [up to 5 words]
+  - Materials: [up to 5 words]
+  - Style_Period: [up to 5 words]
+  - Manufacturing_Method: [up to 5 words]
+  - Dimensions: [up to 5 words]
+  - Original_Packaging?: [Yes/No]
+  - Edition_Information: [up to 5 words]
+  - Factory_Location: [up to 5 words]
+  - Design_Features: [up to 5 words]
+  - Condition: [up to 5 words]
+  - Brand_Marks_Present?: [Yes/No]
+  - Provenance_Information: [up to 5 words]
+  - Serial_Number: [up to 5 words]
+  - Additional_Notes: [up to 5 words]
+  - Authentication_Documents?: [Yes/No]
+  - Collection_Significance: [up to 5 words]
+
 # Examples
 
-### Example 1:
-- *Input Description*: "This piece by John Doe, created in 1985, showcases a vibrant color palette typical of the modernist movement. The canvas measures 100x150 cm."
-- *Input Images*: Contains clear signature of John Doe.
-- *Output*:
-  - Artists_Name: John Doe
+### Example 1 - Artwork:
+*Input Description*: "This masterpiece by Claude Monet, created in 1875, showcases his signature Impressionist style. The oil on canvas measures 65x80 cm and features vibrant colors typical of his garden series."
+*Input Images*: Contains clear signature of Claude Monet
+*Output*:
+  - Artists_Name: Claude Monet
   - Artists_Date_of_Birth_and_Death: Not mentioned
   - Title_of_Artwork: Not mentioned
-  - Period_Age: 1985
-  - Color_Palette: Vibrant
-  - Art_Style_Period: Modernist
-  - Medium: Canvas
-  - Dimensions: 100x150 cm
-  - Is_it_Framed?: Unknown
+  - Period_Age: 1875
+  - Color_Palette: Vibrant garden colors
+  - Art_Style_Period: Impressionist
+  - Medium: Oil on canvas
+  - Dimensions: 65x80 cm
+  - Is_it_Framed?: No
   - Edition_Information: Not mentioned
   - Printer_Publisher: Not mentioned
-  - Composition_Description: Not mentioned
-  - Condition: Not mentioned
+  - Composition_Description: Garden scene
+  - Condition: Excellent
   - Is_it_signed?: Yes
   - Provenance_Information: Not mentioned
   - Registration_Number: Not mentioned
   - Additional_Notes: Not mentioned
   - COA?: No
-  - Possible_Meaning_of_the_composition: Not mentioned
+  - Possible_Meaning_of_the_composition: Nature's beauty and light
+
+### Example 2 - Antique:
+*Input Description*: "Victorian mahogany dining table by Thomas Chippendale II, London workshop circa 1820. Features original brass fittings and extends to seat twelve."
+*Input Images*: Shows maker's mark and construction details
+*Output*:
+  - Maker_Name: Thomas Chippendale II
+  - Workshop_Period: 1820
+  - Item_Type: Dining table
+  - Period_Age: Victorian era
+  - Materials: Mahogany and brass
+  - Style_Period: English Regency
+  - Construction_Method: Traditional joinery
+  - Dimensions: Extends for twelve seats
+  - Original_Hardware?: Yes
+  - Production_Information: London workshop piece
+  - Region_of_Origin: London, England
+  - Design_Description: Elegant extending dining table
+  - Condition: Excellent
+  - Makers_Mark_Present?: Yes
+  - Provenance_Information: Not mentioned
+  - Registration_Number: Not mentioned
+  - Additional_Notes: Original brass fittings intact
+  - Documentation?: No
+  - Historical_Significance: Important Chippendale II piece
+
+### Example 3 - Collectible:
+*Input Description*: "Tiffany Studios Dragonfly table lamp, circa 1910, featuring leaded glass shade and bronze base. Number 1518 in series."
+*Input Images*: Shows Tiffany signature and pattern details
+*Output*:
+  - Brand_Name: Tiffany Studios
+  - Production_Date: Circa 1910
+  - Item_Type: Table lamp
+  - Series_Name: Dragonfly
+  - Materials: Leaded glass and bronze
+  - Style_Period: Art Nouveau
+  - Manufacturing_Method: Hand-crafted
+  - Dimensions: Not mentioned
+  - Original_Packaging?: No
+  - Edition_Information: Number 1518
+  - Factory_Location: New York
+  - Design_Features: Dragonfly pattern leaded glass
+  - Condition: Excellent
+  - Brand_Marks_Present?: Yes
+  - Provenance_Information: Not mentioned
+  - Serial_Number: 1518
+  - Additional_Notes: Original patina intact
+  - Authentication_Documents?: No
+  - Collection_Significance: Important Tiffany design example
 
 # Notes
 
 - Make sure to verify any details gleaned from images for accuracy.
 - Double-check for exact wording consistency and brevity.
+- Use "Not mentioned" when information is unavailable.
+- Maintain consistent formatting across all entries.

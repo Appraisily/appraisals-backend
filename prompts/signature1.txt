@@ -1,31 +1,74 @@
-Compose one comprehensive paragraph for the Signature Analysis section of an artwork report. Use the available images and the report title, which includes the artwork's age, author, composition, and style, to guide your analysis.
+Compose one comprehensive paragraph for the Signature/Maker's Mark Analysis section of an appraisal report. Use the available images and the report title, which includes the item's age, creator/maker, composition/materials, and style, to guide your analysis.
 
 # Steps
 
-1. **Examine the Signature:** Assess the images of the signature, if provided. Note any duplicate images that may be replacements for missing ones.
-   
-2. **Significance of the Signature:** Explain how the signature helps in identifying and authenticating the artwork. Discuss the possible outcomes based on its characteristics and condition.
-   
-3. **Artist Classification:** Determine the type of artist associated with the signature—whether it is a listed artist, an unknown artist, or a street artist.
+1. **Examine the Identifying Marks:** Assess the images of the signature, maker's mark, or identifying features based on item type:
 
-4. **Implications for Authenticity and Provenance:** Analyze what each artist classification implies concerning the artwork's authenticity and provenance.
+   For Artworks:
+   - Artist's signature style and placement
+   - Date inscriptions or stamps
+   - Gallery labels or stickers
+   - Canvas stamps or markings
+   
+   For Antiques:
+   - Maker's marks or stamps
+   - Workshop labels
+   - Manufacturing marks
+   - Period-specific hallmarks
+   
+   For Collectibles:
+   - Brand signatures
+   - Serial numbers
+   - Manufacturing stamps
+   - Authentication marks
 
-5. **Articulation:** Ensure the analysis is concise, professional, and strictly focused on the signature analysis.
+2. **Significance of Identification:** Explain how the identifying marks help in:
+   - Authenticating the item
+   - Determining the maker/creator
+   - Establishing the period of creation
+   - Verifying manufacturing origin
+   
+3. **Maker Classification:** Determine the type of maker associated with the marks:
+   For Artworks:
+   - Listed artist
+   - Unknown artist
+   - School or workshop
+   
+   For Antiques:
+   - Known workshop/manufacturer
+   - Regional maker
+   - Period craftsman
+   
+   For Collectibles:
+   - Established brand
+   - Limited edition series
+   - Specialized workshop
+
+4. **Implications for Authenticity and Provenance:** Analyze what the maker classification implies concerning:
+   - Item authenticity
+   - Historical significance
+   - Market value considerations
+   - Collection importance
+
+5. **Articulation:** Ensure the analysis is concise, professional, and strictly focused on the identification analysis.
 
 # Output Format
 
-A single, comprehensive paragraph that integrates all the elements of the signature analysis, articulated in a professional and concise manner. 
+A single, comprehensive paragraph that integrates all the elements of the identification analysis, articulated in a professional and concise manner. 
 
 # Examples
 
-**Example Input:**
-- Images: [Image of front, image of back, image of signature]
-- Report Title: [Artwork Age, Author, Composition, Style]
+**Example 1 - Artwork:**
+The signature on the artwork serves as a crucial factor in authenticating its origin and verifying the artist's identity. A clear, well-preserved signature typically suggests a listed artist, impacting the artwork's market value and provenance positively. Conversely, an obscured or indistinct signature might indicate an unknown or school artist, raising questions about authenticity and diminishing its provenance unless verified by other means. Each classification—whether listed, unknown, or school—directly affects the perceived value and legitimacy of the artwork within the art community.
 
-**Example Output:**
-The signature on the artwork serves as a crucial factor in authenticating its origin and verifying the artist's identity. A clear, well-preserved signature typically suggests a listed artist, impacting the artwork's market value and provenance positively. Conversely, an obscured or indistinct signature might indicate an unknown or street artist, raising questions about authenticity and diminishing its provenance unless verified by other means. Each classification—whether listed, unknown, or street—directly affects the perceived value and legitimacy of the artwork within the art community.
+**Example 2 - Antique:**
+The maker's mark on this piece provides essential information for authenticating its workshop origin and period of manufacture. The clearly stamped Chippendale workshop signature, combined with period-appropriate construction techniques, strongly supports its attribution to this prestigious maker. The presence of additional regional guild marks and date stamps further strengthens its provenance and historical significance. Such definitive maker's marks, particularly from renowned workshops of this period, substantially influence both the piece's authenticity confirmation and its position within the antiques market.
+
+**Example 3 - Collectible:**
+The manufacturer's marks present on this item offer crucial authentication elements that verify its production origin and date. The distinctive Tiffany Studios signature, accompanied by the model number and period-specific production marks, provides strong evidence of its authentic heritage. The presence of these identifying features, characteristic of the company's early 20th-century production methods, significantly enhances the piece's provenance. Such well-documented manufacturer's marks are essential in distinguishing genuine period pieces from later reproductions, directly impacting the item's market position and collectible status.
 
 # Notes
 
-- Ensure all claims and assessments are based directly on the visible signature characteristics and content provided in the report title.
-- Avoid unnecessary conjecture not backed by visible evidence or credible connections within the artwork's specifics.
+- Ensure all claims and assessments are based directly on the visible identifying marks and content provided in the report title.
+- Avoid unnecessary conjecture not backed by visible evidence or credible connections within the item's specifics.
+- Maintain a professional tone throughout the analysis.
