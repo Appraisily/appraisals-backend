@@ -26,13 +26,12 @@ async function buildMessageContent(prompt, imageUrl, type) {
 async function generateContent(prompt, postTitle, images = {}) {
   try {
     console.log('Generating content with OpenAI...');
-    console.log('\n=== OPENAI REQUEST PAYLOAD ===');
     
     const messages = [{
       role: "system",
       content: [{
         type: "text",
-        text: "You are an expert appraiser. Whenever you produce text, do not mention your inability to do something or disclaim insufficient data. Instead, provide a best-effort analysis or remain concise. Avoid headings beyond one paragraph. Refrain from repeating disclaimers or apologizing for missing info. Your text must seamlessly integrate into the final document without referencing any limitations."
+        text: "You are a professional art expert specializing in appraisals and artwork analysis."
       }]
     }];
 
@@ -52,22 +51,18 @@ async function generateContent(prompt, postTitle, images = {}) {
       }
     }
 
-    const payload = {
-      model: 'gpt-4o',
-      messages: messages,
-      max_tokens: 1500,
-      temperature: 0.7
-    };
-    
-    console.log(JSON.stringify(payload, null, 2));
-    console.log('============================\n');
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${config.OPENAI_API_KEY}`
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: messages,
+        max_tokens: 1500,
+        temperature: 0.7
+      })
     });
 
     if (!response.ok) {

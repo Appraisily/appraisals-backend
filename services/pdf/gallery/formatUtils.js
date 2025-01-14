@@ -1,6 +1,6 @@
 const MAX_IMAGES_PER_ROW = 3;
-const IMAGE_SPACING = '   '; // 3 spaces for horizontal spacing
-const ROW_SPACING = '\n\n';  // Double line break for vertical spacing
+const HORIZONTAL_SPACING = 20; // Points between images horizontally
+const VERTICAL_SPACING = 30;   // Points between rows vertically
 const GALLERY_TITLE = 'Visual Comparisons: Similar Artworks Identified by Google Vision';
 const GALLERY_TITLE_STYLE = {
   alignment: 'CENTER',
@@ -8,21 +8,21 @@ const GALLERY_TITLE_STYLE = {
 };
 
 const DEFAULT_IMAGE_DIMENSIONS = {
-  width: 200,
-  height: 150
+  width: 180,  // Slightly smaller to fit 3 columns with spacing
+  height: 135  // Maintain aspect ratio
 };
 
-function createGalleryTitle(index) {
+function createGalleryTitle(startIndex, endIndex) {
   return [{
     insertText: {
-      location: { index },
+      location: { index: startIndex },
       text: `${GALLERY_TITLE}\n`
     }
   }, {
     updateParagraphStyle: {
       range: {
-        startIndex: index,
-        endIndex: index + GALLERY_TITLE.length + 1
+        startIndex,
+        endIndex
       },
       paragraphStyle: GALLERY_TITLE_STYLE,
       fields: 'alignment,namedStyleType'
@@ -30,7 +30,7 @@ function createGalleryTitle(index) {
   }];
 }
 
-function createImageRequest(index, imageUrl, dimensions) {
+function createImageRequest(index, imageUrl, dimensions, columnIndex) {
   return {
     insertInlineImage: {
       location: { index },
@@ -38,16 +38,11 @@ function createImageRequest(index, imageUrl, dimensions) {
       objectSize: {
         height: { magnitude: dimensions.height, unit: 'PT' },
         width: { magnitude: dimensions.width, unit: 'PT' }
+      },
+      positioning: {
+        leftOffset: { magnitude: columnIndex * (dimensions.width + HORIZONTAL_SPACING), unit: 'PT' },
+        topOffset: { magnitude: 0, unit: 'PT' }
       }
-    }
-  };
-}
-
-function createSpacingRequest(index, isEndOfRow) {
-  return {
-    insertText: {
-      location: { index },
-      text: isEndOfRow ? ROW_SPACING : IMAGE_SPACING
     }
   };
 }

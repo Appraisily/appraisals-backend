@@ -99,7 +99,9 @@ function adjustTitleFontSizeWrapper(documentId, titleText) {
 }
 
 function insertImageAtPlaceholderWrapper(documentId, placeholder, imageUrl) {
-  return insertImageAtPlaceholder(docs, documentId, placeholder, imageUrl);
+  // Remove _image suffix if present in placeholder name
+  const cleanPlaceholder = placeholder.replace(/_image$/, '');
+  return insertImageAtPlaceholder(docs, documentId, cleanPlaceholder, imageUrl);
 }
 
 function exportToPDFWrapper(documentId) {

@@ -32,19 +32,19 @@ async function calculateImageDimensions(url, maxWidth = 200, maxHeight = 150) {
 async function insertImageAtPlaceholder(docs, documentId, placeholder, imageUrl) {
   try {
     if (!imageUrl) {
-      console.warn(`No image URL provided for placeholder {{${placeholder}}}`);
+      console.warn(`No image URL provided for placeholder {{${placeholder}_image}}`);
       return;
     }
 
     const imageData = await calculateImageDimensions(imageUrl);
     if (!imageData) {
-      console.warn(`Failed to process image for placeholder {{${placeholder}}}`);
+      console.warn(`Failed to process image for placeholder {{${placeholder}_image}}`);
       return;
     }
 
     const document = await docs.documents.get({ documentId });
     const content = document.data.body.content;
-    const placeholderFull = `{{${placeholder}}}`;
+    const placeholderFull = `{{${placeholder}_image}}`;
     const occurrences = [];
 
     const findPlaceholders = (elements) => {
@@ -109,9 +109,9 @@ async function insertImageAtPlaceholder(docs, documentId, placeholder, imageUrl)
       requestBody: { requests }
     });
 
-    console.log(`Replaced ${occurrences.length} occurrences of {{${placeholder}}} with image`);
+    console.log(`Replaced ${occurrences.length} occurrences of {{${placeholder}_image}} with image`);
   } catch (error) {
-    console.error(`Error inserting image for placeholder {{${placeholder}}}:`, error);
+    console.error(`Error inserting image for placeholder {{${placeholder}_image}}:`, error);
     throw error;
   }
 }

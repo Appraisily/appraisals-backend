@@ -57,6 +57,21 @@ async function verifyAndProcessImage(url) {
 async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
   try {
     console.log(`Processing ${gallery.length} images for gallery`);
+    
+    // First, remove the gallery placeholder
+    await docs.documents.batchUpdate({
+      documentId,
+      requestBody: {
+        requests: [{
+          deleteContentRange: {
+            range: {
+              startIndex: galleryIndex,
+              endIndex: galleryIndex + '{{gallery}}'.length
+            }
+          }
+        }]
+      }
+    });
 
     // If no gallery images, replace placeholder with message
     if (gallery.length === 0) {
@@ -66,12 +81,9 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
           documentId,
           requestBody: {
             requests: [{
-              replaceAllText: {
-                containsText: {
-                  text: '{{gallery}}',
-                  matchCase: true
-                },
-                replaceText: 'No similar images were found during the analysis of this artwork.'
+              insertText: {
+                location: { index: galleryIndex },
+                text: 'No similar images were found during the analysis of this artwork.'
               }
             }]
           }
@@ -115,18 +127,10 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
     const requests = [];
 
     // Add gallery title
-    requests.push(...createGalleryTitle(currentIndex));
+    const titleEndIndex = currentIndex + GALLERY_TITLE.length + 1;
+    requests.push(...createGalleryTitle(currentIndex, titleEndIndex));
     currentIndex += requests[0].insertText.text.length;
 
-    // Remove original placeholder
-    requests.push({
-      deleteContentRange: {
-        range: {
-          startIndex: galleryIndex,
-          endIndex: galleryIndex + '{{gallery}}'.length
-        }
-      }
-    });
 
     let insertedCount = 0;
     const batchSize = calculateBatchSize(validImages.length);

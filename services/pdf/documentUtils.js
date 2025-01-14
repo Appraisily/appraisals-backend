@@ -64,6 +64,8 @@ async function moveFileToFolder(drive, fileId, folderId) {
 async function replacePlaceholdersInDocument(docs, documentId, data) {
   try {
     console.log('Starting placeholder replacement');
+    console.log('Checking for appraisal_value:', data.appraisal_value);
+    
     const document = await docs.documents.get({ documentId });
     const content = document.data.body.content;
     const requests = [];
@@ -76,6 +78,12 @@ async function replacePlaceholdersInDocument(docs, documentId, data) {
             if (textElement.textRun && textElement.textRun.content) {
               for (const [key, value] of Object.entries(data)) {
                 const placeholder = `{{${key}}}`;
+                
+                // Special logging for appraisal value
+                if (key === 'appraisal_value' && textElement.textRun.content.includes(placeholder)) {
+                  console.log('Found appraisal_value placeholder, replacing with:', value);
+                }
+                
                 if (textElement.textRun.content.includes(placeholder)) {
                   console.log(`Found placeholder: ${placeholder}`);
                   const cleanValue = value !== undefined && value !== null 

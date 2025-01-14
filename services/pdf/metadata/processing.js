@@ -86,16 +86,20 @@ async function processMetadata(postData) {
   if (metadata.value) {
     const numericValue = parseFloat(metadata.value);
     if (!isNaN(numericValue)) {
-      metadata.appraisal_value = numericValue.toLocaleString('es-ES', {
+      metadata.appraisal_value = numericValue.toLocaleString('en-US', {
         style: 'currency',
         currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
       });
     } else {
       metadata.appraisal_value = metadata.value;
     }
   } else {
-    metadata.appraisal_value = '';
+    metadata.appraisal_value = 'Value not provided';
   }
+
+  console.log('Formatted appraisal value:', metadata.appraisal_value);
 
   // Validate metadata
   const validation = validateMetadata(metadata);
