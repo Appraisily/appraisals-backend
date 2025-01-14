@@ -30,7 +30,7 @@ function createGalleryTitle(startIndex, endIndex) {
   }];
 }
 
-function createImageRequest(index, imageUrl, dimensions, columnIndex) {
+function createImageRequest(index, imageUrl, dimensions, columnIndex = 0) {
   return {
     insertInlineImage: {
       location: { index },
@@ -38,24 +38,30 @@ function createImageRequest(index, imageUrl, dimensions, columnIndex) {
       objectSize: {
         height: { magnitude: dimensions.height, unit: 'PT' },
         width: { magnitude: dimensions.width, unit: 'PT' }
-      },
-      positioning: {
-        leftOffset: { magnitude: columnIndex * (dimensions.width + HORIZONTAL_SPACING), unit: 'PT' },
-        topOffset: { magnitude: 0, unit: 'PT' }
       }
     }
   };
 }
 
+function createSpacingRequest(index, isEndOfRow) {
+  return {
+    insertText: {
+      location: { index },
+      text: isEndOfRow ? '\n\n' : '   ' // Three spaces for horizontal spacing, double newline for row end
+    }
+  };
+}
+
 function calculateBatchSize(totalImages) {
-  // Process images in smaller batches to avoid API limits
   return Math.min(10, Math.ceil(totalImages / 2));
 }
 
 module.exports = {
   MAX_IMAGES_PER_ROW,
-  IMAGE_SPACING,
-  ROW_SPACING,
+  HORIZONTAL_SPACING,
+  VERTICAL_SPACING,
+  GALLERY_TITLE,
+  GALLERY_TITLE_STYLE,
   DEFAULT_IMAGE_DIMENSIONS,
   createGalleryTitle,
   createImageRequest,
