@@ -12,7 +12,11 @@ async function getPrompt(custom_post_type_name) {
     if (!promptContent) {
       throw new Error('Empty prompt file');
     }
-    console.log(`Successfully loaded prompt for ${custom_post_type_name}`);
+    console.log('=== LOADED PROMPT ===');
+    console.log(`Type: ${custom_post_type_name}`);
+    console.log('Content:');
+    console.log(promptContent);
+    console.log('===================');
     return promptContent;
   } catch (error) {
     console.error(`Error reading prompt file for ${custom_post_type_name}:`, {
