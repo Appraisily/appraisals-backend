@@ -159,15 +159,14 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
     let currentIndex = galleryPlaceholderIndex;
     const requests = [];
 
-    // Add gallery title
-    // Add paragraph break before gallery
+    // Add section break before gallery
     requests.push({
       insertText: {
         location: { index: currentIndex },
-        text: '\n'  // Single line break to maintain document structure
+        text: '\n\n'  // Double line break for section spacing
       }
     });
-    currentIndex += 1;
+    currentIndex += 2;
 
     // Add title with proper paragraph styling
     const titleText = GALLERY_TITLE + '\n';
@@ -271,7 +270,7 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
       }
     }
 
-    // Add extra spacing after gallery section
+    // Add section break after gallery
     try {
       await docs.documents.batchUpdate({
         documentId,
@@ -279,23 +278,25 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
           requests: [{
             insertText: {
               location: { index: currentIndex },
-              text: '\n'  // Single line break to maintain document structure
+              text: '\n\n\n'  // Triple line break for clear section separation
             }
           }, {
             updateParagraphStyle: {
               range: {
                 startIndex: currentIndex,
-                endIndex: currentIndex + 1
+                endIndex: currentIndex + 3
               },
               paragraphStyle: {
-                spaceBelow: { magnitude: 30, unit: 'PT' }
+                spaceBelow: { magnitude: 40, unit: 'PT' },
+                keepLinesTogether: true,
+                keepWithNext: false
               },
-              fields: 'spaceBelow'
+              fields: 'spaceBelow,keepLinesTogether,keepWithNext'
             }
           }]
         }
       });
-      console.log('Added spacing after gallery section');
+      console.log('[Gallery] Added section break after gallery');
     } catch (error) {
       console.error('Error adding spacing after gallery:', error);
     }

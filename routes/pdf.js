@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { v4: uuidv4 } = require('uuid');
+const he = require('he');
 const wordpress = require('../services/wordpress');
 const { processMetadata } = require('../services/pdf/metadata/processing');
 const { 
@@ -52,9 +53,12 @@ router.post('/generate-pdf', async (req, res) => {
     const templateId = await getTemplateId();
     console.log('Using template ID:', templateId);
 
+    // Decode HTML entities in title
+    const decodedTitle = he.decode(postTitle);
+
     // Log all retrieved data
     console.log('Metadata:', metadata);
-    console.log('Post title:', postTitle);
+    console.log('Post title:', decodedTitle);
     console.log('Post date:', postDate);
     console.log('Images:', images);
 
@@ -69,7 +73,7 @@ router.post('/generate-pdf', async (req, res) => {
     // Step 8: Replace placeholders
     const data = {
       ...metadata,
-      appraisal_title: postTitle,
+      appraisal_title: decodedTitle,
       appraisal_date: postDate,
     };
     await replacePlaceholdersInDocument(clonedDocId, data);
