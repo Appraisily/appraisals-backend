@@ -212,6 +212,7 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
           console.warn(`Failed to prepare image request:`, error.message);
           continue;
         }
+      }
 
       // Execute batch requests
       if (batchRequests.length > 0) {
