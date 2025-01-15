@@ -23,12 +23,7 @@ const DEFAULT_OPTIONS = {
 
 async function fetchWordPress(endpoint, options = {}) {
   const url = `${config.WORDPRESS_API_URL}${endpoint}`;
-  console.log(`Fetching WordPress endpoint: ${url}`);
-  console.log('Request headers:', {
-    ...DEFAULT_OPTIONS.headers,
-    ...options.headers,
-    'Authorization': '[REDACTED]'
-  });
+  console.log(`[WordPress] Fetching: ${url}`);
   
   try {
     const response = await fetch(url, {
@@ -39,9 +34,7 @@ async function fetchWordPress(endpoint, options = {}) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('WordPress API error:', {
-        url,
         status: response.status,
-        headers: response.headers.raw(),
         body: errorText
       });
       throw new Error(`WordPress API error: ${errorText}`);
@@ -50,7 +43,6 @@ async function fetchWordPress(endpoint, options = {}) {
     return response;
   } catch (error) {
     console.error('Fetch error:', {
-      url,
       error: error.message,
       code: error.code,
       type: error.type
