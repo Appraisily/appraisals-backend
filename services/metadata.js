@@ -1,172 +1,188 @@
-const { generateContent } = require('./openai');
-const { updateWordPressMetadata, getPost } = require('./wordpress');
-const { getPrompt, buildContextualPrompt } = require('./utils/promptUtils');
-const { PROMPT_PROCESSING_ORDER, REPORT_INTRODUCTION } = require('./constants/reportStructure');
-const staticMetadata = require('./constants/staticMetadata');
+const fetch = require('node-fetch');
+const FormData = require('form-data');
+const { v4: uuidv4 } = require('uuid');
+const config = require('../config');
+const vision = require('@google-cloud/vision');
+const { getImageUrl } = require('./wordpress');
 
-async function processMetadataField(postId, fieldName, postTitle, images = {}, context = {}) {
+let visionClient;
+
+function initializeVisionClient() {
   try {
-    console.log(`Processing field: ${fieldName}`);
-    console.log(`Loading prompt for: ${fieldName}`);
-    
-    console.log(`Available images for ${fieldName}:`, 
-      Object.entries(images)
-        .filter(([_, url]) => url)
-        .map(([type]) => type)
-    );
-
-    const prompt = await getPrompt(fieldName);
-    if (!prompt) {
-      console.error(`No prompt file found for ${fieldName}`);
-      throw new Error(`Unable to load prompt file for ${fieldName}`);
-    }
-    console.log(`Successfully loaded prompt for ${fieldName}`);
-
-    // Add report introduction to context for the first field
-    if (fieldName === PROMPT_PROCESSING_ORDER[0]) {
-      context.introduction = REPORT_INTRODUCTION;
-    }
-
-    // Build contextual prompt with previous generations
-    const contextualPrompt = buildContextualPrompt(prompt, context);
-
-    const content = await generateContent(contextualPrompt, postTitle, images);
-    if (!content) {
-      throw new Error(`No content generated for ${fieldName}`);
-    }
-
-    // Update WordPress with generated content
-    await updateWordPressMetadata(postId, fieldName, content);
-
-    // After content generation, update static metadata if needed
-    await updateStaticMetadata(postId, fieldName);
-    
-    return {
-      field: fieldName,
-      status: 'success',
-      content
-    };
+    const credentials = JSON.parse(config.GOOGLE_VISION_CREDENTIALS);
+    visionClient = new vision.ImageAnnotatorClient({
+      credentials,
+      projectId: 'civil-forge-403609'
+    });
   } catch (error) {
-    console.error(`Error processing ${fieldName}:`, error);
-    return {
-      field: fieldName,
-      status: 'error',
-      error: error.message
-    };
-  }
-}
-
-async function updateStaticMetadata(postId, fieldName) {
-  try {
-    // Get post data to check appraisal type
-    const postData = await getPost(postId, ['acf']);
-    const appraisalType = postData.acf?.appraisaltype?.toLowerCase() || 'regular';
-
-    // Get metadata content for the appraisal type
-    let metadataContent;
-    switch (appraisalType) {
-      case 'irs':
-        metadataContent = staticMetadata.irs;
-        break;
-      case 'insurance':
-        metadataContent = staticMetadata.insurance;
-        break;
-      default:
-        metadataContent = staticMetadata.regular;
-    }
-
-    if (!metadataContent) {
-      console.warn(`No static metadata found for appraisal type: ${appraisalType}`);
-      return;
-    }
-
-    // Direct mapping between WordPress fields and static metadata fields
-    const fieldMapping = {
-      'introduction': {
-        metadataField: 'Introduction',
-        required: true
-      },
-      'image_analysis': {
-        metadataField: 'ImageAnalysisText',
-        required: true
-      },
-      'signature_analysis': {
-        metadataField: 'SignatureText',
-        required: true
-      },
-      'valuation_method': {
-        metadataField: 'ValuationText',
-        required: true
-      },
-      'appraiser_info': {
-        metadataField: 'AppraiserText',
-        required: true
-      },
-      'liability_conflict': {
-        metadataField: 'LiabilityText',
-        required: true
-      },
-      'selling_guide': {
-        metadataField: 'SellingGuideText',
-        required: true
-      }
-    };
-
-    // Get the mapping for the current field
-    const mapping = fieldMapping[fieldName];
-    if (mapping) {
-      const content = metadataContent[mapping.metadataField];
-      if (content) {
-        await updateWordPressMetadata(postId, fieldName, content);
-        console.log(`Updated static metadata for ${fieldName} (${appraisalType} type)`);
-      } else if (mapping.required) {
-        console.error(`Required static metadata missing: ${mapping.metadataField} for ${appraisalType} type`);
-      }
-    }
-  } catch (error) {
-    console.error(`Error updating static metadata for ${fieldName}:`, error);
     throw error;
   }
 }
 
-async function processAllMetadata(postId, postTitle, postData) {
+async function processMainImageWithGoogleVision(postId) {
   try {
-    console.log(`Processing metadata fields for post ${postId} in specified order`);
+    if (!visionClient) {
+      initializeVisionClient();
+    }
+
+    // Check if gallery is already populated
+    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
+      headers: {
+        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error fetching post: ${await response.text()}`);
+    }
+
+    const postData = await response.json();
     
-    // Extract only the image URLs we need from postData
-    const images = {
-      main: postData.images?.main,
-      age: postData.images?.age,
-      signature: postData.images?.signature
-    };
-    
-    console.log('Available images:', Object.keys(images).filter(key => images[key]));
+    // Check gallery population status
+    if (postData.acf?._gallery_populated === '1' && Array.isArray(postData.acf?.googlevision)) {
+      console.log('Vision: Gallery already populated');
+      return {
+        success: true,
+        message: 'Gallery already populated',
+        similarImagesCount: postData.acf.googlevision.length
+      };
+    }
 
-    const context = {};
-    const results = [];
+    // Get main image URL
+    const mainImageUrl = await getImageUrl(postData.acf?.main);
+    if (!mainImageUrl) {
+      console.log('Vision: Main image not found');
+      throw new Error('Main image not found in post');
+    }
 
-    for (const fieldName of PROMPT_PROCESSING_ORDER) {
-      const result = await processMetadataField(postId, fieldName, postTitle, images, context);
-      results.push(result);
+    console.log('Vision: Analyzing main image');
 
-      // Add successful generations to context for next iterations
-      if (result.status === 'success' && result.content) {
-        context[fieldName] = result.content;
+    // Analyze image with Vision API
+    const [result] = await visionClient.webDetection(mainImageUrl);
+    const webDetection = result.webDetection;
+
+    if (!webDetection?.visuallySimilarImages?.length) {
+      console.log('Vision: No similar images found');
+      return {
+        success: true,
+        message: 'No similar images found',
+        similarImagesCount: 0
+      };
+    }
+
+    // Upload similar images to WordPress
+    const uploadedImageIds = [];
+    for (const image of webDetection.visuallySimilarImages) {
+      console.log('Vision: Processing similar image');
+      const imageId = await uploadImageToWordPress(image.url);
+      if (imageId) {
+        uploadedImageIds.push(imageId);
       }
     }
 
-    const successful = results.filter(r => r.status === 'success').length;
-    const failed = results.filter(r => r.status === 'error').length;
+    if (uploadedImageIds.length > 0) {
+      console.log(`Vision: Uploading ${uploadedImageIds.length} images to gallery`);
+      await updateWordPressGallery(postId, uploadedImageIds);
+    }
 
-    console.log(`Metadata processing complete. Success: ${successful}, Failed: ${failed}`);
-    return results;
+    return {
+      success: true,
+      similarImagesCount: uploadedImageIds.length,
+      uploadedImageIds
+    };
   } catch (error) {
-    console.error('Error processing metadata:', error);
+    console.log('Vision analysis error:', error.message);
+    return {
+      success: false,
+      message: error.message,
+      similarImagesCount: 0
+    };
+  }
+}
+
+async function uploadImageToWordPress(imageUrl) {
+  try {
+    const response = await fetch(imageUrl);
+    if (!response.ok) {
+      return null;
+    }
+
+    const buffer = await response.buffer();
+    const filename = `similar-image-${uuidv4()}.jpg`;
+
+    const form = new FormData();
+    form.append('file', buffer, {
+      filename,
+      contentType: response.headers.get('content-type') || 'image/jpeg'
+    });
+
+    let uploadResponseText;
+    const uploadResponse = await fetch(`${config.WORDPRESS_API_URL}/media`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`,
+        'Accept': 'application/json'
+      },
+      body: form
+    });
+
+    uploadResponseText = await uploadResponse.text();
+
+    if (!uploadResponse.ok) {
+      return null;
+    }
+
+    let mediaData;
+    try {
+      mediaData = JSON.parse(uploadResponseText);
+    } catch (error) {
+      return null;
+    }
+
+    if (!mediaData || !mediaData.id) {
+      return null;
+    }
+
+    return mediaData.id;
+  } catch (error) {
+    console.error('Stack:', error.stack);
+    return null;
+  }
+}
+
+async function updateWordPressGallery(postId, imageIds) {
+  try {
+    console.log(`Updating gallery for post ${postId} with image IDs:`, imageIds);
+
+    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      },
+      body: JSON.stringify({
+        acf: {
+          googlevision: imageIds.map(id => id.toString()),
+          _gallery_populated: '1'
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error updating gallery: ${await response.text()}`);
+      console.error('Response status:', response.status);
+    }
+
+    console.log(`Gallery updated for post ${postId} with ${imageIds.length} images`);
+    return true;
+  } catch (error) {
+    console.error('Error updating WordPress gallery:', error);
     throw error;
+    console.error('Full error:', error);
   }
 }
 
 module.exports = {
-  processAllMetadata,
-  processMetadataField
+  processMainImageWithGoogleVision,
+  initializeVisionClient
 };

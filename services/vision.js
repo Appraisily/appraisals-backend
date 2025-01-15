@@ -42,7 +42,7 @@ async function processMainImageWithGoogleVision(postId) {
     
     // Check gallery population status
     if (postData.acf?._gallery_populated === '1' && Array.isArray(postData.acf?.googlevision)) {
-      console.log('Gallery already populated, skipping Vision analysis');
+      console.log('[Vision] Gallery exists, skipping analysis');
       return {
         success: true,
         message: 'Gallery already populated',
@@ -56,7 +56,7 @@ async function processMainImageWithGoogleVision(postId) {
       throw new Error('Main image not found in post');
     }
 
-    console.log('Analyzing main image:', mainImageUrl);
+    console.log('[Vision] Analyzing main image');
 
     // Analyze image with Vision API
     const [result] = await visionClient.webDetection(mainImageUrl);
@@ -82,6 +82,7 @@ async function processMainImageWithGoogleVision(postId) {
     if (uploadedImageIds.length > 0) {
       await updateWordPressGallery(postId, uploadedImageIds);
     }
+    console.log(`[Vision] Found and processed ${uploadedImageIds.length} similar images`);
 
     return {
       success: true,
@@ -89,7 +90,7 @@ async function processMainImageWithGoogleVision(postId) {
       uploadedImageIds
     };
   } catch (error) {
-    console.error('Error in Vision analysis:', error);
+    console.error(`[Vision] Error: ${error.message}`);
     return {
       success: false,
       message: error.message,

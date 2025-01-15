@@ -6,8 +6,7 @@ const { processAllMetadata } = require('../services/metadata');
 const { getClientIp } = require('request-ip');
 
 router.post('/complete-appraisal-report', async (req, res) => {
-  const clientIp = getClientIp(req);
-  console.log('Client IP:', clientIp);
+  console.log('[Appraisal] Starting report generation');
 
   const { postId } = req.body;
 
@@ -19,12 +18,10 @@ router.post('/complete-appraisal-report', async (req, res) => {
   }
 
   try {
-    // Fetch all post data in a single request
     const { postData, images, title: postTitle } = await wordpress.fetchPostData(postId);
 
     if (!postTitle) {
-      console.warn('Post title not found. Raw response:', JSON.stringify(postData, null, 2));
-      console.log('Request blocked. Client IP:', clientIp);
+      console.warn('[Appraisal] Post title not found');
       return res.status(404).json({
         success: false,
         message: 'Post not found or title is missing',
@@ -37,34 +34,30 @@ router.post('/complete-appraisal-report', async (req, res) => {
       });
     }
 
-    console.log('Post title:', postTitle);
-    console.log('Available images:', images);
+    console.log(`[Appraisal] Processing: "${postTitle}"`);
 
-    // Process Google Vision analysis
     let visionResult;
     try {
       visionResult = await processMainImageWithGoogleVision(postId);
     } catch (error) {
-      console.error('Vision analysis error:', error);
+      console.error(`[Appraisal] Vision error: ${error.message}`);
       visionResult = {
         success: false,
         message: error.message,
         similarImagesCount: 0
       };
     }
-    console.log('Vision analysis result:', visionResult);
 
-    // Process metadata fields
     let metadataResults;
     try {
       metadataResults = await processAllMetadata(postId, postTitle, { postData, images });
     } catch (error) {
-      console.error('Metadata processing error:', error);
+      console.error(`[Appraisal] Metadata error: ${error.message}`);
       metadataResults = [];
     }
-    console.log('Metadata processing results:', metadataResults);
 
-    // Return response
+    console.log('[Appraisal] Report generation complete');
+
     res.status(200).json({
       success: true,
       message: 'Appraisal report completed successfully.',
@@ -76,7 +69,7 @@ router.post('/complete-appraisal-report', async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error in /complete-appraisal-report:', error);
+    console.error(`[Appraisal] Error: ${error.message}`);
     res.status(500).json({
       success: false,
       message: error.message || 'Error completing appraisal report.',

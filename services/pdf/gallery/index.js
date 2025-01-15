@@ -57,9 +57,35 @@ async function verifyAndProcessImage(url) {
 
 async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
   try {
-    console.log(`Processing ${gallery.length} images for gallery`);
+    console.log(`[Gallery] Processing ${gallery.length} images`);
     
-    // First, remove the gallery placeholder
+    // Find the exact position of the gallery placeholder
+    const document = await docs.documents.get({ documentId });
+    const content = document.data.body.content;
+    let galleryPlaceholderIndex = -1;
+
+    const findGalleryPlaceholder = (elements) => {
+      for (const element of elements) {
+        if (element.paragraph?.elements) {
+          for (const elem of element.paragraph.elements) {
+            if (elem.textRun?.content.includes('{{gallery}}')) {
+              galleryPlaceholderIndex = elem.startIndex + elem.textRun.content.indexOf('{{gallery}}');
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    };
+
+    findGalleryPlaceholder(content);
+
+    if (galleryPlaceholderIndex === -1) {
+      console.error('Gallery placeholder not found in document');
+      return 0;
+    }
+
+    // Remove the gallery placeholder
     try {
       await docs.documents.batchUpdate({
         documentId,
@@ -67,8 +93,8 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
           requests: [{
             deleteContentRange: {
               range: {
-                startIndex: galleryIndex,
-                endIndex: galleryIndex + '{{gallery}}'.length
+                startIndex: galleryPlaceholderIndex,
+                endIndex: galleryPlaceholderIndex + '{{gallery}}'.length
               }
             }
           }]
@@ -110,10 +136,10 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
     const validImages = processedImages.filter(img => img !== null);
     const validUrls = gallery.filter((_, index) => processedImages[index] !== null);
 
-    console.log(`Successfully processed ${validImages.length} out of ${gallery.length} images`);
+    console.log(`[Gallery] Valid images: ${validImages.length}/${gallery.length}`);
     
     if (validImages.length === 0) {
-      console.warn('No valid images found for gallery');
+      console.warn('[Gallery] No valid images found');
       await docs.documents.batchUpdate({
         documentId,
         requestBody: {
@@ -130,7 +156,7 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
       return 0;
     }
 
-    let currentIndex = galleryIndex;
+    let currentIndex = galleryPlaceholderIndex;
     const requests = [];
 
     // Add gallery title
@@ -138,13 +164,13 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
     requests.push({
       insertText: {
         location: { index: currentIndex },
-        text: '\n\n'
+        text: '\n'  // Single line break to maintain document structure
       }
     });
-    currentIndex += 2;
+    currentIndex += 1;
 
     // Add title with proper paragraph styling
-    const titleText = GALLERY_TITLE + '\n\n';
+    const titleText = GALLERY_TITLE + '\n';
     requests.push({
       insertText: {
         location: { index: currentIndex },
@@ -223,9 +249,8 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
             documentId,
             requestBody: { requests: batchRequests }
           });
-          console.log(`Successfully inserted batch of ${batch.length} images at index ${currentIndex}`);
         } catch (error) {
-          console.error(`Error inserting batch at index ${currentIndex}:`, error.message);
+          console.error(`[Gallery] Batch insert error: ${error.message}`);
           // If image is not accessible, replace with placeholder text
           try {
             await docs.documents.batchUpdate({
@@ -239,9 +264,8 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
                 }]
               }
             });
-            console.log('Replaced failed image with placeholder text');
           } catch (innerError) {
-            console.error('Error adding placeholder text:', innerError);
+            console.error(`[Gallery] Placeholder error: ${innerError.message}`);
           }
         }
       }
@@ -255,13 +279,13 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
           requests: [{
             insertText: {
               location: { index: currentIndex },
-              text: '\n\n\n\n'  // Add 4 line breaks for clear section separation
+              text: '\n'  // Single line break to maintain document structure
             }
           }, {
             updateParagraphStyle: {
               range: {
                 startIndex: currentIndex,
-                endIndex: currentIndex + 4
+                endIndex: currentIndex + 1
               },
               paragraphStyle: {
                 spaceBelow: { magnitude: 30, unit: 'PT' }
@@ -276,10 +300,10 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
       console.error('Error adding spacing after gallery:', error);
     }
 
-    console.log(`Gallery insertion complete. Inserted ${insertedCount} images`);
+    console.log(`[Gallery] Complete - Inserted ${insertedCount} images`);
     return insertedCount;
   } catch (error) {
-    console.error('Error inserting gallery grid:', error);
+    console.error(`[Gallery] Error: ${error.message}`);
     throw error;
   }
 }
