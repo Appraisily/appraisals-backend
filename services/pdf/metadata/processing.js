@@ -3,7 +3,9 @@ const staticMetadata = require('../../constants/staticMetadata');
 const he = require('he');
 
 function stripHtml(html) {
-  if (!html) return '';
+  // Handle non-string values
+  if (html === null || html === undefined) return '';
+  if (typeof html !== 'string') return String(html);
   
   console.log('Original HTML content:', html);
   
