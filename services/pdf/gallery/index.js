@@ -133,10 +133,38 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
     const requests = [];
 
     // Add gallery title
-    const titleEndIndex = currentIndex + GALLERY_TITLE.length + 1;
-    requests.push(...createGalleryTitle(currentIndex, titleEndIndex));
-    currentIndex += requests[0].insertText.text.length;
+    // Add paragraph break before gallery
+    requests.push({
+      insertText: {
+        location: { index: currentIndex },
+        text: '\n\n'
+      }
+    });
+    currentIndex += 2;
 
+    // Add title with proper paragraph styling
+    const titleText = GALLERY_TITLE + '\n\n';
+    requests.push({
+      insertText: {
+        location: { index: currentIndex },
+        text: titleText
+      }
+    }, {
+      updateParagraphStyle: {
+        range: {
+          startIndex: currentIndex,
+          endIndex: currentIndex + GALLERY_TITLE.length
+        },
+        paragraphStyle: {
+          namedStyleType: 'HEADING_3',
+          alignment: 'CENTER',
+          spaceAbove: { magnitude: 20, unit: 'PT' },
+          spaceBelow: { magnitude: 20, unit: 'PT' }
+        },
+        fields: 'namedStyleType,alignment,spaceAbove,spaceBelow'
+      }
+    });
+    currentIndex += titleText.length;
 
     let insertedCount = 0;
     const batchSize = calculateBatchSize(validImages.length);
@@ -161,13 +189,29 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
           // Add appropriate spacing
           batchRequests.push(createSpacingRequest(currentIndex + 1, isEndOfRow));
 
+          // Update paragraph style to ensure proper spacing
+          batchRequests.push({
+            updateParagraphStyle: {
+              range: {
+                startIndex: currentIndex,
+                endIndex: currentIndex + 1
+              },
+              paragraphStyle: {
+                alignment: 'CENTER',
+                lineSpacing: 150,
+                spaceAbove: { magnitude: 10, unit: 'PT' },
+                spaceBelow: { magnitude: 10, unit: 'PT' }
+              },
+              fields: 'alignment,lineSpacing,spaceAbove,spaceBelow'
+            }
+          });
+
           insertedCount++;
           currentIndex += isEndOfRow ? 6 : 4; // Adjust index based on spacing
         } catch (error) {
           console.warn(`Failed to prepare image request:`, error.message);
           continue;
         }
-      }
 
       // Execute batch requests
       if (batchRequests.length > 0) {

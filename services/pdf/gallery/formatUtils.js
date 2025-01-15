@@ -47,7 +47,7 @@ function createSpacingRequest(index, isEndOfRow) {
   return {
     insertText: {
       location: { index },
-      text: isEndOfRow ? '\n\n' : '   ' // Three spaces for horizontal spacing, double newline for row end
+      text: isEndOfRow ? '\n\n\n' : '      ' // Six spaces for horizontal spacing, triple newline for row end
     }
   };
 }
