@@ -247,6 +247,35 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
       }
     }
 
+    // Add extra spacing after gallery section
+    try {
+      await docs.documents.batchUpdate({
+        documentId,
+        requestBody: {
+          requests: [{
+            insertText: {
+              location: { index: currentIndex },
+              text: '\n\n\n\n'  // Add 4 line breaks for clear section separation
+            }
+          }, {
+            updateParagraphStyle: {
+              range: {
+                startIndex: currentIndex,
+                endIndex: currentIndex + 4
+              },
+              paragraphStyle: {
+                spaceBelow: { magnitude: 30, unit: 'PT' }
+              },
+              fields: 'spaceBelow'
+            }
+          }]
+        }
+      });
+      console.log('Added spacing after gallery section');
+    } catch (error) {
+      console.error('Error adding spacing after gallery:', error);
+    }
+
     console.log(`Gallery insertion complete. Inserted ${insertedCount} images`);
     return insertedCount;
   } catch (error) {
