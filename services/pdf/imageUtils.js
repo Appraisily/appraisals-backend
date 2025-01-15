@@ -45,18 +45,28 @@ async function insertImageAtPlaceholder(docs, documentId, placeholder, imageUrl)
     const document = await docs.documents.get({ documentId });
     const content = document.data.body.content;
     const placeholderFull = `{{${placeholder}_image}}`;
-    const occurrences = [];
+    let occurrences = [];
 
     const findPlaceholders = (elements) => {
       for (const element of elements) {
         if (element.paragraph?.elements) {
           for (const elem of element.paragraph.elements) {
-            if (elem.textRun?.content.includes(placeholderFull)) {
-              const startIndex = elem.startIndex + elem.textRun.content.indexOf(placeholderFull);
-              occurrences.push({
-                startIndex,
-                endIndex: startIndex + placeholderFull.length
-              });
+            if (elem.textRun?.content) {
+              let content = elem.textRun.content;
+              let position = 0;
+              
+              while (true) {
+                const index = content.indexOf(placeholderFull, position);
+                if (index === -1) break;
+                
+                occurrences.push({
+                  startIndex: elem.startIndex + index,
+                  endIndex: elem.startIndex + index + placeholderFull.length,
+                  element: elem
+                });
+                
+                position = index + placeholderFull.length;
+              }
             }
           }
         } else if (element.table) {
@@ -74,12 +84,18 @@ async function insertImageAtPlaceholder(docs, documentId, placeholder, imageUrl)
     findPlaceholders(content);
 
     if (occurrences.length === 0) {
-      console.warn(`No occurrences found for placeholder {{${placeholder}}}`);
+      console.warn(`No occurrences found for placeholder {{${placeholder}_image}}`);
       return;
     }
 
+    console.log(`Found ${occurrences.length} occurrences of {{${placeholder}_image}}`);
+
     const requests = [];
+    // Sort occurrences by startIndex in descending order
+    occurrences.sort((a, b) => b.startIndex - a.startIndex);
+
     for (const occurrence of occurrences) {
+      // First delete the placeholder text
       requests.push(
         {
           deleteContentRange: {
@@ -89,6 +105,7 @@ async function insertImageAtPlaceholder(docs, documentId, placeholder, imageUrl)
             }
           }
         },
+        // Then insert the image at the same position
         {
           insertInlineImage: {
             location: {
@@ -98,21 +115,34 @@ async function insertImageAtPlaceholder(docs, documentId, placeholder, imageUrl)
             objectSize: {
               height: { magnitude: imageData.height, unit: 'PT' },
               width: { magnitude: imageData.width, unit: 'PT' }
+            },
+            objectSize: {
+              height: { magnitude: imageData.height, unit: 'PT' },
+              width: { magnitude: imageData.width, unit: 'PT' }
             }
           }
         }
       );
     }
 
-    await docs.documents.batchUpdate({
-      documentId,
-      requestBody: { requests }
-    });
+    // Execute requests in batches of 10 to avoid rate limits
+    for (let i = 0; i < requests.length; i += 10) {
+      const batchRequests = requests.slice(i, i + 10);
+      try {
+        await docs.documents.batchUpdate({
+          documentId,
+          requestBody: { requests: batchRequests }
+        });
+        console.log(`Processed batch ${Math.floor(i/10) + 1} of ${Math.ceil(requests.length/10)}`);
+      } catch (error) {
+        console.error(`Error processing batch ${Math.floor(i/10) + 1}:`, error);
+        throw error;
+      }
+    }
 
-    console.log(`Replaced ${occurrences.length} occurrences of {{${placeholder}_image}} with image`);
+    console.log(`Replaced ${occurrences.length} occurrence(s) of {{${placeholder}_image}} with image`);
   } catch (error) {
     console.error(`Error inserting image for placeholder {{${placeholder}_image}}:`, error);
-    throw error;
   }
 }
 

@@ -108,6 +108,7 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
 
     // Filter out failed images
     const validImages = processedImages.filter(img => img !== null);
+    const validUrls = gallery.filter((_, index) => processedImages[index] !== null);
 
     console.log(`Successfully processed ${validImages.length} out of ${gallery.length} images`);
     
@@ -177,12 +178,13 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
       for (let j = 0; j < batch.length; j++) {
         const imageData = batch[j];
         const isEndOfRow = (insertedCount + 1) % MAX_IMAGES_PER_ROW === 0;
+        const imageUrl = validUrls[i + j];
         
         try {
           // Add image with proper dimensions
           batchRequests.push(createImageRequest(
             currentIndex,
-            gallery[i + j],
+            imageUrl,
             imageData || DEFAULT_IMAGE_DIMENSIONS
           ));
 
@@ -199,15 +201,15 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
               paragraphStyle: {
                 alignment: 'CENTER',
                 lineSpacing: 150,
-                spaceAbove: { magnitude: 10, unit: 'PT' },
-                spaceBelow: { magnitude: 10, unit: 'PT' }
+                spaceAbove: { magnitude: 20, unit: 'PT' },
+                spaceBelow: { magnitude: 20, unit: 'PT' }
               },
               fields: 'alignment,lineSpacing,spaceAbove,spaceBelow'
             }
           });
 
           insertedCount++;
-          currentIndex += isEndOfRow ? 6 : 4; // Adjust index based on spacing
+          currentIndex += isEndOfRow ? VERTICAL_SPACING/2 : HORIZONTAL_SPACING/2;
         } catch (error) {
           console.warn(`Failed to prepare image request:`, error.message);
           continue;

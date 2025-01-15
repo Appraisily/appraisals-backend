@@ -1,22 +1,24 @@
 const MAX_IMAGES_PER_ROW = 3;
-const HORIZONTAL_SPACING = 20; // Points between images horizontally
-const VERTICAL_SPACING = 30;   // Points between rows vertically
+const HORIZONTAL_SPACING = 40; // Points between images horizontally
+const VERTICAL_SPACING = 40;   // Points between rows vertically
 const GALLERY_TITLE = 'Visual Comparisons: Similar Artworks Identified by Google Vision';
 const GALLERY_TITLE_STYLE = {
   alignment: 'CENTER',
-  namedStyleType: 'HEADING_3'
+  namedStyleType: 'HEADING_3',
+  spaceAbove: { magnitude: 20, unit: 'PT' },
+  spaceBelow: { magnitude: 20, unit: 'PT' }
 };
 
 const DEFAULT_IMAGE_DIMENSIONS = {
-  width: 180,  // Slightly smaller to fit 3 columns with spacing
-  height: 135  // Maintain aspect ratio
+  width: 200,  // Increased width for better visibility
+  height: 150  // Maintain aspect ratio
 };
 
 function createGalleryTitle(startIndex, endIndex) {
   return [{
     insertText: {
       location: { index: startIndex },
-      text: `${GALLERY_TITLE}\n`
+      text: `\n\n${GALLERY_TITLE}\n\n`
     }
   }, {
     updateParagraphStyle: {
@@ -24,8 +26,11 @@ function createGalleryTitle(startIndex, endIndex) {
         startIndex,
         endIndex
       },
-      paragraphStyle: GALLERY_TITLE_STYLE,
-      fields: 'alignment,namedStyleType'
+      paragraphStyle: {
+        ...GALLERY_TITLE_STYLE,
+        lineSpacing: 150
+      },
+      fields: 'alignment,namedStyleType,spaceAbove,spaceBelow,lineSpacing'
     }
   }];
 }
@@ -33,21 +38,35 @@ function createGalleryTitle(startIndex, endIndex) {
 function createImageRequest(index, imageUrl, dimensions, columnIndex = 0) {
   return {
     insertInlineImage: {
-      location: { index },
+      location: {
+        index,
+        segmentId: ''  // Required for proper image insertion
+      },
       uri: imageUrl,
       objectSize: {
         height: { magnitude: dimensions.height, unit: 'PT' },
         width: { magnitude: dimensions.width, unit: 'PT' }
+      },
+      imageProperties: {
+        cropProperties: {
+          offsetLeft: 0,
+          offsetRight: 0,
+          offsetTop: 0,
+          offsetBottom: 0
+        }
       }
     }
   };
 }
 
 function createSpacingRequest(index, isEndOfRow) {
+  const horizontalSpacing = ' '.repeat(HORIZONTAL_SPACING / 2);
+  const verticalSpacing = '\n'.repeat(3);
+
   return {
     insertText: {
       location: { index },
-      text: isEndOfRow ? '\n\n\n' : '      ' // Six spaces for horizontal spacing, triple newline for row end
+      text: isEndOfRow ? verticalSpacing : horizontalSpacing
     }
   };
 }
