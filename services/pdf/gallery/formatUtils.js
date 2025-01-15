@@ -38,30 +38,19 @@ function createGalleryTitle(startIndex, endIndex) {
 function createImageRequest(index, imageUrl, dimensions, columnIndex = 0) {
   return {
     insertInlineImage: {
-      location: {
-        index,
-        segmentId: ''  // Required for proper image insertion
-      },
+      location: { index },
       uri: imageUrl,
       objectSize: {
         height: { magnitude: dimensions.height, unit: 'PT' },
         width: { magnitude: dimensions.width, unit: 'PT' }
-      },
-      imageProperties: {
-        cropProperties: {
-          offsetLeft: 0,
-          offsetRight: 0,
-          offsetTop: 0,
-          offsetBottom: 0
-        }
       }
     }
   };
 }
 
 function createSpacingRequest(index, isEndOfRow) {
-  const horizontalSpacing = ' '.repeat(HORIZONTAL_SPACING / 2);
-  const verticalSpacing = '\n'.repeat(3);
+  const horizontalSpacing = '      '; // 6 spaces for horizontal spacing
+  const verticalSpacing = '\n\n\n';   // 3 newlines for vertical spacing
 
   return {
     insertText: {

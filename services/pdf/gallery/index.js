@@ -209,7 +209,7 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
           });
 
           insertedCount++;
-          currentIndex += isEndOfRow ? VERTICAL_SPACING/2 : HORIZONTAL_SPACING/2;
+          currentIndex += isEndOfRow ? 4 : 2; // Fixed spacing increments
         } catch (error) {
           console.warn(`Failed to prepare image request:`, error.message);
           continue;

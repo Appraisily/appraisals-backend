@@ -111,11 +111,7 @@ async function insertImageAtPlaceholder(docs, documentId, placeholder, imageUrl)
             location: {
               index: occurrence.startIndex
             },
-            uri: imageUrl,
-            objectSize: {
-              height: { magnitude: imageData.height, unit: 'PT' },
-              width: { magnitude: imageData.width, unit: 'PT' }
-            },
+            uri: imageUrl, 
             objectSize: {
               height: { magnitude: imageData.height, unit: 'PT' },
               width: { magnitude: imageData.width, unit: 'PT' }
