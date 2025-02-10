@@ -2,7 +2,6 @@ const fetch = require('node-fetch');
 const config = require('../config');
 
 async function buildMessageContent(prompt, imageUrl, type) {
-async function buildMessageContent(prompt, imageUrl, type) {
   const content = [];
   
   // Add text content first
