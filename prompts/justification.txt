@@ -1,0 +1,24 @@
+Analyze the provided auction results data to create a detailed justification for the appraised value. For each auction result, include:
+
+1. Complete sale details:
+   - Auction house name
+   - Sale date
+   - Final price achieved
+   - Item description
+   - Condition notes
+   - Any special provenance or historical significance
+
+2. Compare and contrast with the item being appraised:
+   - Similarities in period, style, and materials
+   - Differences in condition or features
+   - Market relevance and timing of the sale
+
+3. Explain how each result supports or influences the current valuation.
+
+Format the response as a professional, well-structured analysis that can be directly included in an appraisal report. Use formal language and maintain a factual, evidence-based tone throughout.
+
+# Example Output Format:
+
+Recent auction results strongly support the valuation of [ITEM] at [VALUE]. At Christie's January 2024 sale, a comparable Victorian mahogany dining table achieved $2,300, featuring similar turned legs and original brass castors. This example, while slightly less ornate, provides a solid baseline for our valuation. Another noteworthy sale at Sotheby's in December 2023 saw a more elaborate version reach $2,800, though that example included its original leaves and documented provenance...
+
+[Continue with detailed analysis of each relevant auction result]

@@ -1,10 +1,10 @@
 const fetch = require('node-fetch');
 const FormData = require('form-data');
 const { v4: uuidv4 } = require('uuid');
+const { generateContent } = require('./openai');
 const config = require('../config');
 const vision = require('@google-cloud/vision');
 const { getImageUrl } = require('./wordpress');
-const { generateContent } = require('./openai');
 const { getPrompt } = require('./utils/promptUtils');
 const { PROMPT_PROCESSING_ORDER } = require('./constants/reportStructure');
 
@@ -248,8 +248,58 @@ async function updateWordPressMetadata(postId, metadataKey, metadataValue) {
   }
 }
 
+async function processJustificationMetadata(postId, postTitle, value) {
+  try {
+    console.log('Processing justification metadata for post:', postId);
+    
+    // Make request to valuer agent
+    const response = await fetch('https://valuer-agent-856401495068.us-central1.run.app/api/justify', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        text: postTitle,
+        value: parseFloat(value)
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Valuer agent error: ${await response.text()}`);
+    }
+
+    const auctionData = await response.json();
+    
+    // Get justification prompt
+    const prompt = await getPrompt('justification');
+    
+    // Generate content using GPT-4o with auction data
+    const content = await generateContent(
+      `${prompt}\n\nAuction Data: ${JSON.stringify(auctionData, null, 2)}`,
+      postTitle,
+      {}
+    );
+    
+    // Update WordPress with generated content
+    await updateWordPressMetadata(postId, 'justification_html', content);
+    
+    return {
+      field: 'justification_html',
+      status: 'success'
+    };
+  } catch (error) {
+    console.error('Error processing justification:', error);
+    return {
+      field: 'justification_html',
+      status: 'error',
+      error: error.message
+    };
+  }
+}
+
 module.exports = {
   processMainImageWithGoogleVision,
   processAllMetadata,
+  processJustificationMetadata,
   initializeVisionClient
 };

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const wordpress = require('../services/wordpress');
 const { processMainImageWithGoogleVision } = require('../services/vision');
-const { processAllMetadata } = require('../services/metadata');
+const { processAllMetadata, processJustificationMetadata } = require('../services/metadata');
 const { getClientIp } = require('request-ip');
 
 router.post('/complete-appraisal-report', async (req, res) => {
@@ -54,6 +54,26 @@ router.post('/complete-appraisal-report', async (req, res) => {
     } catch (error) {
       console.error(`[Appraisal] Metadata error: ${error.message}`);
       metadataResults = [];
+    }
+
+    // Process justification metadata
+    let justificationResult;
+    try {
+      justificationResult = await processJustificationMetadata(
+        postId,
+        postTitle,
+        postData.acf?.value
+      );
+      if (justificationResult) {
+        metadataResults.push(justificationResult);
+      }
+    } catch (error) {
+      console.error(`[Appraisal] Justification error: ${error.message}`);
+      metadataResults.push({
+        field: 'justification_html',
+        status: 'error',
+        error: error.message
+      });
     }
 
     console.log('[Appraisal] Report generation complete');
