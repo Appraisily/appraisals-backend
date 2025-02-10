@@ -28,7 +28,15 @@ async function fetchPostData(postId) {
   });
 
   console.log('Post data retrieved successfully');
-  console.log('Title:', postData.title?.rendered);
+  const title = postData.title?.rendered || null;
+  if (!title) {
+    console.warn('Post title not found in WordPress response');
+  } else {
+    console.log('Title:', title);
+  }
+
+  const date = postData.date || new Date().toISOString();
+  console.log('Date:', date);
   console.log('Date:', postData.date);
 
   // Extract image URLs from embedded media
@@ -37,8 +45,8 @@ async function fetchPostData(postId) {
   return {
     postData,
     images,
-    title: postData.title?.rendered || null,
-    date: parseDate(postData.date)
+    title,
+    date: parseDate(date)
   };
 }
 
