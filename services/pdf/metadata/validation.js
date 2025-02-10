@@ -1,7 +1,7 @@
 const REQUIRED_METADATA_FIELDS = [
   'test', 'ad_copy', 'age_text', 'age1', 'condition',
   'signature1', 'signature2', 'style', 'valuation_method',
-  'conclusion1', 'conclusion2', 'authorship', 'table',
+  'conclusion1', 'conclusion2', 'authorship', 'table', 'justification_html',
   'glossary', 'value',
   // Static metadata fields
   'Introduction', 'ImageAnalysisText', 'SignatureText',

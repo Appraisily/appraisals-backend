@@ -1,12 +1,14 @@
-Analyze the provided auction results data to create a detailed justification for the appraised value. For each auction result, include:
+Analyze ONLY the provided auction results data to create a detailed justification for the appraised value. You MUST ONLY use the auction results provided in the data and NEVER fabricate or invent additional sales.
 
-1. Complete sale details:
+For each auction result in the provided data, include:
+
+1. Complete sale details (using ONLY information present in the data):
    - Auction house name
    - Sale date
    - Final price achieved
    - Item description
-   - Condition notes
-   - Any special provenance or historical significance
+   - Condition notes (if provided)
+   - Provenance/significance (if provided)
 
 2. Compare and contrast with the item being appraised:
    - Similarities in period, style, and materials
@@ -15,10 +17,16 @@ Analyze the provided auction results data to create a detailed justification for
 
 3. Explain how each result supports or influences the current valuation.
 
+CRITICAL REQUIREMENTS:
+- Use ONLY the auction results provided in the data
+- DO NOT invent or fabricate any sales data
+- If a detail is not provided in the data, simply omit it rather than making assumptions
+- Maintain strict factual accuracy based on the provided data
+
 Format the response as a professional, well-structured analysis that can be directly included in an appraisal report. Use formal language and maintain a factual, evidence-based tone throughout.
 
 # Example Output Format:
 
-Recent auction results strongly support the valuation of [ITEM] at [VALUE]. At Christie's January 2024 sale, a comparable Victorian mahogany dining table achieved $2,300, featuring similar turned legs and original brass castors. This example, while slightly less ornate, provides a solid baseline for our valuation. Another noteworthy sale at Sotheby's in December 2023 saw a more elaborate version reach $2,800, though that example included its original leaves and documented provenance...
+Recent auction results from [DATES FROM DATA] strongly support the valuation of [ITEM] at [VALUE]. At [AUCTION HOUSE FROM DATA] in [ACTUAL DATE FROM DATA], a comparable [ITEM DESCRIPTION FROM DATA] achieved [ACTUAL PRICE FROM DATA]. [Continue with actual comparisons using only provided data...]
 
-[Continue with detailed analysis of each relevant auction result]
+[Analyze each auction result from the provided data, maintaining strict adherence to the actual information provided]

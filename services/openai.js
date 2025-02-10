@@ -2,6 +2,7 @@ const fetch = require('node-fetch');
 const config = require('../config');
 
 async function buildMessageContent(prompt, imageUrl, type) {
+async function buildMessageContent(prompt, imageUrl, type) {
   const content = [];
   
   // Add text content first
@@ -23,7 +24,7 @@ async function buildMessageContent(prompt, imageUrl, type) {
   return content;
 }
 
-async function generateContent(prompt, postTitle, images = {}) {
+async function generateContent(prompt, postTitle, images = {}, model = 'gpt-4o') {
   try {
     console.log('Generating content with OpenAI...');
     
@@ -51,18 +52,24 @@ async function generateContent(prompt, postTitle, images = {}) {
       }
     }
 
+    const requestBody = {
+      model,
+      messages
+    };
+
+    // Only add these parameters for gpt-4o model
+    if (model === 'gpt-4o') {
+      requestBody.max_tokens = 1500;
+      requestBody.temperature = 0.7;
+    }
+
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${config.OPENAI_API_KEY}`
       },
-      body: JSON.stringify({
-        model: 'gpt-4o',
-        messages: messages,
-        max_tokens: 1500,
-        temperature: 0.7
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {

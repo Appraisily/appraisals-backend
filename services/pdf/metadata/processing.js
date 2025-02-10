@@ -51,6 +51,13 @@ async function processMetadata(postData) {
     return acc;
   }, {});
 
+  // Add justification HTML if available
+  if (postData.acf?.justification_html) {
+    console.log('\nProcessing justification HTML');
+    metadata.justification_html = stripHtml(postData.acf.justification_html);
+    console.log('Justification HTML processed');
+  }
+
   // Add static metadata fields
   console.log('\nProcessing static metadata fields');
   metadata.Introduction = staticContent.Introduction || '';

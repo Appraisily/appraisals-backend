@@ -282,7 +282,8 @@ async function processJustificationMetadata(postId, postTitle, value) {
     const content = await generateContent(
       `${prompt}\n\nAuction Data: ${JSON.stringify(auctionData, null, 2)}`,
       postTitle,
-      {}
+      {},
+      'o3-mini'
     );
     
     // Update WordPress with generated content
