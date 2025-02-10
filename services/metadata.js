@@ -273,6 +273,11 @@ async function processJustificationMetadata(postId, postTitle, value) {
     // Get justification prompt
     const prompt = await getPrompt('justification');
     
+    // Debug log the full prompt and auction data
+    console.log('Justification - Full Prompt:', prompt);
+    console.log('Justification - Auction Data:', JSON.stringify(auctionData, null, 2));
+    console.log('Justification - Combined Prompt:', `${prompt}\n\nAuction Data: ${JSON.stringify(auctionData, null, 2)}`);
+    
     // Generate content using GPT-4o with auction data
     const content = await generateContent(
       `${prompt}\n\nAuction Data: ${JSON.stringify(auctionData, null, 2)}`,
