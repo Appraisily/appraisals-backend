@@ -4,6 +4,9 @@ const { v4: uuidv4 } = require('uuid');
 const config = require('../config');
 const vision = require('@google-cloud/vision');
 const { getImageUrl } = require('./wordpress');
+const { generateContent } = require('./openai');
+const { getPrompt } = require('./utils/promptUtils');
+const { PROMPT_PROCESSING_ORDER } = require('./constants/reportStructure');
 
 let visionClient;
 
@@ -100,6 +103,42 @@ async function processMainImageWithGoogleVision(postId) {
   }
 }
 
+async function processAllMetadata(postId, postTitle, { postData, images }) {
+  console.log('Processing all metadata fields for post:', postId);
+  const results = [];
+  const context = {};
+
+  for (const field of PROMPT_PROCESSING_ORDER) {
+    try {
+      console.log(`Processing field: ${field}`);
+      const prompt = await getPrompt(field);
+      
+      // Generate content using OpenAI
+      const content = await generateContent(prompt, postTitle, images);
+      
+      // Store generated content in context for next fields
+      context[field] = content;
+      
+      // Update WordPress with generated content
+      await updateWordPressMetadata(postId, field, content);
+      
+      results.push({
+        field,
+        status: 'success'
+      });
+    } catch (error) {
+      console.error(`Error processing field ${field}:`, error);
+      results.push({
+        field,
+        status: 'error',
+        error: error.message
+      });
+    }
+  }
+
+  return results;
+}
+
 async function uploadImageToWordPress(imageUrl) {
   try {
     const response = await fetch(imageUrl);
@@ -170,7 +209,6 @@ async function updateWordPressGallery(postId, imageIds) {
 
     if (!response.ok) {
       throw new Error(`Error updating gallery: ${await response.text()}`);
-      console.error('Response status:', response.status);
     }
 
     console.log(`Gallery updated for post ${postId} with ${imageIds.length} images`);
@@ -178,11 +216,40 @@ async function updateWordPressGallery(postId, imageIds) {
   } catch (error) {
     console.error('Error updating WordPress gallery:', error);
     throw error;
-    console.error('Full error:', error);
+  }
+}
+
+async function updateWordPressMetadata(postId, metadataKey, metadataValue) {
+  try {
+    console.log(`Updating metadata for post ${postId}, field: ${metadataKey}`);
+    
+    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      },
+      body: JSON.stringify({
+        acf: {
+          [metadataKey]: metadataValue
+        }
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Error updating metadata: ${await response.text()}`);
+    }
+
+    console.log(`Successfully updated metadata for post ${postId}, field: ${metadataKey}`);
+    return true;
+  } catch (error) {
+    console.error(`Error updating WordPress metadata for ${metadataKey}:`, error);
+    throw error;
   }
 }
 
 module.exports = {
   processMainImageWithGoogleVision,
+  processAllMetadata,
   initializeVisionClient
 };
