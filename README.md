@@ -73,6 +73,133 @@ A scalable, serverless API service built with Node.js that automates the generat
 6. Final report is uploaded to Google Drive
 7. Links are returned to the client
 
+### Detailed Process Flow Diagrams
+
+#### Appraisal Report Generation Flow
+
+```mermaid
+graph TD
+    subgraph "Initialization"
+        A[Start Service] --> B[Load Secrets from Secret Manager]
+        B --> C[Initialize Google APIs]
+        C --> D[Register API Routes]
+        D --> E[Start Express Server]
+    end
+
+    subgraph "Appraisal Report Generation"
+        F[Receive POST /complete-appraisal-report] --> G[Validate postId]
+        G -->|Invalid| H[Return 400 Bad Request]
+        G -->|Valid| I[Fetch WordPress Post Data]
+        I --> J[Process Main Image with Google Vision]
+        
+        I --> K[Process All Metadata]
+        K --> L[Process Title]
+        K --> M[Process Age]
+        K --> N[Process Condition]
+        K --> O[Process Style]
+        K --> P[Process Other Fields]
+        
+        I --> Q[Process Justification Metadata]
+        Q --> R[Calculate Justification based on Value]
+        
+        J --> S[Return Complete Response]
+        L --> S
+        M --> S
+        N --> S
+        O --> S
+        P --> S
+        R --> S
+    end
+
+    subgraph "Error Handling"
+        I -->|Error| T[Log Error]
+        J -->|Error| T
+        K -->|Error| T
+        Q -->|Error| T
+        
+        T --> U[Return Error Response]
+    end
+
+    subgraph "Resource Files"
+        Z1["/index.js: Main entry point & server setup"]
+        Z2["/routes/appraisal.js: Appraisal endpoints"]
+        Z3["/services/wordpress.js: WordPress API client"]
+        Z4["/services/vision.js: Google Vision integration"]
+        Z5["/services/metadata.js: Metadata processing"]
+        Z6["/services/openai.js: OpenAI integration"]
+    end
+    
+    style Z1 fill:#f9f9f9,stroke:#666,stroke-width:1px
+    style Z2 fill:#f9f9f9,stroke:#666,stroke-width:1px
+    style Z3 fill:#f9f9f9,stroke:#666,stroke-width:1px
+    style Z4 fill:#f9f9f9,stroke:#666,stroke-width:1px
+    style Z5 fill:#f9f9f9,stroke:#666,stroke-width:1px
+    style Z6 fill:#f9f9f9,stroke:#666,stroke-width:1px
+```
+
+#### PDF Generation Flow
+
+```mermaid
+graph TD
+    subgraph "PDF Generation Process"
+        A1[Receive POST /generate-pdf] --> B1[Validate postId]
+        B1 -->|Invalid| C1[Return 400 Bad Request]
+        B1 -->|Valid| D1[Initialize Google APIs]
+        
+        D1 --> E1[Fetch WordPress Post Data]
+        E1 --> F1[Process & Validate Metadata]
+        F1 -->|Invalid| G1[Return 400 Validation Error]
+        
+        F1 -->|Valid| H1[Get Template ID]
+        H1 --> I1[Clone Template Document]
+        I1 --> J1[Move Document to Folder]
+        
+        J1 --> K1[Replace Placeholders with Metadata]
+        K1 --> L1[Adjust Title Font Size]
+        L1 --> M1[Add Gallery Images]
+        M1 --> N1[Insert Age Image]
+        N1 --> O1[Insert Signature Image]
+        O1 --> P1[Insert Main Image]
+        
+        P1 --> Q1[Export to PDF]
+        Q1 --> R1[Generate Filename]
+        R1 --> S1[Upload PDF to Drive]
+        S1 --> T1[Update WordPress ACF Fields]
+        
+        T1 --> U1[Return Success Response]
+    end
+
+    subgraph "Error Handling"
+        E1 -->|Error| V1[Log Error]
+        F1 -->|Error| V1
+        I1 -->|Error| V1
+        M1 -->|Non-fatal Error| W1[Log Warning & Continue]
+        Q1 -->|Error| V1
+        S1 -->|Error| V1
+        T1 -->|Error| V1
+        
+        V1 --> X1[Return Error Response]
+    end
+
+    subgraph "Resource Files"
+        Y1["/routes/pdf.js: PDF generation endpoint"]
+        Y2["/services/pdf/index.js: Google Docs operations"]
+        Y3["/services/pdf/documentUtils.js: Document manipulation"]
+        Y4["/services/pdf/exportUtils.js: PDF export"]
+        Y5["/services/pdf/gallery/index.js: Gallery handling"]
+        Y6["/services/pdf/metadata/processing.js: Metadata processing"]
+        Y7["/services/pdf/metadata/validation.js: Metadata validation"]
+    end
+    
+    style Y1 fill:#f9f9f9,stroke:#666,stroke-width:1px
+    style Y2 fill:#f9f9f9,stroke:#666,stroke-width:1px
+    style Y3 fill:#f9f9f9,stroke:#666,stroke-width:1px
+    style Y4 fill:#f9f9f9,stroke:#666,stroke-width:1px
+    style Y5 fill:#f9f9f9,stroke:#666,stroke-width:1px
+    style Y6 fill:#f9f9f9,stroke:#666,stroke-width:1px
+    style Y7 fill:#f9f9f9,stroke:#666,stroke-width:1px
+```
+
 ---
 
 ## Requirements
