@@ -5,8 +5,9 @@ const { generateContent } = require('./openai');
 const config = require('../config');
 const vision = require('@google-cloud/vision');
 const { getImageUrl } = require('./wordpress');
-const { getPrompt } = require('./utils/promptUtils');
+const { getPrompt, buildContextualPrompt } = require('./utils/promptUtils');
 const { PROMPT_PROCESSING_ORDER } = require('./constants/reportStructure');
+const { performContextualSearch } = require('./serper');
 
 let visionClient;
 
@@ -107,11 +108,49 @@ async function processAllMetadata(postId, postTitle, { postData, images }) {
   console.log('Processing all metadata fields for post:', postId);
   const results = [];
   const context = {};
+  
+  // Perform contextual search using SERPER at the beginning
+  // This will be used for all field generations
+  let searchResults = null;
+  try {
+    console.log('Initiating contextual search for title:', postTitle);
+    searchResults = await performContextualSearch(postTitle);
+    if (searchResults.success) {
+      console.log('Contextual search completed successfully');
+      // Store search results in WordPress for reference/debugging
+      await updateWordPressMetadata(postId, 'serper_search_results', JSON.stringify({
+        query: searchResults.searchQuery,
+        timestamp: new Date().toISOString(),
+        success: true,
+        results: searchResults.searchResults
+      }));
+    } else {
+      console.warn('Contextual search failed:', searchResults.error);
+      // Still store the error for reference
+      await updateWordPressMetadata(postId, 'serper_search_results', JSON.stringify({
+        timestamp: new Date().toISOString(),
+        success: false,
+        error: searchResults.error
+      }));
+    }
+  } catch (searchError) {
+    console.error('Error during contextual search:', searchError);
+    searchResults = null;
+  }
 
   for (const field of PROMPT_PROCESSING_ORDER) {
     try {
       console.log(`Processing field: ${field}`);
-      const prompt = await getPrompt(field);
+      // Get the base prompt 
+      const basePrompt = await getPrompt(field);
+      
+      // Build the full contextual prompt with previous content and search results
+      const prompt = buildContextualPrompt(basePrompt, context, searchResults);
+      
+      // Log if we're using search results for this field
+      if (searchResults && searchResults.success) {
+        console.log(`Using search results for field: ${field}`);
+      }
       
       // Generate content using OpenAI
       const content = await generateContent(prompt, postTitle, images);
@@ -273,14 +312,44 @@ async function processJustificationMetadata(postId, postTitle, value) {
     // Get justification prompt
     const prompt = await getPrompt('justification');
     
+    // Perform contextual search specifically for justification
+    let searchResults = null;
+    try {
+      // Create a more targeted search specifically for valuation
+      const searchQuery = `${postTitle} auction value ${value}`;
+      console.log('Justification - Performing targeted search for valuation data:', searchQuery);
+      
+      // Call SERPER API directly since we have a specific query
+      const { searchGoogle, formatSearchResults } = require('./serper');
+      const googleResults = await searchGoogle(searchQuery);
+      searchResults = {
+        success: true,
+        searchQuery,
+        formattedContext: formatSearchResults(googleResults)
+      };
+      
+      console.log('Justification - Search results received');
+    } catch (searchError) {
+      console.error('Justification - Error during search:', searchError);
+      searchResults = null;
+    }
+    
+    // Build the final prompt with auction data and search results
+    let finalPrompt = `${prompt}\n\nAuction Data: ${JSON.stringify(auctionData, null, 2)}`;
+    
+    if (searchResults && searchResults.formattedContext) {
+      finalPrompt += `\n\n${searchResults.formattedContext}\n\nUsing both the auction data and search results above, please generate a detailed justification for the valuation.`;
+      console.log('Justification - Using search results to enhance justification');
+    }
+    
     // Debug log the full prompt and auction data
     console.log('Justification - Full Prompt:', prompt);
     console.log('Justification - Auction Data:', JSON.stringify(auctionData, null, 2));
-    console.log('Justification - Combined Prompt:', `${prompt}\n\nAuction Data: ${JSON.stringify(auctionData, null, 2)}`);
+    console.log('Justification - Search Query:', searchResults?.searchQuery || 'None');
     
-    // Generate content using GPT-4o with auction data
+    // Generate content using GPT-4o with auction data and search results
     const content = await generateContent(
-      `${prompt}\n\nAuction Data: ${JSON.stringify(auctionData, null, 2)}`,
+      finalPrompt,
       postTitle,
       {},
       'o3-mini'
@@ -288,6 +357,14 @@ async function processJustificationMetadata(postId, postTitle, value) {
     
     // Update WordPress with generated content
     await updateWordPressMetadata(postId, 'justification_html', content);
+    
+    // Also store the search results used for justification separately
+    if (searchResults && searchResults.success) {
+      await updateWordPressMetadata(postId, 'justification_search_results', JSON.stringify({
+        query: searchResults.searchQuery,
+        timestamp: new Date().toISOString()
+      }));
+    }
     
     return {
       field: 'justification_html',

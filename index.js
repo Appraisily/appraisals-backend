@@ -30,6 +30,16 @@ async function loadSecrets() {
     process.env.OPENAI_API_KEY = await getSecret('OPENAI_API_KEY');
     process.env.GOOGLE_VISION_CREDENTIALS = await getSecret('GOOGLE_VISION_CREDENTIALS');
     process.env.GOOGLE_DOCS_CREDENTIALS = await getSecret('GOOGLE_DOCS_CREDENTIALS');
+    
+    // Load SERPER API key
+    try {
+      process.env.SERPER_API = await getSecret('SERPER_API');
+      console.log('SERPER API key loaded successfully.');
+    } catch (serperError) {
+      console.warn('Warning: SERPER_API key not found in Secret Manager:', serperError.message);
+      console.warn('SERPER search functionality will be disabled.');
+    }
+    
     console.log('All secrets loaded successfully.');
   } catch (error) {
     console.error('Error loading secrets:', error);

@@ -75,6 +75,99 @@ A scalable, serverless API service built with Node.js that automates the generat
 
 ### Detailed Process Flow Diagrams
 
+#### System Architecture Overview
+
+```mermaid
+graph TD
+    %% Entry points and initialization
+    subgraph "System Initialization"
+        A[Start Service] --> B[Load Secrets from Secret Manager]
+        B --> C[Initialize Vision Client]
+        B --> D[Initialize Google Docs/Drive]
+        C --> E[Register API Routes]
+        D --> E
+        E --> F[Start Express Server]
+        
+        %% Source file references
+        A -.-> AFile["/index.js: Main entry point"]
+        B -.-> BFile["/index.js: loadSecrets()"]
+        C -.-> CFile["/services/vision.js: initializeVisionClient()"]
+        D -.-> DFile["/services/pdf/index.js: initializeGoogleApis()"]
+        E -.-> EFile["/index.js: Route registration"]
+    end
+    
+    %% Core endpoints
+    subgraph "API Endpoints"
+        F --> G["/complete-appraisal-report"]
+        F --> H["/generate-pdf"]
+        
+        %% Source file references
+        G -.-> GFile["/routes/appraisal.js"]
+        H -.-> HFile["/routes/pdf.js"]
+    end
+    
+    %% External services
+    subgraph "External Services"
+        I1[WordPress CMS]
+        I2[Google Vision API]
+        I3[OpenAI GPT-4]
+        I4[Google Docs/Drive]
+        I5[Valuer Agent API]
+        
+        %% Integration connections
+        G --> I1
+        G --> I2
+        G --> I3
+        G --> I5
+        H --> I1
+        H --> I4
+    end
+    
+    %% Data flows
+    subgraph "Data Processing Flows"
+        %% Content flow
+        J1[WordPress Post Data]
+        J2[AI-Generated Content]
+        J3[Similar Artwork Images]
+        J4[PDF Document]
+        
+        I1 --> J1
+        I2 --> J3
+        I3 --> J2
+        I4 --> J4
+        
+        %% Data connections
+        J1 --> G
+        J1 --> H
+        J2 --> I1
+        J3 --> I1
+        J4 --> I1
+        
+        %% Source file references
+        J1 -.-> J1File["/services/wordpress.js: fetchPostData()"]
+        J2 -.-> J2File["/services/openai.js: generateContent()"]
+        J3 -.-> J3File["/services/vision.js: processMainImageWithGoogleVision()"]
+        J4 -.-> J4File["/services/pdf/index.js: export and document functions"]
+    end
+    
+    %% Performance metrics
+    Time1["~2-3s: WordPress data fetch"] -.-> J1
+    Time2["~5-10s: Vision API analysis"] -.-> I2
+    Time3["~3-5s: OpenAI content generation (per field)"] -.-> I3
+    Time4["~40-60s: PDF generation complete process"] -.-> J4
+    
+    %% Styling
+    classDef api fill:#d4f0d0,stroke:#333,stroke-width:1px
+    classDef external fill:#ffd700,stroke:#333,stroke-width:1px
+    classDef file fill:#f9f9f9,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5
+    classDef time fill:none,stroke:none
+    
+    class G,H api
+    class I1,I2,I3,I4,I5 external
+    class AFile,BFile,CFile,DFile,EFile,GFile,HFile,J1File,J2File,J3File,J4File file
+    class Time1,Time2,Time3,Time4 time
+```
+
 #### Appraisal Report Generation Flow
 
 ```mermaid
@@ -198,6 +291,81 @@ graph TD
     style Y5 fill:#f9f9f9,stroke:#666,stroke-width:1px
     style Y6 fill:#f9f9f9,stroke:#666,stroke-width:1px
     style Y7 fill:#f9f9f9,stroke:#666,stroke-width:1px
+```
+
+#### Vision Processing and Content Generation Flow
+
+```mermaid
+graph TD
+    subgraph "Main Image Vision Processing"
+        V1[Start Vision Processing] --> V2{Gallery Populated?}
+        V2 -->|Yes| V3[Skip Processing]
+        V2 -->|No| V4[Get Main Image URL]
+        V4 --> V5[Call Google Vision API]
+        V5 --> V6{Similar Images Found?}
+        V6 -->|No| V7[Return Empty Gallery]
+        V6 -->|Yes| V8[Process Similar Images]
+        V8 --> V9[Upload Images to WordPress]
+        V9 --> V10[Update ACF Gallery Field]
+        V10 --> V11[Return Gallery Data]
+        V3 --> V11
+
+        %% Source file references
+        V1 -.-> VFile1["/services/vision.js: processMainImageWithGoogleVision()"]
+        V5 -.-> VFile2["/services/vision.js: visionClient.webDetection()"]
+        V9 -.-> VFile3["/services/vision.js: uploadImageToWordPress()"]
+        V10 -.-> VFile4["/services/vision.js: updateWordPressGallery()"]
+    end
+
+    subgraph "Metadata Processing"
+        M1[Start Metadata Processing] --> M2[Load Processing Order]
+        M2 --> M3[Begin Processing Loop]
+        M3 --> M4[Load Field Prompt]
+        M4 --> M5[Generate Content with OpenAI]
+        M5 --> M6[Update WordPress with Content]
+        M6 --> M7{More Fields?}
+        M7 -->|Yes| M3
+        M7 -->|No| M8[Return Processed Fields]
+
+        %% Source file references
+        M1 -.-> MFile1["/services/metadata.js: processAllMetadata()"]
+        M4 -.-> MFile2["/services/utils/promptUtils.js: getPrompt()"]
+        M5 -.-> MFile3["/services/openai.js: generateContent()"]
+        M6 -.-> MFile4["/services/metadata.js: updateWordPressMetadata()"]
+    end
+
+    subgraph "Justification Processing"
+        J1[Start Justification Processing] --> J2[Get Artwork Value]
+        J2 --> J3[Call Valuer Agent API]
+        J3 --> J4[Format Auction Data]
+        J4 --> J5[Load Justification Prompt]
+        J5 --> J6[Generate Justification with OpenAI]
+        J6 --> J7[Update WordPress with Justification]
+        J7 --> J8[Return Justification Field]
+
+        %% Source file references
+        J1 -.-> JFile1["/services/metadata.js: processJustificationMetadata()"]
+        J3 -.-> JFile2["External Valuer Agent API call"]
+        J6 -.-> JFile3["/services/openai.js: generateContent()"]
+        J7 -.-> JFile4["/services/metadata.js: updateWordPressMetadata()"]
+    end
+
+    %% Performance metrics
+    TimeV1["~5-8s: Vision API processing"] -.-> V5
+    TimeV2["~1-2s per image upload"] -.-> V9
+    TimeM1["~3-5s per field generation"] -.-> M5
+    TimeJ1["~5-7s: Valuer agent API"] -.-> J3
+    TimeJ2["~3-4s: Justification generation"] -.-> J6
+
+    %% Styling
+    classDef api fill:#d4f0d0,stroke:#333,stroke-width:1px
+    classDef external fill:#ffd700,stroke:#333,stroke-width:1px
+    classDef file fill:#f9f9f9,stroke:#666,stroke-width:1px,stroke-dasharray: 5 5
+    classDef time fill:none,stroke:none
+
+    class V5,J3 external
+    class VFile1,VFile2,VFile3,VFile4,MFile1,MFile2,MFile3,MFile4,JFile1,JFile2,JFile3,JFile4 file
+    class TimeV1,TimeV2,TimeM1,TimeJ1,TimeJ2 time
 ```
 
 ---

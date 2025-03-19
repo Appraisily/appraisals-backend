@@ -59,5 +59,11 @@ Object.defineProperties(config, {
       }
       return process.env.GOOGLE_DOCS_CREDENTIALS;
     }
+  },
+  'SERPER_API': {
+    enumerable: true,
+    get() {
+      return process.env.SERPER_API || null; // Return null if not available, making it optional
+    }
   }
 });

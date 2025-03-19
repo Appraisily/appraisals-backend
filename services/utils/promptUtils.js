@@ -24,19 +24,43 @@ async function getPrompt(custom_post_type_name) {
   }
 }
 
-function buildContextualPrompt(prompt, context) {
-  if (Object.keys(context).length === 0) {
-    return prompt;
+function buildContextualPrompt(prompt, context, searchResults = null) {
+  let contextualPrompt = prompt;
+
+  // Add previous generated content
+  if (Object.keys(context).length > 0) {
+    contextualPrompt = `Previous content generated for this report:\n\n${
+      Object.entries(context)
+        .map(([field, content]) => `${field}:\n${content}\n`)
+        .join('\n')
+    }\n\nUsing the context above and maintaining consistency, ${prompt}`;
+  }
+  
+  // Add search results if available
+  if (searchResults && searchResults.formattedContext) {
+    contextualPrompt = `${contextualPrompt}\n\n${searchResults.formattedContext}\n\nUsing the search results above to inform your content where relevant, please generate the requested section.`;
+    
+    console.log('PromptUtils: Added search results to prompt');
+    // Log the query that generated these results
+    if (searchResults.searchQuery) {
+      console.log('PromptUtils: Search query used:', searchResults.searchQuery);
+    }
   }
 
-  return `Previous content generated for this report:\n\n${
-    Object.entries(context)
-      .map(([field, content]) => `${field}:\n${content}\n`)
-      .join('\n')
-  }\n\nUsing the context above and maintaining consistency, ${prompt}`;
+  return contextualPrompt;
+}
+
+// Helper to enhance prompt with only search context
+function addSearchContextToPrompt(prompt, searchResults) {
+  if (!searchResults || !searchResults.formattedContext) {
+    return prompt;
+  }
+  
+  return `${prompt}\n\n${searchResults.formattedContext}\n\nConsider the search results above when generating content where relevant.`;
 }
 
 module.exports = {
   getPrompt,
-  buildContextualPrompt
+  buildContextualPrompt,
+  addSearchContextToPrompt
 };
