@@ -1,29 +1,29 @@
-const s3Logger = require('./s3Logger');
+const gcsLogger = require('./gcsLogger');
 
 function createLogger(name) {
   return {
     info: (message, sessionId, data = {}) => {
       console.log(`[${name}] ${message}`);
       if (sessionId) {
-        return s3Logger.info(sessionId, message, data);
+        return gcsLogger.info(sessionId, message, data);
       }
     },
     error: (message, sessionId, error, data = {}) => {
       console.error(`[${name}] ${message}`, error);
       if (sessionId) {
-        return s3Logger.error(sessionId, message, { ...data, error: formatError(error) });
+        return gcsLogger.error(sessionId, message, { ...data, error: formatError(error) });
       }
     },
     warn: (message, sessionId, data = {}) => {
       console.warn(`[${name}] ${message}`);
       if (sessionId) {
-        return s3Logger.warn(sessionId, message, data);
+        return gcsLogger.warn(sessionId, message, data);
       }
     },
     debug: (message, sessionId, data = {}) => {
       console.debug(`[${name}] ${message}`);
       if (sessionId) {
-        return s3Logger.debug(sessionId, message, data);
+        return gcsLogger.debug(sessionId, message, data);
       }
     }
   };
