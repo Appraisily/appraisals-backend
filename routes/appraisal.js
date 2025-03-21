@@ -58,9 +58,15 @@ router.post('/complete-appraisal-report', async (req, res) => {
 
     logger.info(`Updating WordPress post with generated metadata: ${postId}`, sessionId);
     
-    // Update the post with metadata
-    await wordpress.updatePostMetadata(postId, metadata);
-    await wordpress.updatePostContent(postId, justification.content);
+    // Update the post with justification content
+    if (justification.status === 'success') {
+      logger.info(`Successfully generated justification for post: ${postId}`, sessionId);
+      // WordPress ACF updates were already performed in the metadata processing
+    } else {
+      logger.error(`Failed to generate justification for post: ${postId}`, sessionId, {
+        error: justification.error
+      });
+    }
 
     logger.info(`Successfully completed appraisal report for post: ${postId}`, sessionId);
 
@@ -70,7 +76,11 @@ router.post('/complete-appraisal-report', async (req, res) => {
       details: {
         postId,
         title: postTitle,
-        metadata
+        metadata,
+        justification: {
+          status: justification.status,
+          error: justification.error
+        }
       }
     });
 

@@ -104,78 +104,37 @@ async function processMainImageWithGoogleVision(postId) {
   }
 }
 
-async function processAllMetadata(postId, postTitle, { postData, images }) {
-  console.log('Processing all metadata fields for post:', postId);
+async function processAllMetadata(postData, visionAnalysis, sessionId) {
+  const { createLogger } = require('./utils/logger');
+  const logger = createLogger('Metadata');
+  
+  logger.info('Processing all metadata fields', sessionId, { 
+    postId: postData.id,
+    hasVisionResults: !!visionAnalysis 
+  });
+  
   const results = [];
   const context = {};
   
-  // Perform contextual search using SERPER at the beginning
-  // This will be used for all field generations
-  let searchResults = null;
-  try {
-    console.log('Initiating contextual search for title:', postTitle);
-    searchResults = await performContextualSearch(postTitle);
-    if (searchResults.success) {
-      console.log('Contextual search completed successfully');
-      // Store search results in WordPress for reference/debugging
-      await updateWordPressMetadata(postId, 'serper_search_results', JSON.stringify({
-        query: searchResults.searchQuery,
-        timestamp: new Date().toISOString(),
-        success: true,
-        results: searchResults.searchResults
-      }));
-    } else {
-      console.warn('Contextual search failed:', searchResults.error);
-      // Still store the error for reference
-      await updateWordPressMetadata(postId, 'serper_search_results', JSON.stringify({
-        timestamp: new Date().toISOString(),
-        success: false,
-        error: searchResults.error
-      }));
-    }
-  } catch (searchError) {
-    console.error('Error during contextual search:', searchError);
-    searchResults = null;
-  }
+  // Extract needed data
+  const postId = postData.id;
+  const postTitle = postData.title?.rendered || 'Item for Appraisal';
+  
+  // Return metadata object that includes existing ACF data with any new fields added
+  const metadata = {
+    id: postId,
+    title: postTitle,
+    ...postData.acf
+  };
 
-  for (const field of PROMPT_PROCESSING_ORDER) {
-    try {
-      console.log(`Processing field: ${field}`);
-      // Get the base prompt 
-      const basePrompt = await getPrompt(field);
-      
-      // Build the full contextual prompt with previous content and search results
-      const prompt = buildContextualPrompt(basePrompt, context, searchResults);
-      
-      // Log if we're using search results for this field
-      if (searchResults && searchResults.success) {
-        console.log(`Using search results for field: ${field}`);
-      }
-      
-      // Generate content using OpenAI
-      const content = await generateContent(prompt, postTitle, images);
-      
-      // Store generated content in context for next fields
-      context[field] = content;
-      
-      // Update WordPress with generated content
-      await updateWordPressMetadata(postId, field, content);
-      
-      results.push({
-        field,
-        status: 'success'
-      });
-    } catch (error) {
-      console.error(`Error processing field ${field}:`, error);
-      results.push({
-        field,
-        status: 'error',
-        error: error.message
-      });
-    }
+  // Add vision analysis if available
+  if (visionAnalysis) {
+    metadata.visionAnalysis = visionAnalysis;
   }
-
-  return results;
+  
+  logger.info('Metadata processing complete', sessionId);
+  
+  return metadata;
 }
 
 async function uploadImageToWordPress(imageUrl) {
@@ -260,7 +219,17 @@ async function updateWordPressGallery(postId, imageIds) {
 
 async function updateWordPressMetadata(postId, metadataKey, metadataValue) {
   try {
-    console.log(`Updating metadata for post ${postId}, field: ${metadataKey}`);
+    const { createLogger } = require('./utils/logger');
+    const logger = createLogger('WordPressMetadata');
+    
+    logger.info(`Updating metadata for post ${postId}, field: ${metadataKey}`, postId);
+    
+    // Do special handling for HTML fields to ensure HTML content is preserved
+    if (metadataKey === 'auction_statistics_html' || 
+        metadataKey === 'justification_html' || 
+        (typeof metadataValue === 'string' && metadataValue.includes('<'))) {
+      logger.info(`Field ${metadataKey} contains HTML, ensuring it's preserved`, postId);
+    }
     
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}`, {
       method: 'POST',
@@ -276,49 +245,59 @@ async function updateWordPressMetadata(postId, metadataKey, metadataValue) {
     });
 
     if (!response.ok) {
-      throw new Error(`Error updating metadata: ${await response.text()}`);
+      const errorText = await response.text();
+      logger.error(`Error updating metadata: ${errorText}`, postId);
+      throw new Error(`Error updating metadata: ${errorText}`);
     }
 
-    console.log(`Successfully updated metadata for post ${postId}, field: ${metadataKey}`);
+    logger.info(`Successfully updated metadata for post ${postId}, field: ${metadataKey}`, postId);
     return true;
   } catch (error) {
-    console.error(`Error updating WordPress metadata for ${metadataKey}:`, error);
+    const { createLogger } = require('./utils/logger');
+    const logger = createLogger('WordPressMetadata');
+    logger.error(`Error updating WordPress metadata for ${metadataKey}`, postId, error);
     throw error;
   }
 }
 
-async function processJustificationMetadata(postId, postTitle, value) {
+async function processJustificationMetadata(value, metadata, sessionId) {
   try {
-    console.log('Processing justification metadata for post:', postId);
+    const { createLogger } = require('./utils/logger');
+    const logger = createLogger('JustificationMetadata');
+    logger.info(`Processing justification metadata for value: ${value}`, sessionId);
     
     // Make request to valuer agent
+    logger.info('Calling valuer agent API', sessionId);
     const response = await fetch('https://valuer-agent-856401495068.us-central1.run.app/api/justify', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        text: postTitle,
+        text: metadata.title || metadata.appraisal_title || 'Item for appraisal',
         value: parseFloat(value)
       })
     });
 
     if (!response.ok) {
-      throw new Error(`Valuer agent error: ${await response.text()}`);
+      const errorText = await response.text();
+      logger.error(`Valuer agent error: ${errorText}`, sessionId);
+      throw new Error(`Valuer agent error: ${errorText}`);
     }
 
     const valuerResponse = await response.json();
-    console.log('Justification - Valuer agent response:', JSON.stringify(valuerResponse, null, 2));
+    logger.info('Valuer agent response received', sessionId);
     
     // Extract explanation, auction results, and all search results from the response
     const { explanation, auctionResults, allSearchResults, success } = valuerResponse;
     
     if (!success) {
+      logger.error('Valuer agent returned unsuccessful response', sessionId);
       throw new Error('Valuer agent returned unsuccessful response');
     }
     
     // Store the raw auction data for reference
-    await updateWordPressMetadata(postId, 'valuer_agent_data', JSON.stringify(valuerResponse));
+    await updateWordPressMetadata(metadata.id, 'valuer_agent_data', JSON.stringify(valuerResponse));
     
     // Generate HTML table from auction results
     const auctionTableHtml = generateAuctionTableHtml(auctionResults, parseFloat(value));
@@ -326,16 +305,19 @@ async function processJustificationMetadata(postId, postTitle, value) {
     // Process statistical analysis if allSearchResults is available
     let statisticsHtml = '';
     if (allSearchResults && Array.isArray(allSearchResults)) {
-      console.log('Justification - Processing advanced statistics from all search results');
+      logger.info('Processing advanced statistics from all search results', sessionId);
       
       // Generate the statistics from all search results
       const statisticsData = processAllSearchResultsStatistics(allSearchResults, parseFloat(value));
       
       // Generate a HTML representation of the statistics
-      statisticsHtml = await generateStatisticsHtml(statisticsData, postTitle, parseFloat(value));
+      statisticsHtml = await generateStatisticsHtml(statisticsData, metadata.title || metadata.appraisal_title || 'Item for appraisal', parseFloat(value));
       
       // Store the raw statistics data for reference
-      await updateWordPressMetadata(postId, 'auction_statistics_data', JSON.stringify(statisticsData));
+      await updateWordPressMetadata(metadata.id, 'auction_statistics_data', JSON.stringify(statisticsData));
+      
+      // Store the raw statistics HTML separately
+      await updateWordPressMetadata(metadata.id, 'auction_statistics_html', statisticsHtml);
     }
     
     // Get justification prompt
@@ -345,8 +327,8 @@ async function processJustificationMetadata(postId, postTitle, value) {
     let searchResults = null;
     try {
       // Create a more targeted search specifically for valuation
-      const searchQuery = `${postTitle} auction value ${value}`;
-      console.log('Justification - Performing targeted search for valuation data:', searchQuery);
+      const searchQuery = `${metadata.title || metadata.appraisal_title || 'Item for appraisal'} auction value ${value}`;
+      logger.info(`Performing targeted search for valuation data: ${searchQuery}`, sessionId);
       
       // Call SERPER API directly since we have a specific query
       const { searchGoogle, formatSearchResults } = require('./serper');
@@ -357,9 +339,9 @@ async function processJustificationMetadata(postId, postTitle, value) {
         formattedContext: formatSearchResults(googleResults)
       };
       
-      console.log('Justification - Search results received');
+      logger.info('Search results received for valuation data', sessionId);
     } catch (searchError) {
-      console.error('Justification - Error during search:', searchError);
+      logger.error('Error during search for valuation data', sessionId, searchError);
       searchResults = null;
     }
     
@@ -368,17 +350,17 @@ async function processJustificationMetadata(postId, postTitle, value) {
     
     if (searchResults && searchResults.formattedContext) {
       finalPrompt += `\n\n${searchResults.formattedContext}\n\nUsing the valuer agent explanation, auction data, and search results above, please generate a detailed justification for the valuation.`;
-      console.log('Justification - Using search results to enhance justification');
+      logger.info('Using search results to enhance justification', sessionId);
     }
     
     // Generate only the introduction text using OpenAI
     // We'll append the auction table later
     finalPrompt += '\n\nYour response should be a detailed explanation that will be followed by a table of auction results, so please do not describe the specific auction results in detail, as they will be displayed in the table.';
     
-    console.log('Justification - Generating introduction text...');
+    logger.info('Generating introduction text', sessionId);
     const introductionText = await generateContent(
       finalPrompt,
-      postTitle,
+      metadata.title || metadata.appraisal_title || 'Item for appraisal',
       {},
       'o3-mini'
     );
@@ -402,20 +384,24 @@ async function processJustificationMetadata(postId, postTitle, value) {
       `;
     }
     
-    console.log('Justification - Complete content created with auction table and statistics');
+    logger.info('Complete content created with auction table and statistics', sessionId);
     
     // Update WordPress with the combined content
-    await updateWordPressMetadata(postId, 'justification_html', completeContent);
+    await updateWordPressMetadata(metadata.id, 'justification_html', completeContent);
     
     // Also store the explanation separately for possible use elsewhere
-    await updateWordPressMetadata(postId, 'justification_explanation', explanation);
+    await updateWordPressMetadata(metadata.id, 'justification_explanation', explanation);
     
     return {
       field: 'justification_html',
-      status: 'success'
+      status: 'success',
+      content: completeContent,
     };
   } catch (error) {
-    console.error('Error processing justification:', error);
+    const { createLogger } = require('./utils/logger');
+    const logger = createLogger('JustificationMetadata');
+    logger.error('Error processing justification metadata', sessionId, error);
+    
     return {
       field: 'justification_html',
       status: 'error',
