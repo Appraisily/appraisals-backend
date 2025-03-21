@@ -4,13 +4,17 @@ const wordpress = require('../services/wordpress');
 const { processMainImageWithGoogleVision } = require('../services/vision');
 const { processAllMetadata, processJustificationMetadata } = require('../services/metadata');
 const { getClientIp } = require('request-ip');
+const { createLogger } = require('../services/utils/logger');
+
+const logger = createLogger('AppraisalRoutes');
 
 router.post('/complete-appraisal-report', async (req, res) => {
-  console.log('[Appraisal] Starting report generation');
+  const { postId, sessionId } = req.body;
 
-  const { postId } = req.body;
+  logger.info('Starting appraisal report generation', sessionId, { postId });
 
   if (!postId) {
+    logger.warn('Missing postId in request', sessionId, { body: req.body });
     return res.status(400).json({ 
       success: false, 
       message: 'postId is required.' 
@@ -18,10 +22,11 @@ router.post('/complete-appraisal-report', async (req, res) => {
   }
 
   try {
+    logger.info(`Fetching post data for postId: ${postId}`, sessionId);
     const { postData, images, title: postTitle } = await wordpress.fetchPostData(postId);
 
     if (!postTitle) {
-      console.warn('[Appraisal] Post title not found');
+      logger.warn(`Post title not found for postId: ${postId}`, sessionId);
       return res.status(404).json({
         success: false,
         message: 'Post not found or title is missing',
@@ -29,76 +34,52 @@ router.post('/complete-appraisal-report', async (req, res) => {
           postId,
           title: null,
           visionAnalysis: null,
-          processedFields: []
         }
       });
     }
 
-    console.log(`[Appraisal] Processing: "${postTitle}"`);
+    logger.info(`Processing main image with Google Vision for post: ${postId}`, sessionId);
+    const mainImage = images.length > 0 ? images[0] : null;
+    const visionAnalysis = mainImage 
+      ? await processMainImageWithGoogleVision(mainImage.url, sessionId)
+      : { error: 'No images found' };
 
-    let visionResult;
-    try {
-      visionResult = await processMainImageWithGoogleVision(postId);
-    } catch (error) {
-      console.error(`[Appraisal] Vision error: ${error.message}`);
-      visionResult = {
-        success: false,
-        message: error.message,
-        similarImagesCount: 0
-      };
-    }
+    logger.info(`Generating complete appraisal metadata for post: ${postId}`, sessionId, { 
+      imageCount: images.length,
+      hasVisionResults: !!visionAnalysis 
+    });
+    
+    const metadata = await processAllMetadata(postData, visionAnalysis, sessionId);
+    const justification = await processJustificationMetadata(
+      postData.acf.appraisal_value || '0',
+      metadata,
+      sessionId
+    );
 
-    let metadataResults;
-    try {
-      metadataResults = await processAllMetadata(postId, postTitle, { postData, images });
-    } catch (error) {
-      console.error(`[Appraisal] Metadata error: ${error.message}`);
-      metadataResults = [];
-    }
+    logger.info(`Updating WordPress post with generated metadata: ${postId}`, sessionId);
+    
+    // Update the post with metadata
+    await wordpress.updatePostMetadata(postId, metadata);
+    await wordpress.updatePostContent(postId, justification.content);
 
-    // Process justification metadata
-    let justificationResult;
-    try {
-      justificationResult = await processJustificationMetadata(
-        postId,
-        postTitle,
-        postData.acf?.value
-      );
-      if (justificationResult) {
-        metadataResults.push(justificationResult);
-      }
-    } catch (error) {
-      console.error(`[Appraisal] Justification error: ${error.message}`);
-      metadataResults.push({
-        field: 'justification_html',
-        status: 'error',
-        error: error.message
-      });
-    }
+    logger.info(`Successfully completed appraisal report for post: ${postId}`, sessionId);
 
-    console.log('[Appraisal] Report generation complete');
-
-    res.status(200).json({
+    return res.json({
       success: true,
-      message: 'Appraisal report completed successfully.',
+      message: 'Appraisal report completed successfully',
       details: {
         postId,
         title: postTitle,
-        visionAnalysis: visionResult,
-        processedFields: metadataResults
+        metadata
       }
     });
+
   } catch (error) {
-    console.error(`[Appraisal] Error: ${error.message}`);
-    res.status(500).json({
+    logger.error(`Error completing appraisal report for post: ${postId}`, sessionId, error);
+    return res.status(500).json({
       success: false,
-      message: error.message || 'Error completing appraisal report.',
-      details: {
-        postId,
-        error: error.message,
-        visionAnalysis: null,
-        processedFields: []
-      }
+      message: 'Error completing appraisal report',
+      error: error.message
     });
   }
 });

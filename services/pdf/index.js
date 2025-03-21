@@ -10,6 +10,12 @@ const {
   getTemplateId: getTemplateIdBase 
 } = require('./documentUtils');
 const { exportToPDF, uploadPDFToDrive } = require('./exportUtils');
+const { createLogger } = require('../utils/logger');
+const { v4: uuidv4 } = require('uuid');
+const he = require('he');
+const wordpress = require('../wordpress');
+
+const logger = createLogger('PDFService');
 
 let docs;
 let drive;
@@ -132,15 +138,259 @@ function uploadPDFToDriveWrapper(pdfBuffer, filename, folderId) {
   return uploadPDFToDrive(drive, pdfBuffer, filename, folderId);
 }
 
+/**
+ * Generate a PDF for an appraisal
+ * @param {string} postId - WordPress post ID
+ * @param {string} sessionId - Session ID for logging
+ * @returns {Promise<Object>} - PDF generation result
+ */
+async function generateAppraisalPdf(postId, sessionId) {
+  try {
+    logger.info('Initializing Google APIs for PDF generation', sessionId);
+    await initializeGoogleApis();
+
+    // Get Google Drive folder ID
+    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+    if (!folderId) {
+      throw new Error('GOOGLE_DRIVE_FOLDER_ID must be set in environment variables');
+    }
+
+    // Fetch post data from WordPress
+    logger.info('Fetching post data from WordPress', sessionId, { postId });
+    const { postData, images, title: postTitle, date: postDate } = await wordpress.fetchPostData(postId);
+
+    // Get template ID based on appraisal type
+    const appraisalType = postData.acf?.appraisal_type || 'Regular';
+    logger.info('Getting template ID for PDF', sessionId, { appraisalType });
+    const templateId = await getTemplateIdWrapper(appraisalType);
+    
+    // Decode HTML entities in title
+    const decodedTitle = he.decode(postTitle);
+    
+    // Create metadata for PDF
+    const metadata = {
+      customer_name: postData.acf?.customer_name || '',
+      customer_email: postData.acf?.customer_email || '',
+      appraiser_name: postData.acf?.appraiser_name || 'Appraisily Expert',
+      appraisal_value: postData.acf?.appraisal_value || '0',
+      appraisal_description: postData.acf?.appraisal_description || '',
+      justification_html: postData.acf?.justification_html || '',
+      material: postData.acf?.material || '',
+      condition: postData.acf?.condition || '',
+      age: postData.acf?.age || '',
+      origin: postData.acf?.origin || '',
+      dimensions: postData.acf?.dimensions || '',
+      weight: postData.acf?.weight || '',
+      appraisal_title: decodedTitle,
+      appraisal_date: postDate,
+    };
+    
+    // Clone the template document
+    logger.info('Cloning template document', sessionId, { templateId });
+    const clonedDoc = await cloneTemplateWrapper(templateId);
+    const clonedDocId = clonedDoc.id;
+    const clonedDocLink = clonedDoc.link;
+    
+    // Move to target folder
+    logger.info('Moving document to target folder', sessionId, { docId: clonedDocId, folderId });
+    await moveFileToFolderWrapper(clonedDocId, folderId);
+    
+    // Replace placeholders with actual data
+    logger.info('Replacing placeholders in document', sessionId, { docId: clonedDocId });
+    await replacePlaceholdersInDocumentWrapper(clonedDocId, metadata);
+    
+    // Adjust title font size
+    logger.info('Adjusting title font size', sessionId);
+    await adjustTitleFontSizeWrapper(clonedDocId, postTitle);
+    
+    // Add gallery images
+    logger.info('Adding gallery images', sessionId, { imageCount: images.gallery?.length || 0 });
+    try {
+      if (images.gallery && images.gallery.length > 0) {
+        await addGalleryImages(clonedDocId, images.gallery);
+      } else {
+        logger.warn('No gallery images found', sessionId);
+      }
+    } catch (error) {
+      logger.error('Error adding gallery images', sessionId, error);
+      // Continue despite gallery error
+    }
+    
+    // Insert specific images
+    if (images.age) {
+      logger.info('Inserting age image', sessionId);
+      await insertImageAtPlaceholderWrapper(clonedDocId, 'age_image', images.age);
+    }
+    
+    if (images.signature) {
+      logger.info('Inserting signature image', sessionId);
+      await insertImageAtPlaceholderWrapper(clonedDocId, 'signature_image', images.signature);
+    }
+    
+    if (images.main) {
+      logger.info('Inserting main image', sessionId);
+      await insertImageAtPlaceholderWrapper(clonedDocId, 'main_image', images.main);
+    }
+    
+    // Export to PDF
+    logger.info('Exporting document to PDF', sessionId);
+    const pdfBuffer = await exportToPDFWrapper(clonedDocId);
+    
+    // Generate filename
+    const pdfFilename = sessionId 
+      ? `${sessionId}.pdf` 
+      : `Appraisal_Report_Post_${postId}_${uuidv4()}.pdf`;
+    
+    // Upload PDF to Drive
+    logger.info('Uploading PDF to Drive', sessionId, { filename: pdfFilename });
+    const pdfLink = await uploadPDFToDriveWrapper(pdfBuffer, pdfFilename, folderId);
+    
+    // Update WordPress
+    logger.info('Updating WordPress with PDF and Doc links', sessionId);
+    await wordpress.updatePostACFFields(postId, pdfLink, clonedDocLink);
+    
+    logger.info('PDF generation completed successfully', sessionId, { 
+      pdfUrl: pdfLink,
+      docUrl: clonedDocLink
+    });
+    
+    return {
+      success: true,
+      pdfUrl: pdfLink,
+      pdfId: pdfFilename,
+      docUrl: clonedDocLink,
+      docId: clonedDocId
+    };
+  } catch (error) {
+    logger.error('Error in PDF generation', sessionId, error);
+    throw error;
+  }
+}
+
+/**
+ * Generate a Google Doc for an appraisal
+ * @param {string} postId - WordPress post ID
+ * @param {string} sessionId - Session ID for logging
+ * @returns {Promise<Object>} - Doc generation result
+ */
+async function generateAppraisalDoc(postId, sessionId) {
+  try {
+    logger.info('Initializing Google APIs for Doc generation', sessionId);
+    await initializeGoogleApis();
+
+    // Get Google Drive folder ID
+    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+    if (!folderId) {
+      throw new Error('GOOGLE_DRIVE_FOLDER_ID must be set in environment variables');
+    }
+
+    // Fetch post data from WordPress
+    logger.info('Fetching post data from WordPress', sessionId, { postId });
+    const { postData, images, title: postTitle, date: postDate } = await wordpress.fetchPostData(postId);
+
+    // Get template ID based on appraisal type
+    const appraisalType = postData.acf?.appraisal_type || 'Regular';
+    logger.info('Getting template ID for Doc', sessionId, { appraisalType });
+    const templateId = await getTemplateIdWrapper(appraisalType);
+    
+    // Decode HTML entities in title
+    const decodedTitle = he.decode(postTitle);
+    
+    // Create metadata for Doc
+    const metadata = {
+      customer_name: postData.acf?.customer_name || '',
+      customer_email: postData.acf?.customer_email || '',
+      appraiser_name: postData.acf?.appraiser_name || 'Appraisily Expert',
+      appraisal_value: postData.acf?.appraisal_value || '0',
+      appraisal_description: postData.acf?.appraisal_description || '',
+      justification_html: postData.acf?.justification_html || '',
+      material: postData.acf?.material || '',
+      condition: postData.acf?.condition || '',
+      age: postData.acf?.age || '',
+      origin: postData.acf?.origin || '',
+      dimensions: postData.acf?.dimensions || '',
+      weight: postData.acf?.weight || '',
+      appraisal_title: decodedTitle,
+      appraisal_date: postDate,
+    };
+    
+    // Clone the template document
+    logger.info('Cloning template document', sessionId, { templateId });
+    const clonedDoc = await cloneTemplateWrapper(templateId);
+    const clonedDocId = clonedDoc.id;
+    const clonedDocLink = clonedDoc.link;
+    
+    // Move to target folder
+    logger.info('Moving document to target folder', sessionId, { docId: clonedDocId, folderId });
+    await moveFileToFolderWrapper(clonedDocId, folderId);
+    
+    // Replace placeholders with actual data
+    logger.info('Replacing placeholders in document', sessionId, { docId: clonedDocId });
+    await replacePlaceholdersInDocumentWrapper(clonedDocId, metadata);
+    
+    // Adjust title font size
+    logger.info('Adjusting title font size', sessionId);
+    await adjustTitleFontSizeWrapper(clonedDocId, postTitle);
+    
+    // Add gallery images
+    logger.info('Adding gallery images', sessionId, { imageCount: images.gallery?.length || 0 });
+    try {
+      if (images.gallery && images.gallery.length > 0) {
+        await addGalleryImages(clonedDocId, images.gallery);
+      } else {
+        logger.warn('No gallery images found', sessionId);
+      }
+    } catch (error) {
+      logger.error('Error adding gallery images', sessionId, error);
+      // Continue despite gallery error
+    }
+    
+    // Insert specific images
+    if (images.age) {
+      logger.info('Inserting age image', sessionId);
+      await insertImageAtPlaceholderWrapper(clonedDocId, 'age_image', images.age);
+    }
+    
+    if (images.signature) {
+      logger.info('Inserting signature image', sessionId);
+      await insertImageAtPlaceholderWrapper(clonedDocId, 'signature_image', images.signature);
+    }
+    
+    if (images.main) {
+      logger.info('Inserting main image', sessionId);
+      await insertImageAtPlaceholderWrapper(clonedDocId, 'main_image', images.main);
+    }
+    
+    // Update WordPress with Doc link
+    logger.info('Updating WordPress with Doc link', sessionId);
+    await wordpress.updatePostACFField(postId, 'google_doc_link', clonedDocLink);
+    
+    logger.info('Doc generation completed successfully', sessionId, { 
+      docUrl: clonedDocLink
+    });
+    
+    return {
+      success: true,
+      docUrl: clonedDocLink,
+      docId: clonedDocId
+    };
+  } catch (error) {
+    logger.error('Error in Doc generation', sessionId, error);
+    throw error;
+  }
+}
+
 module.exports = {
   initializeGoogleApis,
-  cloneTemplate: cloneTemplateWrapper,
+  addGalleryImages,
   getTemplateId: getTemplateIdWrapper,
+  cloneTemplate: cloneTemplateWrapper,
   moveFileToFolder: moveFileToFolderWrapper,
   replacePlaceholdersInDocument: replacePlaceholdersInDocumentWrapper,
   adjustTitleFontSize: adjustTitleFontSizeWrapper,
   insertImageAtPlaceholder: insertImageAtPlaceholderWrapper,
-  addGalleryImages,
   exportToPDF: exportToPDFWrapper,
-  uploadPDFToDrive: uploadPDFToDriveWrapper
+  uploadPDFToDrive: uploadPDFToDriveWrapper,
+  generateAppraisalPdf,
+  generateAppraisalDoc
 };
