@@ -3,6 +3,7 @@ const cors = require('cors');
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const config = require('./config');
 const { initializeGoogleApis } = require('./services/pdf');
+const gcsLogger = require('./services/utils/gcsLogger');
 
 const app = express();
 
@@ -229,6 +230,37 @@ async function startServer() {
     app.listen(PORT, () => {
       console.log(`✅ Server running on port ${PORT}`);
       console.log('Appraisals Backend Service is ready to handle requests');
+    });
+
+    // Handle graceful shutdown
+    const handleShutdown = async (signal) => {
+      console.log(`Received ${signal} signal. Starting graceful shutdown...`);
+      
+      try {
+        // Flush any remaining logs
+        await gcsLogger.flushAll();
+        console.log('All logs flushed to GCS');
+        console.log('Graceful shutdown completed');
+        process.exit(0);
+      } catch (error) {
+        console.error('Error during shutdown:', error);
+        // Try to flush logs even if shutdown failed
+        try {
+          await gcsLogger.flushAll();
+        } catch (logError) {
+          console.error('Error flushing logs during shutdown:', logError);
+        }
+        process.exit(1);
+      }
+    };
+
+    // Set up signal handlers
+    process.on('SIGINT', () => {
+      handleShutdown('SIGINT');
+    });
+
+    process.on('SIGTERM', () => {
+      handleShutdown('SIGTERM');
     });
   } catch (error) {
     console.error('❌ Fatal error during server startup:', error.message);
