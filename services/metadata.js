@@ -225,10 +225,38 @@ async function updateWordPressMetadata(postId, metadataKey, metadataValue) {
     logger.info(`Updating metadata for post ${postId}, field: ${metadataKey}`, postId);
     
     // Do special handling for HTML fields to ensure HTML content is preserved
+    let processedValue = metadataValue;
+    
+    // Special handling for fields that contain HTML to prevent WordPress from stripping tags
     if (metadataKey === 'auction_statistics_html' || 
         metadataKey === 'justification_html' || 
         (typeof metadataValue === 'string' && metadataValue.includes('<'))) {
+      
       logger.info(`Field ${metadataKey} contains HTML, ensuring it's preserved`, postId);
+      
+      // For HTML content, make sure it's properly handled to prevent WordPress from sanitizing it
+      // WordPress keeps HTML in ACF fields if they're configured as "Text Area" or "WYSIWYG Editor"
+      // For fields that might still get sanitized, we can try to prevent this
+      if (metadataKey === 'auction_statistics_html') {
+        // Store the raw content separately, without any further processing that might strip HTML
+        logger.info(`Storing raw HTML content for statistics field`, postId);
+        
+        // If statistics HTML content is being stored separately in dedicated fields
+        // create an additional field with the raw content
+        await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+          },
+          body: JSON.stringify({
+            acf: {
+              // Store the same content in a field specifically designated for raw HTML
+              'auction_statistics_html_raw': processedValue
+            }
+          })
+        });
+      }
     }
     
     const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}`, {
@@ -239,7 +267,7 @@ async function updateWordPressMetadata(postId, metadataKey, metadataValue) {
       },
       body: JSON.stringify({
         acf: {
-          [metadataKey]: metadataValue
+          [metadataKey]: processedValue
         }
       })
     });
@@ -289,7 +317,7 @@ async function processJustificationMetadata(value, metadata, sessionId) {
     logger.info('Valuer agent response received', sessionId);
     
     // Extract explanation, auction results, and all search results from the response
-    const { explanation, auctionResults, allSearchResults, success } = valuerResponse;
+    const { explanation, auctionResults, allSearchResults, success, statisticsHtml: rawStatisticsHtml } = valuerResponse;
     
     if (!success) {
       logger.error('Valuer agent returned unsuccessful response', sessionId);
@@ -299,12 +327,11 @@ async function processJustificationMetadata(value, metadata, sessionId) {
     // Store the raw auction data for reference
     await updateWordPressMetadata(metadata.id, 'valuer_agent_data', JSON.stringify(valuerResponse));
     
-    // Generate HTML table from auction results
-    const auctionTableHtml = generateAuctionTableHtml(auctionResults, parseFloat(value));
-    
     // Process statistical analysis if allSearchResults is available
-    let statisticsHtml = '';
-    if (allSearchResults && Array.isArray(allSearchResults)) {
+    let statisticsHtml = rawStatisticsHtml || ''; // Use rawStatisticsHtml if available
+    
+    // Only generate statistics HTML if not already provided
+    if (!statisticsHtml && allSearchResults && Array.isArray(allSearchResults)) {
       logger.info('Processing advanced statistics from all search results', sessionId);
       
       // Generate the statistics from all search results
@@ -318,6 +345,7 @@ async function processJustificationMetadata(value, metadata, sessionId) {
       
       // Store the raw statistics HTML separately
       await updateWordPressMetadata(metadata.id, 'auction_statistics_html', statisticsHtml);
+      await updateWordPressMetadata(metadata.id, 'auction_statistics_html_raw', statisticsHtml);
     }
     
     // Get justification prompt
@@ -370,7 +398,7 @@ async function processJustificationMetadata(value, metadata, sessionId) {
       ${introductionText}
       
       <h3>Comparable Auction Results</h3>
-      ${auctionTableHtml}
+      ${generateAuctionTableHtml(auctionResults, parseFloat(value))}
       
       <p><em>The valuation of $${value.toLocaleString()} is supported by the above auction results of similar items.</em></p>
     `;
@@ -382,6 +410,14 @@ async function processJustificationMetadata(value, metadata, sessionId) {
         <h3>Market Analysis</h3>
         ${statisticsHtml}
       `;
+      
+      // Also create a separate field with just the statistics HTML for use in templates if needed
+      await updateWordPressMetadata(metadata.id, 'statistics_content', `
+        <div class="statistics-section">
+          <h3>Market Analysis</h3>
+          ${statisticsHtml}
+        </div>
+      `);
     }
     
     logger.info('Complete content created with auction table and statistics', sessionId);
@@ -1446,5 +1482,8 @@ module.exports = {
   processMainImageWithGoogleVision,
   processAllMetadata,
   processJustificationMetadata,
-  initializeVisionClient
+  initializeVisionClient,
+  processAllSearchResultsStatistics,
+  generateStatisticsHtml,
+  updateWordPressMetadata
 };

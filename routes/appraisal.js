@@ -94,4 +94,131 @@ router.post('/complete-appraisal-report', async (req, res) => {
   }
 });
 
+// Add a new route to fix statistics HTML in existing posts
+router.post('/fix-statistics-html', async (req, res) => {
+  const { postId, sessionId } = req.body;
+  
+  logger.info('Attempting to fix statistics HTML for post', sessionId, { postId });
+  
+  if (!postId) {
+    logger.warn('Missing postId in fix-statistics request', sessionId);
+    return res.status(400).json({
+      success: false,
+      message: 'postId is required'
+    });
+  }
+  
+  try {
+    // Fetch the post data
+    logger.info(`Fetching post data for postId: ${postId}`, sessionId);
+    const { postData } = await wordpress.fetchPostData(postId);
+    
+    if (!postData || !postData.acf) {
+      logger.warn(`Post data not found for postId: ${postId}`, sessionId);
+      return res.status(404).json({
+        success: false,
+        message: 'Post not found or ACF data missing'
+      });
+    }
+    
+    // Get valuer agent data
+    const valuerAgentData = postData.acf.valuer_agent_data;
+    if (!valuerAgentData) {
+      logger.warn(`No valuer agent data found for post: ${postId}`, sessionId);
+      return res.status(404).json({
+        success: false,
+        message: 'No valuer agent data found'
+      });
+    }
+    
+    let valuerResponse;
+    try {
+      valuerResponse = JSON.parse(valuerAgentData);
+    } catch (error) {
+      logger.error(`Error parsing valuer agent data for post: ${postId}`, sessionId, error);
+      return res.status(500).json({
+        success: false,
+        message: 'Failed to parse valuer agent data',
+        error: error.message
+      });
+    }
+    
+    // Extract the necessary data
+    const { auctionResults, allSearchResults } = valuerResponse;
+    
+    if (!auctionResults || !allSearchResults) {
+      logger.warn(`Missing required data in valuer agent response for post: ${postId}`, sessionId);
+      return res.status(404).json({
+        success: false,
+        message: 'Missing auction results or search results in valuer agent data'
+      });
+    }
+    
+    // Get the appraisal value
+    const appraisalValue = parseFloat(postData.acf.appraisal_value || '0');
+    
+    // Generate statistics data
+    logger.info(`Regenerating statistics data for post: ${postId}`, sessionId);
+    const { processAllSearchResultsStatistics, generateStatisticsHtml } = require('../services/metadata');
+    const statisticsData = processAllSearchResultsStatistics(allSearchResults, appraisalValue);
+    
+    // Generate statistics HTML
+    logger.info(`Regenerating statistics HTML for post: ${postId}`, sessionId);
+    const postTitle = postData.title?.rendered || 'Item for Appraisal';
+    const statisticsHtml = await generateStatisticsHtml(statisticsData, postTitle, appraisalValue);
+    
+    // Update the metadata in WordPress
+    logger.info(`Updating statistics metadata for post: ${postId}`, sessionId);
+    const { updateWordPressMetadata } = require('../services/metadata');
+    
+    // Store the statistics data
+    await updateWordPressMetadata(postId, 'auction_statistics_data', JSON.stringify(statisticsData));
+    
+    // Store the statistics HTML in multiple places to ensure it's preserved
+    await updateWordPressMetadata(postId, 'auction_statistics_html', statisticsHtml);
+    await updateWordPressMetadata(postId, 'auction_statistics_html_raw', statisticsHtml);
+    
+    // Create a separate field with just the statistics content
+    await updateWordPressMetadata(postId, 'statistics_content', `
+      <div class="statistics-section">
+        <h3>Market Analysis</h3>
+        ${statisticsHtml}
+      </div>
+    `);
+    
+    // Update the justification HTML to include the statistics
+    const justificationHtml = postData.acf.justification_html;
+    if (justificationHtml) {
+      const statisticsSection = `
+        <hr>
+        <h3>Market Analysis</h3>
+        ${statisticsHtml}
+      `;
+      
+      // Check if statistics section already exists
+      if (!justificationHtml.includes('Market Analysis')) {
+        // Add statistics section
+        const updatedJustificationHtml = justificationHtml + statisticsSection;
+        await updateWordPressMetadata(postId, 'justification_html', updatedJustificationHtml);
+      }
+    }
+    
+    logger.info(`Successfully fixed statistics HTML for post: ${postId}`, sessionId);
+    
+    return res.json({
+      success: true,
+      message: 'Statistics HTML fixed successfully',
+      statisticsHtml: statisticsHtml ? true : false
+    });
+    
+  } catch (error) {
+    logger.error(`Error fixing statistics HTML for post: ${postId}`, sessionId, error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error fixing statistics HTML',
+      error: error.message
+    });
+  }
+});
+
 module.exports = router;
