@@ -23,53 +23,133 @@ const secretClient = new SecretManagerServiceClient();
 // Load secrets
 async function loadSecrets() {
   try {
-    // Load secrets into process.env
-    process.env.WORDPRESS_API_URL = await getSecret('WORDPRESS_API_URL');
-    process.env.wp_username = await getSecret('wp_username');
-    process.env.wp_app_password = await getSecret('wp_app_password');
-    process.env.OPENAI_API_KEY = await getSecret('OPENAI_API_KEY');
-    process.env.GOOGLE_VISION_CREDENTIALS = await getSecret('GOOGLE_VISION_CREDENTIALS');
-    process.env.GOOGLE_DOCS_CREDENTIALS = await getSecret('GOOGLE_DOCS_CREDENTIALS');
+    console.log('Loading secrets from Secret Manager...');
     
-    // Load SERPER API key
-    try {
-      process.env.SERPER_API = await getSecret('SERPER_API');
-      console.log('SERPER API key loaded successfully.');
-    } catch (serperError) {
-      console.warn('Warning: SERPER_API key not found in Secret Manager:', serperError.message);
-      console.warn('SERPER search functionality will be disabled.');
+    // Define required secrets and load them
+    const requiredSecrets = [
+      'WORDPRESS_API_URL',
+      'wp_username',
+      'wp_app_password',
+      'OPENAI_API_KEY',
+      'GOOGLE_VISION_CREDENTIALS',
+      'GOOGLE_DOCS_CREDENTIALS'
+    ];
+    
+    // Optional secrets
+    const optionalSecrets = [
+      'SERPER_API'
+    ];
+    
+    // Load all required secrets
+    for (const secretName of requiredSecrets) {
+      try {
+        console.log(`Loading required secret: ${secretName}`);
+        process.env[secretName] = await getSecret(secretName);
+        console.log(`✓ Successfully loaded secret: ${secretName}`);
+      } catch (error) {
+        console.error(`✗ Error loading required secret '${secretName}':`, error.message);
+        throw new Error(`Failed to load required secret '${secretName}': ${error.message}`);
+      }
     }
     
-    console.log('All secrets loaded successfully.');
+    // Load optional secrets
+    for (const secretName of optionalSecrets) {
+      try {
+        console.log(`Loading optional secret: ${secretName}`);
+        process.env[secretName] = await getSecret(secretName);
+        console.log(`✓ Successfully loaded optional secret: ${secretName}`);
+      } catch (error) {
+        console.warn(`⚠ Optional secret '${secretName}' not available:`, error.message);
+        console.warn(`Functionality requiring ${secretName} will be disabled.`);
+      }
+    }
+    
+    // Verify all required secrets are loaded
+    const missingSecrets = requiredSecrets.filter(secret => !process.env[secret]);
+    if (missingSecrets.length > 0) {
+      throw new Error(`Missing required secrets: ${missingSecrets.join(', ')}`);
+    }
+    
+    console.log('✅ All required secrets loaded successfully.');
   } catch (error) {
-    console.error('Error loading secrets:', error);
-    process.exit(1);
+    console.error('❌ Failed to load secrets:', error.message);
+    throw error;
   }
 }
 
-// Get secret from Secret Manager
-async function getSecret(secretName) {
-  try {
-    const projectId = 'civil-forge-403609';
-    const secretPath = `projects/${projectId}/secrets/${secretName}/versions/latest`;
-    const [version] = await secretClient.accessSecretVersion({ name: secretPath });
-    return version.payload.data.toString('utf8');
-  } catch (error) {
-    console.error(`Error getting secret '${secretName}':`, error);
-    throw error;
+// Get secret from Secret Manager with retries
+async function getSecret(secretName, maxRetries = 3) {
+  let retries = 0;
+  let lastError = null;
+  
+  while (retries < maxRetries) {
+    try {
+      const projectId = 'civil-forge-403609';
+      const secretPath = `projects/${projectId}/secrets/${secretName}/versions/latest`;
+      
+      console.log(`Fetching secret ${secretName} (attempt ${retries + 1}/${maxRetries})...`);
+      const [version] = await secretClient.accessSecretVersion({ name: secretPath });
+      
+      const secretValue = version.payload.data.toString('utf8');
+      if (!secretValue) {
+        throw new Error(`Secret ${secretName} is empty`);
+      }
+      
+      return secretValue;
+    } catch (error) {
+      lastError = error;
+      
+      if (error.code === 5) {
+        console.error(`Secret ${secretName} not found (code 5/NOT_FOUND)`);
+        // No need to retry if the secret doesn't exist
+        break;
+      } else if (error.code === 7) {
+        console.error(`Permission denied accessing secret ${secretName} (code 7/PERMISSION_DENIED)`);
+        // No need to retry permission issues
+        break;
+      }
+      
+      console.error(`Error fetching secret ${secretName} (attempt ${retries + 1}/${maxRetries}):`, error.message);
+      
+      // Increase retry count
+      retries++;
+      
+      if (retries < maxRetries) {
+        // Wait before retrying (exponential backoff)
+        const delay = Math.min(1000 * Math.pow(2, retries), 10000);
+        console.log(`Retrying in ${delay/1000} seconds...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+    }
   }
+  
+  // If we got here, all retries failed
+  throw new Error(`Failed to fetch secret ${secretName} after ${maxRetries} attempts: ${lastError?.message || 'Unknown error'}`);
 }
 
 // Initialize and start server
 async function startServer() {
   try {
+    console.log('┌─────────────────────────────────────────┐');
+    console.log('│  Starting Appraisals Backend Service    │');
+    console.log('└─────────────────────────────────────────┘');
+    
     // Load secrets first
+    console.log('Step 1: Loading secrets...');
     await loadSecrets();
-
+    
     // Initialize Google APIs
-    await initializeGoogleApis();
+    console.log('Step 2: Initializing Google APIs...');
+    try {
+      await initializeGoogleApis();
+      console.log('✓ Google APIs initialized successfully');
+    } catch (error) {
+      console.error('✗ Error initializing Google APIs:', error.message);
+      console.warn('⚠ Continuing startup, but PDF functionality may be limited');
+    }
 
     // Load routers after secrets are available
+    console.log('Step 3: Loading application routes...');
     const appraisalRouter = require('./routes/appraisal');
     const pdfRouter = require('./routes/pdf');
 
@@ -113,12 +193,18 @@ async function startServer() {
       }
     });
 
+    console.log('Step 4: Starting HTTP server...');
     const PORT = process.env.PORT || 8080;
     app.listen(PORT, () => {
-      console.log(`Server running on port ${PORT}`);
+      console.log(`✅ Server running on port ${PORT}`);
+      console.log('Appraisals Backend Service is ready to handle requests');
     });
   } catch (error) {
-    console.error('Error starting server:', error);
+    console.error('❌ Fatal error during server startup:', error.message);
+    console.error(error.stack);
+    
+    // Exit with error code
+    console.log('Exiting process due to startup failure');
     process.exit(1);
   }
 }
