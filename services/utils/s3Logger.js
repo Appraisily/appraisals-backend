@@ -2,7 +2,13 @@ const AWS = require('aws-sdk');
 
 class S3Logger {
   constructor(bucketName) {
-    this.s3 = new AWS.S3();
+    // Configure AWS SDK to use Google Cloud Storage
+    // GCS has an S3-compatible API endpoint
+    this.s3 = new AWS.S3({
+      endpoint: 'https://storage.googleapis.com',
+      region: 'us-central1',
+      signatureVersion: 'v4'
+    });
     this.bucketName = bucketName || 'appraisily-image-backups';
   }
 
@@ -40,10 +46,10 @@ class S3Logger {
         ContentType: 'application/json'
       }).promise();
       
-      console.log(`[S3Logger] Log saved to s3://${this.bucketName}/${key}`);
+      console.log(`[S3Logger] Log saved to gs://${this.bucketName}/${key}`);
       return key;
     } catch (error) {
-      console.error('[S3Logger] Error saving log to S3:', error.message);
+      console.error('[S3Logger] Error saving log to GCS:', error.message);
       // Continue execution even if logging fails
     }
   }
