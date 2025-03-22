@@ -262,27 +262,105 @@ async function updateWordPressMetadata(postId, metadataKey, metadataValue) {
   try {
     console.log(`Updating metadata for post ${postId}, field: ${metadataKey}`);
     
-    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}`, {
+    // Validate inputs
+    if (!postId) {
+      throw new Error('Post ID is required');
+    }
+    
+    if (!metadataKey) {
+      throw new Error('Metadata key is required');
+    }
+    
+    // Force convert postId to number if possible
+    const numericPostId = parseInt(postId, 10);
+    if (isNaN(numericPostId)) {
+      throw new Error(`Invalid post ID: ${postId}`);
+    }
+    
+    // Special handling for large metadata values
+    let processedValue = metadataValue;
+    const isString = typeof metadataValue === 'string';
+    const isObject = typeof metadataValue === 'object' && metadataValue !== null;
+    
+    // Log value type and size for debugging
+    if (isString) {
+      console.log(`Metadata value for ${metadataKey} is string, length: ${metadataValue.length}`);
+      // If string is too large, truncate it (WP API might have limits)
+      if (metadataValue.length > 100000) {
+        console.warn(`Truncating very large string value for ${metadataKey} (${metadataValue.length} chars)`);
+        processedValue = metadataValue.substring(0, 100000) + '... [truncated]';
+      }
+    } else if (isObject) {
+      const jsonString = JSON.stringify(metadataValue);
+      console.log(`Metadata value for ${metadataKey} is object, JSON size: ${jsonString.length}`);
+      
+      // If JSON is too large, truncate it
+      if (jsonString.length > 100000) {
+        console.warn(`Object too large for ${metadataKey}, reducing to essential data`);
+        // Try to extract essential data or truncate as needed
+        if (Array.isArray(metadataValue)) {
+          // For arrays, limit number of items
+          processedValue = metadataValue.slice(0, 10);
+          if (metadataValue.length > 10) {
+            console.log(`Array truncated from ${metadataValue.length} to 10 items`);
+          }
+        } else {
+          // For objects, limit to a few key properties
+          const simpleObj = {};
+          let count = 0;
+          for (const key in metadataValue) {
+            if (count < 20) {
+              simpleObj[key] = metadataValue[key];
+              count++;
+            } else {
+              break;
+            }
+          }
+          processedValue = simpleObj;
+          console.log(`Object properties truncated to ${count} items`);
+        }
+      }
+    }
+    
+    console.log(`Making WordPress API request for ${metadataKey}`);
+    const requestBody = {
+      acf: {
+        [metadataKey]: processedValue
+      }
+    };
+    
+    const apiUrl = `${config.WORDPRESS_API_URL}/appraisals/${numericPostId}`;
+    console.log(`API URL: ${apiUrl}`);
+    
+    const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
         'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
       },
-      body: JSON.stringify({
-        acf: {
-          [metadataKey]: metadataValue
-        }
-      })
+      body: JSON.stringify(requestBody)
     });
 
     if (!response.ok) {
-      throw new Error(`Error updating metadata: ${await response.text()}`);
+      const errorText = await response.text();
+      console.error(`WordPress API error (${response.status}): ${errorText}`);
+      throw new Error(`Error updating metadata: ${response.status} ${response.statusText}. ${errorText}`);
     }
 
+    const responseData = await response.json();
     console.log(`Successfully updated metadata for post ${postId}, field: ${metadataKey}`);
+    
+    // Verify the update was successful
+    if (responseData && responseData.acf && responseData.acf[metadataKey] !== undefined) {
+      console.log(`WordPress confirmed field ${metadataKey} was updated`);
+    } else {
+      console.warn(`WordPress response does not confirm field ${metadataKey} was updated`);
+    }
+    
     return true;
   } catch (error) {
     console.error(`Error updating WordPress metadata for ${metadataKey}:`, error);
+    console.error(`Stack trace: ${error.stack}`);
     throw error;
   }
 }
@@ -291,7 +369,25 @@ async function processJustificationMetadata(postId, postTitle, value) {
   try {
     console.log('Processing justification metadata for post:', postId);
     
+    // Validate value
+    if (!value) {
+      throw new Error('Cannot process justification metadata: Value is required');
+    }
+    
+    let numericValue;
+    try {
+      numericValue = parseFloat(value);
+      if (isNaN(numericValue)) {
+        throw new Error('Invalid numeric value');
+      }
+    } catch (valueError) {
+      throw new Error(`Cannot process value: ${valueError.message}`);
+    }
+    
+    console.log(`Processing justification for value: ${numericValue}`);
+    
     // Make request to valuer agent
+    console.log('Sending request to valuer agent');
     const response = await fetch('https://valuer-agent-856401495068.us-central1.run.app/api/justify', {
       method: 'POST',
       headers: {
@@ -299,16 +395,18 @@ async function processJustificationMetadata(postId, postTitle, value) {
       },
       body: JSON.stringify({
         text: postTitle,
-        value: parseFloat(value)
+        value: numericValue
       })
     });
 
     if (!response.ok) {
-      throw new Error(`Valuer agent error: ${await response.text()}`);
+      const errorText = await response.text();
+      console.error('Error response from valuer agent:', errorText);
+      throw new Error(`Valuer agent error: ${errorText}`);
     }
 
     const valuerResponse = await response.json();
-    console.log('Justification - Valuer agent response:', JSON.stringify(valuerResponse, null, 2));
+    console.log('Valuer agent response received:', valuerResponse.success);
     
     // Extract explanation and auction results from the response
     const { explanation, auctionResults, success } = valuerResponse;
@@ -317,11 +415,42 @@ async function processJustificationMetadata(postId, postTitle, value) {
       throw new Error('Valuer agent returned unsuccessful response');
     }
     
-    // Store the raw auction data for reference
-    await updateWordPressMetadata(postId, 'valuer_agent_data', JSON.stringify(valuerResponse));
+    // Save raw auction data first - this is critical for debugging
+    console.log('Storing raw valuer agent data');
+    try {
+      await updateWordPressMetadata(postId, 'valuer_agent_data', JSON.stringify(valuerResponse));
+      console.log('Raw valuer agent data stored successfully');
+    } catch (rawDataError) {
+      console.error('Error storing raw valuer agent data:', rawDataError);
+      // Continue processing even if storing raw data fails
+    }
+    
+    // Validate auction results
+    if (!auctionResults || !Array.isArray(auctionResults) || auctionResults.length === 0) {
+      console.warn('No auction results returned from valuer agent');
+    } else {
+      console.log(`Received ${auctionResults.length} auction results`);
+      
+      // Store auction results separately for better access
+      try {
+        await updateWordPressMetadata(postId, 'auction_results', JSON.stringify(auctionResults));
+        console.log('Auction results stored separately for easier access');
+      } catch (auctionDataError) {
+        console.error('Error storing auction results:', auctionDataError);
+      }
+    }
     
     // Generate HTML table from auction results
-    const auctionTableHtml = generateAuctionTableHtml(auctionResults, parseFloat(value));
+    console.log('Generating auction results HTML table');
+    const auctionTableHtml = generateAuctionTableHtml(auctionResults, numericValue);
+    
+    // Store auction table HTML separately
+    try {
+      await updateWordPressMetadata(postId, 'auction_table_html', auctionTableHtml);
+      console.log('Auction table HTML stored separately');
+    } catch (tableError) {
+      console.error('Error storing auction table HTML:', tableError);
+    }
     
     // Get justification prompt
     const prompt = await getPrompt('justification');
@@ -330,8 +459,8 @@ async function processJustificationMetadata(postId, postTitle, value) {
     let searchResults = null;
     try {
       // Create a more targeted search specifically for valuation
-      const searchQuery = `${postTitle} auction value ${value}`;
-      console.log('Justification - Performing targeted search for valuation data:', searchQuery);
+      const searchQuery = `${postTitle} auction value ${numericValue}`;
+      console.log('Performing targeted search for valuation data:', searchQuery);
       
       // Call SERPER API directly since we have a specific query
       const { searchGoogle, formatSearchResults } = require('./serper');
@@ -342,10 +471,28 @@ async function processJustificationMetadata(postId, postTitle, value) {
         formattedContext: formatSearchResults(googleResults)
       };
       
-      console.log('Justification - Search results received');
+      console.log('Search results received');
+      
+      // Store search results
+      try {
+        await updateWordPressMetadata(postId, 'justification_search_results', JSON.stringify({
+          query: searchQuery,
+          results: googleResults
+        }));
+      } catch (searchStoreError) {
+        console.error('Error storing search results:', searchStoreError);
+      }
     } catch (searchError) {
-      console.error('Justification - Error during search:', searchError);
+      console.error('Error during search:', searchError);
       searchResults = null;
+    }
+    
+    // Store explanation text directly
+    try {
+      await updateWordPressMetadata(postId, 'justification_explanation', explanation);
+      console.log('Explanation text stored successfully');
+    } catch (explanationError) {
+      console.error('Error storing explanation:', explanationError);
     }
     
     // Build the final prompt - include the explanation from valuer agent
@@ -353,14 +500,14 @@ async function processJustificationMetadata(postId, postTitle, value) {
     
     if (searchResults && searchResults.formattedContext) {
       finalPrompt += `\n\n${searchResults.formattedContext}\n\nUsing the valuer agent explanation, auction data, and search results above, please generate a detailed justification for the valuation.`;
-      console.log('Justification - Using search results to enhance justification');
+      console.log('Using search results to enhance justification');
     }
     
     // Generate only the introduction text using OpenAI
     // We'll append the auction table later
     finalPrompt += '\n\nYour response should be a detailed explanation that will be followed by a table of auction results, so please do not describe the specific auction results in detail, as they will be displayed in the table.';
     
-    console.log('Justification - Generating introduction text...');
+    console.log('Generating introduction text...');
     const introductionText = await generateContent(
       finalPrompt,
       postTitle,
@@ -368,23 +515,44 @@ async function processJustificationMetadata(postId, postTitle, value) {
       'o3-mini'
     );
     
+    // Store introduction text separately
+    try {
+      await updateWordPressMetadata(postId, 'justification_introduction', introductionText);
+      console.log('Introduction text stored separately');
+    } catch (introError) {
+      console.error('Error storing introduction text:', introError);
+    }
+    
     // Combine the introduction text with the auction table
+    // Format the value as currency
+    const currencyFormatter = new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: 'USD',
+      maximumFractionDigits: 0
+    });
+    
+    const formattedValue = currencyFormatter.format(numericValue);
+    
     const completeContent = `
       ${introductionText}
       
       <h3>Comparable Auction Results</h3>
       ${auctionTableHtml}
       
-      <p><em>The valuation of $${value.toLocaleString()} is supported by the above auction results of similar items.</em></p>
+      <p><em>The valuation of ${formattedValue} is supported by the above auction results of similar items.</em></p>
     `;
     
-    console.log('Justification - Complete content created with auction table');
+    console.log('Complete content created with auction table');
     
     // Update WordPress with the combined content
-    await updateWordPressMetadata(postId, 'justification_html', completeContent);
-    
-    // Also store the explanation separately for possible use elsewhere
-    await updateWordPressMetadata(postId, 'justification_explanation', explanation);
+    console.log('Updating WordPress with complete justification content');
+    try {
+      await updateWordPressMetadata(postId, 'justification_html', completeContent);
+      console.log('Complete justification HTML stored successfully');
+    } catch (completeContentError) {
+      console.error('Error storing complete content:', completeContentError);
+      throw completeContentError; // This is critical, so rethrow
+    }
     
     return {
       field: 'justification_html',
@@ -392,6 +560,17 @@ async function processJustificationMetadata(postId, postTitle, value) {
     };
   } catch (error) {
     console.error('Error processing justification:', error);
+    // Try to store the error in WordPress for debugging
+    try {
+      await updateWordPressMetadata(postId, 'justification_error', JSON.stringify({
+        message: error.message,
+        stack: error.stack,
+        timestamp: new Date().toISOString()
+      }));
+    } catch (errorStoreError) {
+      console.error('Error storing justification error:', errorStoreError);
+    }
+    
     return {
       field: 'justification_html',
       status: 'error',
