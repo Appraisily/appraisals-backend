@@ -109,6 +109,29 @@ async function processAllMetadata(postId, postTitle, { postData, images }) {
   const results = [];
   const context = {};
   
+  // Get the appraisal type to use appropriate static metadata
+  let appraisalType = 'regular';
+  try {
+    if (postData && postData.acf && postData.acf.appraisaltype) {
+      // Normalize appraisal type
+      const rawType = postData.acf.appraisaltype.toLowerCase();
+      if (rawType === 'irs' || rawType === 'insurance') {
+        appraisalType = rawType;
+      }
+      console.log(`Using appraisal type: ${appraisalType} (from WordPress ACF)`);
+    } else {
+      console.log(`Using default appraisal type: ${appraisalType}`);
+    }
+    
+    // Add appraisal type to context for use in prompts
+    context.appraisalType = appraisalType;
+    
+  } catch (typeError) {
+    console.error('Error determining appraisal type:', typeError);
+    // Default to regular if there's an error
+    context.appraisalType = 'regular';
+  }
+  
   // Perform contextual search using SERPER at the beginning
   // This will be used for all field generations
   let searchResults = null;
@@ -138,6 +161,7 @@ async function processAllMetadata(postId, postTitle, { postData, images }) {
     searchResults = null;
   }
 
+  // Process main content fields first
   for (const field of PROMPT_PROCESSING_ORDER) {
     try {
       console.log(`Processing field: ${field}`);
@@ -173,6 +197,31 @@ async function processAllMetadata(postId, postTitle, { postData, images }) {
         error: error.message
       });
     }
+  }
+
+  // Add the static metadata fields based on appraisal type
+  try {
+    console.log(`Adding static metadata content for appraisal type: ${appraisalType}`);
+    const staticMetadata = require('./constants/staticMetadata');
+    
+    if (staticMetadata[appraisalType]) {
+      const typeMetadata = staticMetadata[appraisalType];
+      
+      // Update WordPress with each static metadata field
+      for (const [key, value] of Object.entries(typeMetadata)) {
+        console.log(`Adding static metadata: ${key}`);
+        await updateWordPressMetadata(postId, key, value);
+        
+        results.push({
+          field: key,
+          status: 'success (static)'
+        });
+      }
+    } else {
+      console.warn(`No static metadata found for type: ${appraisalType}`);
+    }
+  } catch (staticError) {
+    console.error('Error adding static metadata:', staticError);
   }
 
   return results;

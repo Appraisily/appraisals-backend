@@ -1,0 +1,12 @@
+Based on the title and any previously generated content for this appraisal, provide a concise classification of what type of object this is (e.g., "Oil Painting", "Bronze Sculpture", "Antique Furniture", "Porcelain Figurine", etc.).
+
+Your response should be very brief (2-5 words) and focus on the physical category of the object being appraised. This will be used as a label in a summary card.
+
+Example good responses:
+- "Oil Painting on Canvas"
+- "Bronze Sculpture"
+- "Antique Ceramic Vase"
+- "Mid-Century Armchair"
+- "Sterling Silver Flatware"
+
+Your response should capture the medium and form of the item in the most concise way possible.

@@ -1,0 +1,18 @@
+Based on the title and previously generated content (especially the age analysis sections), provide a concise estimate of when this item was created.
+
+Your response should be very brief (2-5 words maximum) and will be used as a label in a summary card.
+
+Example good responses:
+- "Circa 1920"
+- "18th Century"
+- "1950-1960"
+- "Tang Dynasty"
+- "Contemporary (2015)"
+
+Use the most appropriate time format based on the precision of the dating:
+- For precisely dated works: year or year range
+- For approximate dates: "Circa" followed by year
+- For period pieces: century or dynasty
+- For contemporary works: "Contemporary" with year if known
+
+Be concise but informative, favoring clarity over excessive precision when dating is uncertain.

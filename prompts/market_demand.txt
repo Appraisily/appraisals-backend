@@ -1,0 +1,25 @@
+Based on all previously generated content, especially sections related to valuation, market analysis, and the auction data if available, estimate the current market demand for this type of item.
+
+Your response should be a single number between 0 and 100 representing a percentage score for market demand, with no percentage sign or other text.
+
+Examples:
+- "85" (not "85%" or "Market demand: 85")
+- "50"
+- "92"
+
+Guidelines for determining the score:
+- 90-100: Extremely high demand; readily sells at or above estimate; multiple competitive bidders
+- 75-89: Strong demand; consistent sales with occasional bidding competition
+- 60-74: Moderate demand; sells reliably but may take time to find the right buyer
+- 40-59: Average demand; can sell but may require marketing and patience
+- 20-39: Low demand; difficult to sell, likely below estimate
+- 0-19: Very low demand; extremely niche market or outdated style
+
+Consider factors such as:
+- Recent auction performance for similar items
+- Prominence/popularity of the artist or maker
+- Current collecting trends
+- Historical performance of similar items
+- Seasonal factors if relevant
+
+Provide only the numeric value with no additional text.

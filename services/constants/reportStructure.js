@@ -14,7 +14,17 @@ const PROMPT_PROCESSING_ORDER = [
   'conclusion2',
   'ad_copy',
   'table',
-  'glossary'
+  'glossary',
+  // Summary panel fields
+  'object_type',
+  'creator',
+  'estimated_age',
+  'condition_summary',
+  'medium',
+  'market_demand',
+  'rarity',
+  'condition_score',
+  'statistics_summary'
 ];
 
 const REPORT_INTRODUCTION = `

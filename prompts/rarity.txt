@@ -1,0 +1,25 @@
+Based on all previously generated content, assess the rarity of this item compared to similar pieces in the market.
+
+Your response should be a single number between 0 and 100 representing a percentage score for rarity, with no percentage sign or other text.
+
+Examples:
+- "70" (not "70%" or "Rarity: 70")
+- "45"
+- "93"
+
+Guidelines for determining the score:
+- 90-100: Extremely rare; museum-quality uniqueness; possibly the only known example
+- 75-89: Very rare; seldom appears on the market; limited production or survival
+- 60-74: Rare; uncommon but occasionally available; limited production run
+- 40-59: Somewhat uncommon; can be found with effort; moderate production numbers
+- 20-39: Common; regularly available on the market; mass-produced
+- 0-19: Very common; abundant availability; mass-produced in large quantities
+
+Consider factors such as:
+- Number of similar examples known to exist
+- Production volume (limited edition vs. mass-produced)
+- Survival rate (how many have been preserved)
+- Special characteristics that distinguish this from more common examples
+- Availability on the current market
+
+Provide only the numeric value with no additional text.

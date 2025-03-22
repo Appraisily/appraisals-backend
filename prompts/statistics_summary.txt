@@ -1,0 +1,16 @@
+Based on all previously generated content, especially the valuation method, justification, and auction data sections, provide a very concise summary of the market analysis for this item.
+
+Your response should be a brief paragraph (2-3 sentences, maximum 50 words) summarizing the key market insights that support the valuation. This will be displayed in a market analysis tab in the appraisal summary.
+
+Example good responses:
+- "Market analysis reveals strong demand for similar bronze sculptures, with consistent price appreciation over the past 5 years. Recent auction results show comparable pieces selling in the $5,000-$8,000 range at major auction houses."
+- "This artist's work has shown stable but modest market performance. While not in high demand, the limited supply of authenticated pieces supports the valuation, with similar examples selling in the estimated range."
+- "Recent auction data indicates volatile pricing for Art Deco furniture, with condition being the primary value driver. This piece's excellent preservation and complete provenance position it in the upper quartile of comparable sales."
+
+Include specific insights about:
+- Current market trends for this type of item
+- Price stability or volatility
+- Key value drivers (condition, provenance, rarity, etc.)
+- Comparison to recent sales if available
+
+Keep your response concise, factual, and focused on market data rather than subjective opinions.

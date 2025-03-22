@@ -1,0 +1,27 @@
+Based on all previously generated content, especially the condition section, provide a numerical assessment of this item's condition.
+
+Your response should be a single number between 0 and 100 representing a percentage score for condition, with no percentage sign or other text.
+
+Examples:
+- "95" (not "95%" or "Condition: 95")
+- "72"
+- "88"
+
+Guidelines for determining the score:
+- 90-100: Near mint or pristine condition; minimal to no signs of age or wear
+- 80-89: Excellent condition; minor signs of age but no significant flaws
+- 70-79: Very good condition; expected age-related wear but well-preserved
+- 60-69: Good condition; noticeable wear and/or minor repairs
+- 50-59: Fair condition; visible wear, may have had some restoration
+- 30-49: Poor condition; significant wear, damage, or extensive restoration
+- 0-29: Very poor condition; major damage, structural issues, or incomplete
+
+Consider factors such as:
+- Structural integrity
+- Surface condition (scratches, fading, chips, etc.)
+- Completeness (missing elements)
+- Previous restoration or repairs
+- Age-appropriate patina vs. damage
+- Functionality (if applicable)
+
+Provide only the numeric value with no additional text.

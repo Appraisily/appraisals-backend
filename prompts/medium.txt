@@ -1,0 +1,12 @@
+Based on the title and previously generated content, provide a very concise description of the materials and techniques used to create this item.
+
+Your response should be extremely brief (1-5 words) and will be used as a label in a summary card.
+
+Example good responses:
+- "Oil on canvas"
+- "Bronze with patina"
+- "Porcelain, underglaze"
+- "Walnut, marquetry"
+- "Silver and turquoise"
+
+Focus on the primary materials and, if relevant, the primary technique. Be as specific as possible while remaining extremely concise. Prioritize materials information that would be most relevant to a collector or appraiser in understanding the item's value.

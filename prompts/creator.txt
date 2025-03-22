@@ -1,0 +1,12 @@
+Based on the title and previously generated content (especially the authorship and signature sections), provide a concise attribution of who created this item.
+
+Your response should be very brief (typically just a name or "Unknown Artist" if unattributed) and will be used as a label in a summary card.
+
+Example good responses:
+- "Pablo Picasso"
+- "Tiffany Studios"
+- "Unknown Chinese Artist"
+- "École de Paris, 19th c."
+- "Herman Miller (attr.)"
+
+If the creator is unknown but the culture or school is known, include that information in the most concise way possible. If the attribution is tentative, indicate this with "(attributed)" or "(attr.)".

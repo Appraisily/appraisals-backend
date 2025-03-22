@@ -1,0 +1,542 @@
+<!-- APPRAISAL SUMMARY PANEL - Place this code at the top of the WordPress template -->
+
+<!-- wp:html -->
+<div class="appraisal-summary-panel">
+  <div class="summary-container">
+    <div class="summary-header">
+      <div class="summary-title">
+        <h2>[get_custom_field field_name="title" default="Appraisal Summary"]</h2>
+        <span class="date">[display_publish_date]</span>
+      </div>
+      <div class="value-badge">
+        <span class="value-label">Appraised Value</span>
+        <span class="value-amount">[acf field="value" format="$%d USD"]</span>
+      </div>
+    </div>
+    
+    <div class="summary-content">
+      <div class="summary-image">
+        [acf_dynamic_img fieldname="main" format="thumbnail" class="main-thumbnail"]
+        <div class="image-navigator">
+          <button class="nav-button prev" onclick="cycleImages(-1)">←</button>
+          <button class="nav-button next" onclick="cycleImages(1)">→</button>
+        </div>
+      </div>
+      
+      <div class="summary-details">
+        <div class="detail-row">
+          <div class="detail-label">Object</div>
+          <div class="detail-value">[get_custom_field field_name="object_type" default="Art Object"]</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Creator</div>
+          <div class="detail-value">[get_custom_field field_name="creator" default="Unknown Artist"]</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Age</div>
+          <div class="detail-value">[get_custom_field field_name="estimated_age" default="20th Century"]</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Condition</div>
+          <div class="detail-value">[get_custom_field field_name="condition_summary" default="Good"]</div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-label">Medium</div>
+          <div class="detail-value">[get_custom_field field_name="medium" default="Mixed Media"]</div>
+        </div>
+      </div>
+      
+      <div class="summary-stats">
+        <div class="stat-circle">
+          <svg viewBox="0 0 36 36" class="circular-chart">
+            <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
+            <path class="circle" stroke-dasharray="[get_percentage field_name='market_demand' default='75'], 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
+            <text x="18" y="20.5" class="percentage">[get_custom_field field_name='market_demand' default='75']%</text>
+          </svg>
+          <span class="stat-label">Market Demand</span>
+        </div>
+        <div class="stat-circle">
+          <svg viewBox="0 0 36 36" class="circular-chart">
+            <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
+            <path class="circle" stroke-dasharray="[get_percentage field_name='rarity' default='60'], 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
+            <text x="18" y="20.5" class="percentage">[get_custom_field field_name='rarity' default='60']%</text>
+          </svg>
+          <span class="stat-label">Rarity</span>
+        </div>
+        <div class="stat-circle">
+          <svg viewBox="0 0 36 36" class="circular-chart">
+            <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
+            <path class="circle" stroke-dasharray="[get_percentage field_name='condition_score' default='85'], 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
+            <text x="18" y="20.5" class="percentage">[get_custom_field field_name='condition_score' default='85']%</text>
+          </svg>
+          <span class="stat-label">Condition</span>
+        </div>
+      </div>
+    </div>
+    
+    <div class="summary-tabs">
+      <div class="tab-buttons">
+        <button class="tab-button active" onclick="showTab('nutshell')">In a Nutshell</button>
+        <button class="tab-button" onclick="showTab('market')">Market Analysis</button>
+        <button class="tab-button" onclick="showTab('similar')">Similar Items</button>
+      </div>
+      
+      <div class="tab-content">
+        <div id="nutshell" class="tab-pane active">
+          [get_custom_field field_name="table"]
+        </div>
+        <div id="market" class="tab-pane">
+          <div class="market-summary">
+            [get_custom_field field_name="statistics_summary" default="Market analysis reveals strong demand for similar items with consistent price appreciation over the past 5 years."]
+            <div class="market-cta">
+              <button class="read-more-btn" onclick="scrollToSection('market-research')">See Full Market Analysis</button>
+            </div>
+          </div>
+        </div>
+        <div id="similar" class="tab-pane">
+          <div class="similar-items-container">
+            [similar_gallery field_name="googlevision" limit="3" class="summary-similar-gallery"]
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <div class="summary-footer">
+      <div class="appraiser-info">
+        <span>Appraised by: <strong>Andrés Gómez</strong>, Accredited Art Appraiser</span>
+      </div>
+      <button class="expand-collapse-btn" onclick="toggleSummaryPanel()">Show Details ↓</button>
+    </div>
+  </div>
+</div>
+
+<style>
+/* Appraisal Summary Panel Styles */
+.appraisal-summary-panel {
+  margin: 2rem 0 4rem;
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: linear-gradient(to right, #f8f9fa, #ffffff);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  overflow: hidden;
+  transition: all 0.3s ease;
+  border: 1px solid #e0e0e0;
+}
+
+.appraisal-summary-panel:hover {
+  box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+  transform: translateY(-5px);
+}
+
+.summary-container {
+  padding: 0;
+}
+
+.summary-header {
+  background: linear-gradient(135deg, #2c3e50, #4a6491);
+  color: white;
+  padding: 1.5rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+}
+
+.summary-title h2 {
+  margin: 0;
+  font-size: 1.8rem;
+  font-weight: 600;
+  color: white;
+}
+
+.summary-title .date {
+  font-size: 0.9rem;
+  opacity: 0.8;
+  display: block;
+  margin-top: 0.3rem;
+}
+
+.value-badge {
+  background: rgba(255,255,255,0.15);
+  padding: 0.8rem 1.5rem;
+  border-radius: 8px;
+  text-align: center;
+  backdrop-filter: blur(5px);
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+.value-label {
+  display: block;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 0.3rem;
+}
+
+.value-amount {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.summary-content {
+  display: flex;
+  padding: 2rem;
+  background: white;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.summary-image {
+  flex: 0 0 250px;
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.main-thumbnail {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.image-navigator {
+  position: absolute;
+  bottom: 10px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-between;
+  padding: 0 10px;
+}
+
+.nav-button {
+  background: rgba(0,0,0,0.5);
+  color: white;
+  border: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.nav-button:hover {
+  background: rgba(0,0,0,0.8);
+}
+
+.summary-details {
+  flex: 1;
+  min-width: 250px;
+}
+
+.detail-row {
+  display: flex;
+  border-bottom: 1px solid #eaeaea;
+  padding: 0.7rem 0;
+}
+
+.detail-label {
+  flex: 0 0 100px;
+  font-weight: 600;
+  color: #555;
+}
+
+.detail-value {
+  flex: 1;
+  color: #333;
+}
+
+.summary-stats {
+  display: flex;
+  gap: 1.5rem;
+  flex: 0 0 220px;
+  justify-content: center;
+}
+
+.stat-circle {
+  text-align: center;
+  width: 70px;
+}
+
+.circular-chart {
+  width: 70px;
+  height: 70px;
+}
+
+.circle-bg {
+  fill: none;
+  stroke: #eee;
+  stroke-width: 2.8;
+}
+
+.circle {
+  fill: none;
+  stroke-width: 2.8;
+  stroke-linecap: round;
+  stroke: #4a6491;
+  animation: progress 1s ease-out forwards;
+}
+
+@keyframes progress {
+  0% {
+    stroke-dasharray: 0 100;
+  }
+}
+
+.percentage {
+  fill: #333;
+  font-size: 0.4rem;
+  font-weight: 600;
+  text-anchor: middle;
+}
+
+.stat-label {
+  font-size: 0.75rem;
+  color: #666;
+  display: block;
+  margin-top: 0.4rem;
+}
+
+.summary-tabs {
+  border-top: 1px solid #eee;
+}
+
+.tab-buttons {
+  display: flex;
+  border-bottom: 1px solid #eee;
+  background: #f9f9f9;
+}
+
+.tab-button {
+  padding: 1rem 1.5rem;
+  background: none;
+  border: none;
+  border-bottom: 3px solid transparent;
+  cursor: pointer;
+  font-weight: 600;
+  color: #666;
+  transition: all 0.2s;
+}
+
+.tab-button.active {
+  color: #4a6491;
+  border-bottom-color: #4a6491;
+}
+
+.tab-button:hover:not(.active) {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.tab-content {
+  padding: 1.5rem 2rem;
+  min-height: 150px;
+}
+
+.tab-pane {
+  display: none;
+}
+
+.tab-pane.active {
+  display: block;
+  animation: fadeIn 0.5s;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.market-summary {
+  line-height: 1.6;
+}
+
+.market-cta {
+  margin-top: 1rem;
+  text-align: right;
+}
+
+.read-more-btn {
+  background: #4a6491;
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.read-more-btn:hover {
+  background: #2c3e50;
+}
+
+.similar-items-container {
+  display: flex;
+  gap: 1rem;
+  overflow-x: auto;
+  padding-bottom: 1rem;
+}
+
+.summary-similar-gallery img {
+  width: 120px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.summary-similar-gallery img:hover {
+  transform: scale(1.05);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.summary-footer {
+  background: #f9f9f9;
+  padding: 1rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-top: 1px solid #eee;
+}
+
+.appraiser-info {
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.expand-collapse-btn {
+  background: none;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.5rem 1rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.expand-collapse-btn:hover {
+  background: #f0f0f0;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .summary-content {
+    flex-direction: column;
+  }
+  
+  .summary-image, .summary-details, .summary-stats {
+    flex: 1 1 100%;
+  }
+  
+  .summary-stats {
+    justify-content: space-around;
+  }
+  
+  .summary-header {
+    flex-direction: column;
+    text-align: center;
+    gap: 1rem;
+  }
+  
+  .value-badge {
+    width: 100%;
+  }
+}
+</style>
+
+<script>
+// JavaScript for interactivity
+function showTab(tabId) {
+  // Hide all tab panes
+  document.querySelectorAll('.tab-pane').forEach(tab => {
+    tab.classList.remove('active');
+  });
+  
+  // Remove active class from all buttons
+  document.querySelectorAll('.tab-button').forEach(button => {
+    button.classList.remove('active');
+  });
+  
+  // Show the selected tab
+  document.getElementById(tabId).classList.add('active');
+  
+  // Add active class to clicked button
+  event.target.classList.add('active');
+}
+
+function toggleSummaryPanel() {
+  const panel = document.querySelector('.appraisal-summary-panel');
+  const button = document.querySelector('.expand-collapse-btn');
+  
+  if (panel.classList.contains('collapsed')) {
+    panel.classList.remove('collapsed');
+    button.textContent = 'Show Details ↓';
+    panel.style.maxHeight = '';
+  } else {
+    panel.classList.add('collapsed');
+    button.textContent = 'Show Summary ↑';
+    panel.style.maxHeight = '80px';
+    panel.style.overflow = 'hidden';
+  }
+}
+
+function scrollToSection(sectionId) {
+  const section = document.getElementById(sectionId);
+  if (section) {
+    window.scrollTo({
+      top: section.offsetTop - 100,
+      behavior: 'smooth'
+    });
+  }
+}
+
+// Function to cycle between available images
+let currentImageIndex = 0;
+const allImages = [];
+
+function initImageArray() {
+  // Get all image elements in the appraisal (main, signature, age)
+  const mainImg = document.querySelector('.main-thumbnail');
+  if (mainImg) allImages.push(mainImg.src);
+  
+  document.querySelectorAll('[fieldname="signature"] img, [fieldname="age"] img').forEach(img => {
+    allImages.push(img.src);
+  });
+}
+
+function cycleImages(direction) {
+  if (allImages.length <= 1) return;
+  
+  currentImageIndex = (currentImageIndex + direction + allImages.length) % allImages.length;
+  const mainImg = document.querySelector('.main-thumbnail');
+  if (mainImg) {
+    mainImg.src = allImages[currentImageIndex];
+    
+    // Add a small animation effect
+    mainImg.style.opacity = '0';
+    setTimeout(() => {
+      mainImg.style.opacity = '1';
+    }, 100);
+  }
+}
+
+// Initialize once the DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+  initImageArray();
+  
+  // Add IDs to market research section for scrolling
+  const marketResearchHeading = document.querySelector('h2#h-market-research');
+  if (marketResearchHeading) {
+    marketResearchHeading.id = 'market-research';
+  }
+});
+</script>
+<!-- /wp:html -->

@@ -1,0 +1,20 @@
+Based on the title and previously generated content (especially the condition section), provide a very concise summary of this item's condition.
+
+Your response should be extremely brief (1-3 words) and will be used as a label in a summary card.
+
+Example good responses:
+- "Excellent"
+- "Good, minor wear"
+- "Fair, restored"
+- "Poor, damaged"
+- "Mint condition"
+
+Use standard condition terminology from the art and antiques market:
+- Mint/Pristine: Perfect condition with no flaws
+- Excellent: Nearly perfect with minimal signs of age
+- Very Good: Minor wear consistent with age
+- Good: Normal wear, may have minor repairs
+- Fair: Visible wear, may have repairs or restoration
+- Poor: Significant damage or excessive restoration
+
+Be honest but fair in your assessment, using the most concise language possible.
