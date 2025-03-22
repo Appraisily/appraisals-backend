@@ -5,7 +5,12 @@
   <div class="summary-container">
     <div class="summary-header">
       <div class="summary-title">
-        <h2>[get_custom_field field_name="title" default="Appraisal Summary"]</h2>
+        <div class="title-badge">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM10 17L5 12L6.41 10.59L10 14.17L17.59 6.58L19 8L10 17Z" fill="white"/>
+          </svg>
+        </div>
+        <h2>Art Analysis Report</h2>
         <span class="date">[display_publish_date]</span>
       </div>
       <div class="value-badge">
@@ -23,53 +28,82 @@
         </div>
       </div>
       
-      <div class="summary-details">
-        <div class="detail-row">
-          <div class="detail-label">Object</div>
-          <div class="detail-value">[get_custom_field field_name="object_type" default="Art Object"]</div>
+      <div class="artwork-title">
+        <h3>[get_custom_field field_name="title" default="Artwork Title"]</h3>
+        <div class="artwork-creator">[get_custom_field field_name="creator" default="Unknown Artist"]</div>
+      </div>
+      
+      <div class="key-details-grid">
+        <div class="detail-card">
+          <div class="detail-icon">📋</div>
+          <div class="detail-info">
+            <span class="detail-label">Object Type</span>
+            <span class="detail-value">[get_custom_field field_name="object_type" default="Art Object"]</span>
+          </div>
         </div>
-        <div class="detail-row">
-          <div class="detail-label">Creator</div>
-          <div class="detail-value">[get_custom_field field_name="creator" default="Unknown Artist"]</div>
+        
+        <div class="detail-card">
+          <div class="detail-icon">🕰️</div>
+          <div class="detail-info">
+            <span class="detail-label">Period/Age</span>
+            <span class="detail-value">[get_custom_field field_name="estimated_age" default="20th Century"]</span>
+          </div>
         </div>
-        <div class="detail-row">
-          <div class="detail-label">Age</div>
-          <div class="detail-value">[get_custom_field field_name="estimated_age" default="20th Century"]</div>
+        
+        <div class="detail-card">
+          <div class="detail-icon">🎨</div>
+          <div class="detail-info">
+            <span class="detail-label">Medium</span>
+            <span class="detail-value">[get_custom_field field_name="medium" default="Mixed Media"]</span>
+          </div>
         </div>
-        <div class="detail-row">
-          <div class="detail-label">Condition</div>
-          <div class="detail-value">[get_custom_field field_name="condition_summary" default="Good"]</div>
-        </div>
-        <div class="detail-row">
-          <div class="detail-label">Medium</div>
-          <div class="detail-value">[get_custom_field field_name="medium" default="Mixed Media"]</div>
+        
+        <div class="detail-card">
+          <div class="detail-icon">✨</div>
+          <div class="detail-info">
+            <span class="detail-label">Condition</span>
+            <span class="detail-value">[get_custom_field field_name="condition_summary" default="Good"]</span>
+          </div>
         </div>
       </div>
       
-      <div class="summary-stats">
-        <div class="stat-circle">
+      <!-- Value estimation section removed as requested -->
+      
+      <div class="market-metrics">
+        <div class="metric-card">
           <svg viewBox="0 0 36 36" class="circular-chart">
             <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
             <path class="circle" stroke-dasharray="[get_percentage field_name='market_demand' default='75'], 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
             <text x="18" y="20.5" class="percentage">[get_custom_field field_name='market_demand' default='75']%</text>
           </svg>
-          <span class="stat-label">Market Demand</span>
+          <div class="metric-info">
+            <div class="metric-name">Market Demand</div>
+            <div class="metric-desc">Current collector interest</div>
+          </div>
         </div>
-        <div class="stat-circle">
+        
+        <div class="metric-card">
           <svg viewBox="0 0 36 36" class="circular-chart">
             <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
             <path class="circle" stroke-dasharray="[get_percentage field_name='rarity' default='60'], 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
             <text x="18" y="20.5" class="percentage">[get_custom_field field_name='rarity' default='60']%</text>
           </svg>
-          <span class="stat-label">Rarity</span>
+          <div class="metric-info">
+            <div class="metric-name">Rarity</div>
+            <div class="metric-desc">Availability in the market</div>
+          </div>
         </div>
-        <div class="stat-circle">
+        
+        <div class="metric-card">
           <svg viewBox="0 0 36 36" class="circular-chart">
             <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
             <path class="circle" stroke-dasharray="[get_percentage field_name='condition_score' default='85'], 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
             <text x="18" y="20.5" class="percentage">[get_custom_field field_name='condition_score' default='85']%</text>
           </svg>
-          <span class="stat-label">Condition</span>
+          <div class="metric-info">
+            <div class="metric-name">Condition</div>
+            <div class="metric-desc">Physical state assessment</div>
+          </div>
         </div>
       </div>
     </div>
@@ -83,7 +117,9 @@
       
       <div class="tab-content">
         <div id="nutshell" class="tab-pane active">
-          [get_custom_field field_name="table"]
+          <div class="nutshell-details">
+            [format_table field_name="table"]
+          </div>
         </div>
         <div id="market" class="tab-pane">
           <div class="market-summary">
@@ -114,18 +150,20 @@
 /* Appraisal Summary Panel Styles */
 .appraisal-summary-panel {
   margin: 2rem 0 4rem;
-  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-  background: linear-gradient(to right, #f8f9fa, #ffffff);
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  background: white;
+  border-radius: 16px;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.08);
   overflow: hidden;
   transition: all 0.3s ease;
-  border: 1px solid #e0e0e0;
+  border: 1px solid #f0f0f0;
+  max-width: 1100px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .appraisal-summary-panel:hover {
-  box-shadow: 0 15px 40px rgba(0,0,0,0.15);
-  transform: translateY(-5px);
+  box-shadow: 0 15px 60px rgba(0,0,0,0.12);
 }
 
 .summary-container {
@@ -133,94 +171,113 @@
 }
 
 .summary-header {
-  background: linear-gradient(135deg, #2c3e50, #4a6491);
+  background: linear-gradient(135deg, #3a66db, #5d7ce4);
   color: white;
-  padding: 1.5rem 2rem;
+  padding: 1.8rem 2.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-bottom: 1px solid rgba(255,255,255,0.1);
+  position: relative;
+}
+
+.title-badge {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: rgba(255,255,255,0.2);
+  border-radius: 50%;
+  margin-bottom: 12px;
 }
 
 .summary-title h2 {
   margin: 0;
-  font-size: 1.8rem;
-  font-weight: 600;
+  font-size: 2rem;
+  font-weight: 700;
   color: white;
+  letter-spacing: -0.02em;
 }
 
 .summary-title .date {
   font-size: 0.9rem;
   opacity: 0.8;
   display: block;
-  margin-top: 0.3rem;
+  margin-top: 0.5rem;
 }
 
 .value-badge {
   background: rgba(255,255,255,0.15);
-  padding: 0.8rem 1.5rem;
-  border-radius: 8px;
+  padding: 1rem 1.8rem;
+  border-radius: 12px;
   text-align: center;
   backdrop-filter: blur(5px);
   border: 1px solid rgba(255,255,255,0.2);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.1);
 }
 
 .value-label {
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 1px;
   margin-bottom: 0.3rem;
+  font-weight: 500;
 }
 
 .value-amount {
-  font-size: 1.6rem;
+  font-size: 1.8rem;
   font-weight: 700;
   color: #ffffff;
 }
 
 .summary-content {
   display: flex;
-  padding: 2rem;
+  flex-direction: column;
+  padding: 2.5rem;
   background: white;
-  gap: 2rem;
-  flex-wrap: wrap;
+  gap: 2.5rem;
 }
 
 .summary-image {
-  flex: 0 0 250px;
+  width: 100%;
   position: relative;
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+  height: 350px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: #f9f9f9;
 }
 
 .main-thumbnail {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
   display: block;
 }
 
 .image-navigator {
   position: absolute;
-  bottom: 10px;
+  bottom: 15px;
   left: 0;
   right: 0;
   display: flex;
   justify-content: space-between;
-  padding: 0 10px;
+  padding: 0 15px;
 }
 
 .nav-button {
-  background: rgba(0,0,0,0.5);
+  background: rgba(0,0,0,0.6);
   color: white;
   border: none;
-  width: 30px;
-  height: 30px;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   cursor: pointer;
-  font-size: 14px;
+  font-size: 16px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -229,59 +286,111 @@
 
 .nav-button:hover {
   background: rgba(0,0,0,0.8);
+  transform: scale(1.1);
 }
 
-.summary-details {
-  flex: 1;
-  min-width: 250px;
+.artwork-title {
+  text-align: center;
+  margin-bottom: 1rem;
 }
 
-.detail-row {
-  display: flex;
-  border-bottom: 1px solid #eaeaea;
-  padding: 0.7rem 0;
+.artwork-title h3 {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem;
+  color: #1a1a1a;
 }
 
-.detail-label {
-  flex: 0 0 100px;
-  font-weight: 600;
+.artwork-creator {
+  font-size: 1.1rem;
   color: #555;
 }
 
-.detail-value {
-  flex: 1;
-  color: #333;
-}
-
-.summary-stats {
-  display: flex;
+.key-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1.5rem;
-  flex: 0 0 220px;
-  justify-content: center;
+  margin-bottom: 1.5rem;
 }
 
-.stat-circle {
-  text-align: center;
-  width: 70px;
+.detail-card {
+  display: flex;
+  align-items: center;
+  background: #f9f9f9;
+  padding: 1.2rem;
+  border-radius: 10px;
+  transition: all 0.2s;
+}
+
+.detail-card:hover {
+  background: #f0f5ff;
+  transform: translateY(-2px);
+}
+
+.detail-icon {
+  font-size: 1.6rem;
+  margin-right: 1rem;
+}
+
+.detail-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-label {
+  font-size: 0.85rem;
+  color: #666;
+  margin-bottom: 0.2rem;
+}
+
+.detail-value {
+  font-weight: 600;
+  color: #1a1a1a;
+  font-size: 1.1rem;
+}
+
+/* Value estimation styles removed as requested */
+
+.market-metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.metric-card {
+  display: flex;
+  align-items: center;
+  background: white;
+  padding: 1.2rem;
+  border-radius: 10px;
+  border: 1px solid #eaeaea;
+  transition: all 0.2s;
+}
+
+.metric-card:hover {
+  box-shadow: 0 6px 24px rgba(0,0,0,0.06);
+  border-color: #d0deff;
 }
 
 .circular-chart {
-  width: 70px;
-  height: 70px;
+  width: 80px;
+  height: 80px;
+  margin-right: 1.2rem;
+  flex-shrink: 0;
 }
 
 .circle-bg {
   fill: none;
   stroke: #eee;
-  stroke-width: 2.8;
+  stroke-width: 2.5;
 }
 
 .circle {
   fill: none;
-  stroke-width: 2.8;
+  stroke-width: 2.5;
   stroke-linecap: round;
-  stroke: #4a6491;
-  animation: progress 1s ease-out forwards;
+  stroke: #3a66db;
+  animation: progress 1.5s ease-out forwards;
 }
 
 @keyframes progress {
@@ -292,42 +401,53 @@
 
 .percentage {
   fill: #333;
-  font-size: 0.4rem;
+  font-size: 0.45rem;
   font-weight: 600;
   text-anchor: middle;
 }
 
-.stat-label {
-  font-size: 0.75rem;
+.metric-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.metric-name {
+  font-weight: 600;
+  font-size: 1.1rem;
+  color: #1a1a1a;
+  margin-bottom: 0.2rem;
+}
+
+.metric-desc {
+  font-size: 0.85rem;
   color: #666;
-  display: block;
-  margin-top: 0.4rem;
 }
 
 .summary-tabs {
-  border-top: 1px solid #eee;
+  border-top: 1px solid #eaeaea;
 }
 
 .tab-buttons {
   display: flex;
-  border-bottom: 1px solid #eee;
+  border-bottom: 1px solid #eaeaea;
   background: #f9f9f9;
 }
 
 .tab-button {
-  padding: 1rem 1.5rem;
+  padding: 1.2rem 1.8rem;
   background: none;
   border: none;
   border-bottom: 3px solid transparent;
   cursor: pointer;
   font-weight: 600;
-  color: #666;
+  color: #555;
   transition: all 0.2s;
+  font-size: 1rem;
 }
 
 .tab-button.active {
-  color: #4a6491;
-  border-bottom-color: #4a6491;
+  color: #3a66db;
+  border-bottom-color: #3a66db;
 }
 
 .tab-button:hover:not(.active) {
@@ -336,8 +456,8 @@
 }
 
 .tab-content {
-  padding: 1.5rem 2rem;
-  min-height: 150px;
+  padding: 2rem 2.5rem;
+  min-height: 200px;
 }
 
 .tab-pane {
@@ -354,100 +474,167 @@
   to { opacity: 1; }
 }
 
+.nutshell-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 1.5rem;
+}
+
+.nutshell-details h3 {
+  font-size: 1.2rem;
+  margin-top: 0;
+  color: #3a66db;
+  margin-bottom: 1rem;
+  grid-column: 1 / -1;
+}
+
+.nutshell-details dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.6rem 1rem;
+}
+
+.nutshell-details dt {
+  font-weight: 600;
+  color: #555;
+  position: relative;
+}
+
+.nutshell-details dd {
+  margin: 0;
+  color: #1a1a1a;
+}
+
 .market-summary {
-  line-height: 1.6;
+  line-height: 1.7;
+  font-size: 1.05rem;
 }
 
 .market-cta {
-  margin-top: 1rem;
+  margin-top: 1.5rem;
   text-align: right;
 }
 
 .read-more-btn {
-  background: #4a6491;
+  background: #3a66db;
   color: white;
   border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
+  padding: 0.6rem 1.2rem;
+  border-radius: 6px;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
   transition: all 0.2s;
+  font-weight: 500;
 }
 
 .read-more-btn:hover {
-  background: #2c3e50;
+  background: #2951b9;
+  transform: translateY(-2px);
 }
 
 .similar-items-container {
-  display: flex;
-  gap: 1rem;
-  overflow-x: auto;
-  padding-bottom: 1rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1.5rem;
 }
 
 .summary-similar-gallery img {
-  width: 120px;
-  height: 120px;
+  width: 100%;
+  height: 140px;
   object-fit: cover;
-  border-radius: 4px;
-  transition: all 0.2s;
+  border-radius: 8px;
+  transition: all 0.25s;
+  border: 1px solid #eaeaea;
 }
 
 .summary-similar-gallery img:hover {
   transform: scale(1.05);
-  box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+  border-color: #d0deff;
 }
 
 .summary-footer {
   background: #f9f9f9;
-  padding: 1rem 2rem;
+  padding: 1.5rem 2.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
-  border-top: 1px solid #eee;
+  border-top: 1px solid #eaeaea;
 }
 
 .appraiser-info {
-  font-size: 0.9rem;
-  color: #666;
+  font-size: 0.95rem;
+  color: #555;
 }
 
 .expand-collapse-btn {
-  background: none;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  padding: 0.5rem 1rem;
-  font-size: 0.9rem;
+  background: white;
+  border: 1px solid #d0deff;
+  border-radius: 6px;
+  padding: 0.6rem 1.2rem;
+  font-size: 0.95rem;
   cursor: pointer;
   transition: all 0.2s;
+  color: #3a66db;
+  font-weight: 500;
 }
 
 .expand-collapse-btn:hover {
-  background: #f0f0f0;
+  background: #f0f5ff;
+  transform: translateY(-2px);
+}
+
+/* Fix for the unformatted glossary text */
+.nutshell-details dt::after {
+  content: ':';
 }
 
 /* Responsive adjustments */
 @media (max-width: 768px) {
-  .summary-content {
-    flex-direction: column;
-  }
-  
-  .summary-image, .summary-details, .summary-stats {
-    flex: 1 1 100%;
-  }
-  
-  .summary-stats {
-    justify-content: space-around;
-  }
-  
   .summary-header {
     flex-direction: column;
     text-align: center;
-    gap: 1rem;
+    gap: 1.5rem;
+    padding: 1.5rem;
   }
   
   .value-badge {
     width: 100%;
+  }
+  
+  .summary-content {
+    padding: 1.5rem;
+    gap: 1.5rem;
+  }
+  
+  .summary-image {
+    height: 250px;
+  }
+  
+  .key-details-grid {
+    gap: 1rem;
+  }
+  
+  .market-metrics {
+    gap: 1rem;
+  }
+  
+  .tab-content {
+    padding: 1.5rem;
+  }
+  
+  .nutshell-details {
+    grid-template-columns: 1fr;
+  }
+  
+  .similar-items-container {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  }
+  
+  .tab-button {
+    padding: 1rem;
+    font-size: 0.9rem;
   }
 }
 </style>
@@ -480,6 +667,7 @@ function toggleSummaryPanel() {
     panel.classList.remove('collapsed');
     button.textContent = 'Show Details ↓';
     panel.style.maxHeight = '';
+    panel.style.overflow = '';
   } else {
     panel.classList.add('collapsed');
     button.textContent = 'Show Summary ↑';
@@ -528,15 +716,108 @@ function cycleImages(direction) {
   }
 }
 
+// Function to format the table data (glossary of terms)
+function formatTable() {
+  const nutshellPane = document.getElementById('nutshell');
+  if (!nutshellPane) return;
+  
+  const tableContent = nutshellPane.textContent.trim();
+  if (!tableContent) return;
+  
+  // Clear existing content
+  nutshellPane.innerHTML = '';
+  
+  // Create formatted container
+  const formattedContainer = document.createElement('div');
+  formattedContainer.className = 'nutshell-details';
+  
+  // Add heading
+  const heading = document.createElement('h3');
+  heading.textContent = 'Artwork Details';
+  formattedContainer.appendChild(heading);
+  
+  // Create definition list
+  const dl = document.createElement('dl');
+  
+  // Parse the text (assumes format: "- Key: Value")
+  const items = tableContent.split('-').filter(item => item.trim());
+  
+  items.forEach(item => {
+    const parts = item.split(':');
+    if (parts.length >= 2) {
+      const key = parts[0].trim();
+      const value = parts.slice(1).join(':').trim();
+      
+      const dt = document.createElement('dt');
+      dt.textContent = key;
+      
+      const dd = document.createElement('dd');
+      dd.textContent = value;
+      
+      dl.appendChild(dt);
+      dl.appendChild(dd);
+    }
+  });
+  
+  formattedContainer.appendChild(dl);
+  nutshellPane.appendChild(formattedContainer);
+}
+
 // Initialize once the DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
   initImageArray();
+  formatTable();
   
   // Add IDs to market research section for scrolling
   const marketResearchHeading = document.querySelector('h2#h-market-research');
   if (marketResearchHeading) {
     marketResearchHeading.id = 'market-research';
   }
+  
+  // Range marker code removed as requested
 });
+</script>
+
+<!-- Custom shortcode registration for field formatting -->
+<script>
+// WordPress will need a custom shortcode to handle the table formatting
+// Add this to your theme's functions.php or a custom plugin:
+
+/*
+function format_table_shortcode($atts) {
+  $atts = shortcode_atts(array(
+      'field_name' => 'table',
+  ), $atts);
+  
+  $field_name = $atts['field_name'];
+  $content = get_post_meta(get_the_ID(), $field_name, true);
+  
+  if (empty($content)) return '';
+  
+  // Format the content into a structured HTML
+  $items = explode('-', $content);
+  $formatted = '<div class="formatted-details">';
+  
+  foreach ($items as $item) {
+    $item = trim($item);
+    if (empty($item)) continue;
+    
+    $parts = explode(':', $item, 2);
+    if (count($parts) === 2) {
+      $key = trim($parts[0]);
+      $value = trim($parts[1]);
+      
+      $formatted .= '<div class="detail-item">';
+      $formatted .= '<div class="detail-key">' . esc_html($key) . '</div>';
+      $formatted .= '<div class="detail-value">' . esc_html($value) . '</div>';
+      $formatted .= '</div>';
+    }
+  }
+  
+  $formatted .= '</div>';
+  return $formatted;
+}
+add_shortcode('format_table', 'format_table_shortcode');
+*/
 </script>
 <!-- /wp:html -->
