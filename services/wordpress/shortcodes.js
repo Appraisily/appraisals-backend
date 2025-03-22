@@ -72,6 +72,35 @@ const SHORTCODE_DEFINITIONS = [
     }
     add_shortcode('display_publish_date', 'display_publish_date_shortcode');
     `
+  },
+  {
+    name: 'display_html_content',
+    description: 'Displays HTML content from metadata fields without escaping',
+    php_code: `
+    // Display HTML content from metadata fields without escaping
+    function display_html_content_shortcode($atts) {
+      $atts = shortcode_atts(array(
+        'field_name' => '',
+        'default' => ''
+      ), $atts);
+      
+      $field_name = $atts['field_name'];
+      $default = $atts['default'];
+      
+      if (empty($field_name)) {
+        return $default;
+      }
+      
+      $value = get_field($field_name);
+      if (empty($value)) {
+        return $default;
+      }
+      
+      // Return HTML content unescaped
+      return $value;
+    }
+    add_shortcode('display_html_content', 'display_html_content_shortcode');
+    `
   }
 ];
 

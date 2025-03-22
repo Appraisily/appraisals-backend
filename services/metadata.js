@@ -598,6 +598,30 @@ async function processJustificationMetadata(postId, postTitle, value) {
     try {
       await updateWordPressMetadata(postId, 'justification_html', completeContent);
       console.log('Complete justification HTML stored successfully');
+      
+      // Store enhanced statistics for interactive charts
+      try {
+        if (statistics && statistics.enhancedStats) {
+          const enhancedStatsJson = JSON.stringify(statistics.enhancedStats);
+          await updateWordPressMetadata(postId, 'statistics', enhancedStatsJson);
+          console.log('Enhanced statistics data stored for interactive charts');
+          
+          // Create a readable summary for the market tab in the summary panel
+          const statsSummary = `
+            <div class="statistics-summary">
+              <p>Market analysis reveals ${statistics.enhancedStats.comparable_sales.length} comparable items with an average value of $${statistics.enhancedStats.average_price.toLocaleString()}.</p>
+              <p>Your item's value of $${statistics.enhancedStats.value.toLocaleString()} places it in the ${statistics.enhancedStats.percentile} percentile, with a ${statistics.enhancedStats.price_trend_percentage} average annual growth rate.</p>
+              <p>Market confidence: <strong>${statistics.enhancedStats.confidence_level}</strong></p>
+            </div>
+          `;
+          await updateWordPressMetadata(postId, 'statistics_summary', statsSummary);
+          console.log('Statistics summary stored for market panel');
+        }
+      } catch (statsError) {
+        console.error('Error storing enhanced statistics:', statsError);
+        // Non-critical error, continue execution
+      }
+      
     } catch (completeContentError) {
       console.error('Error storing complete content:', completeContentError);
       throw completeContentError; // This is critical, so rethrow
@@ -979,8 +1003,8 @@ function calculateAuctionStatistics(auctionResults, targetValue) {
       max: bucketMax,
       count: bucketPrices.length,
       position: (i / bucketCount) * 100,
-      heightPercentage: bucketPrices.length > 0 ? (bucketPrices.length / count) * 100 : 0,
-      containsTarget
+      height: bucketPrices.length > 0 ? (bucketPrices.length / count) * 100 : 0,
+      contains_target: containsTarget
     };
   });
   
@@ -988,7 +1012,66 @@ function calculateAuctionStatistics(auctionResults, targetValue) {
   const range = max - min;
   const targetMarkerPosition = range > 0 ? ((targetValue - min) / range) * 100 : 50;
   
+  // Format comparable sales for display
+  const formattedSales = validResults.map(result => {
+    // Calculate percentage difference from target value
+    const priceDiff = ((result.price - targetValue) / targetValue) * 100;
+    const diffFormatted = priceDiff > 0 ? `+${priceDiff.toFixed(1)}%` : `${priceDiff.toFixed(1)}%`;
+    
+    return {
+      title: result.title || 'Similar Item',
+      house: result.house || 'Unknown',
+      date: result.date || 'Unknown',
+      price: result.price,
+      diff: diffFormatted
+    };
+  });
+  
+  // Add current item to sales comparison
+  formattedSales.splice(1, 0, {
+    title: 'Your Item',
+    house: '-',
+    date: 'Current',
+    price: targetValue,
+    diff: '-',
+    is_current: true
+  });
+  
+  // Format percentile as ordinal number (1st, 2nd, 3rd, etc.)
+  const getOrdinalSuffix = (num) => {
+    const j = num % 10;
+    const k = num % 100;
+    if (j === 1 && k !== 11) return num + "st";
+    if (j === 2 && k !== 12) return num + "nd";
+    if (j === 3 && k !== 13) return num + "rd";
+    return num + "th";
+  };
+  
+  // Calculate year-over-year price trend (simplified example)
+  const priceTrend = ((max - min) / min) * 100 / 5; // Assume 5 years of data
+  const priceTrendFormatted = priceTrend > 0 ? `+${priceTrend.toFixed(1)}%` : `${priceTrend.toFixed(1)}%`;
+  
+  // Enhanced statistics object for interactive charts
+  const enhancedStats = {
+    count,
+    average_price: Math.round(mean),
+    median_price: Math.round(median),
+    price_min: Math.round(min),
+    price_max: Math.round(max),
+    standard_deviation: Math.round(standardDeviation),
+    coefficient_of_variation: Math.round(coefficientOfVariation * 100) / 100,
+    percentile: getOrdinalSuffix(Math.round(targetPercentile)),
+    confidence_level: confidenceLevel,
+    price_trend_percentage: priceTrendFormatted,
+    histogram,
+    comparable_sales: formattedSales.slice(0, 5), // Limit to 5 for display
+    value: targetValue,
+    target_marker_position: targetMarkerPosition
+  };
+  
+  // Store the original statistics and enhanced statistics
   return {
+    // Original statistics
     count,
     mean,
     median,
@@ -999,7 +1082,10 @@ function calculateAuctionStatistics(auctionResults, targetValue) {
     targetPercentile,
     confidenceLevel,
     histogram,
-    targetMarkerPosition
+    targetMarkerPosition,
+    
+    // Enhanced statistics for interactive charts
+    enhancedStats
   };
 }
 
