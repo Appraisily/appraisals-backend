@@ -14,84 +14,122 @@ const {
   adjustTitleFontSize,
   addGalleryImages,
   exportToPDF,
-  uploadPDFToDrive,
-  generateAppraisalPdf,
-  generateAppraisalDoc
+  uploadPDFToDrive
 } = require('../services/pdf');
-const { createLogger } = require('../services/utils/logger');
 
-const logger = createLogger('PDFRoutes');
-
-router.post('/generate', async (req, res) => {
-  const { postId, sessionId } = req.body;
-  
-  logger.info('Received PDF generation request', sessionId, { postId });
+router.post('/generate-pdf', async (req, res) => {
+  const { postId, session_ID } = req.body;
 
   if (!postId) {
-    logger.warn('Missing postId in request', sessionId);
-    return res.status(400).json({
-      success: false,
-      message: 'postId is required'
+    return res.status(400).json({ 
+      success: false, 
+      message: 'postId is required.' 
     });
   }
 
   try {
-    logger.info(`Generating PDF for post: ${postId}`, sessionId);
-    const pdfResult = await generateAppraisalPdf(postId, sessionId);
-    
-    logger.info(`PDF generation successful for post: ${postId}`, sessionId, { pdfUrl: pdfResult.pdfUrl });
-    
-    return res.json({
+    // Step 1: Initialize Google APIs
+    await initializeGoogleApis();
+
+    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+    if (!folderId) {
+      throw new Error('GOOGLE_DRIVE_FOLDER_ID must be set in environment variables.');
+    }
+
+    // Fetch all data in a single request
+    const { postData, images, title: postTitle, date: postDate } = await wordpress.fetchPostData(postId);
+
+    // Process and validate metadata
+    const { metadata, validation } = await processMetadata(postData);
+    if (!validation.isValid) {
+      return res.status(400).json({
+        success: false,
+        message: `Missing required metadata fields: ${validation.missingFields.join(', ')}`,
+        validation
+      });
+    }
+
+    // Get template ID based on appraisal type
+    const templateId = await getTemplateId();
+    console.log('Using template ID:', templateId);
+
+    // Decode HTML entities in title
+    const decodedTitle = he.decode(postTitle);
+
+    // Log all retrieved data
+    console.log('Metadata:', metadata);
+    console.log('Post title:', decodedTitle);
+    console.log('Post date:', postDate);
+    console.log('Images:', images);
+
+    // Step 6: Clone template
+    const clonedDoc = await cloneTemplate(templateId);
+    const clonedDocId = clonedDoc.id;
+    const clonedDocLink = clonedDoc.link;
+
+    // Step 7: Move to folder
+    await moveFileToFolder(clonedDocId, folderId);
+
+    // Step 8: Replace placeholders
+    const data = {
+      ...metadata,
+      appraisal_title: decodedTitle,
+      appraisal_date: postDate,
+    };
+    await replacePlaceholdersInDocument(clonedDocId, data);
+
+    // Step 9: Adjust title font size
+    await adjustTitleFontSize(clonedDocId, postTitle);
+
+    // Step 10: Add gallery images
+    try {
+      await addGalleryImages(clonedDocId, images.gallery);
+    } catch (error) {
+      console.error('Error adding gallery images:', error);
+      console.log('Continuing with PDF generation despite gallery error');
+    }
+
+    // Step 11: Insert specific images
+    if (images.age) {
+      await insertImageAtPlaceholder(clonedDocId, 'age_image', images.age);
+    }
+    if (images.signature) {
+      await insertImageAtPlaceholder(clonedDocId, 'signature_image', images.signature);
+    }
+    if (images.main) {
+      await insertImageAtPlaceholder(clonedDocId, 'main_image', images.main);
+    }
+
+    // Step 12: Export to PDF
+    const pdfBuffer = await exportToPDF(clonedDocId);
+
+    // Step 13: Generate filename
+    const pdfFilename = session_ID?.trim()
+      ? `${session_ID}.pdf`
+      : `Appraisal_Report_Post_${postId}_${uuidv4()}.pdf`;
+
+    // Step 14: Upload PDF
+    const pdfLink = await uploadPDFToDrive(pdfBuffer, pdfFilename, folderId);
+
+    // Step 15: Update WordPress
+    await wordpress.updatePostACFFields(postId, pdfLink, clonedDocLink);
+
+    // Return response
+    console.log('PDF Link:', pdfLink);
+    console.log('Doc Link:', clonedDocLink);
+
+    res.json({
       success: true,
-      message: 'PDF generated successfully',
-      data: {
-        pdfUrl: pdfResult.pdfUrl,
-        pdfId: pdfResult.pdfId
-      }
+      message: 'PDF generated successfully.',
+      pdfLink,
+      docLink: clonedDocLink
     });
+
   } catch (error) {
-    logger.error(`Error generating PDF for post: ${postId}`, sessionId, error);
-    return res.status(500).json({
+    console.error('Error generating PDF:', error);
+    res.status(500).json({
       success: false,
-      message: 'Error generating PDF',
-      error: error.message
-    });
-  }
-});
-
-router.post('/generate-doc', async (req, res) => {
-  const { postId, sessionId } = req.body;
-  
-  logger.info('Received Google Doc generation request', sessionId, { postId });
-
-  if (!postId) {
-    logger.warn('Missing postId in request', sessionId);
-    return res.status(400).json({
-      success: false,
-      message: 'postId is required'
-    });
-  }
-
-  try {
-    logger.info(`Generating Google Doc for post: ${postId}`, sessionId);
-    const docResult = await generateAppraisalDoc(postId, sessionId);
-    
-    logger.info(`Google Doc generation successful for post: ${postId}`, sessionId, { docUrl: docResult.docUrl });
-    
-    return res.json({
-      success: true,
-      message: 'Google Doc generated successfully',
-      data: {
-        docUrl: docResult.docUrl,
-        docId: docResult.docId
-      }
-    });
-  } catch (error) {
-    logger.error(`Error generating Google Doc for post: ${postId}`, sessionId, error);
-    return res.status(500).json({
-      success: false,
-      message: 'Error generating Google Doc',
-      error: error.message
+      message: error.message || 'Error generating PDF'
     });
   }
 });

@@ -7,19 +7,16 @@ const agent = new https.Agent({
   timeout: 30000
 });
 
-// Create authorization headers at runtime instead of during module load
-function getAuthHeaders() {
-  return {
-    'Content-Type': 'application/json',
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-    'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`,
-    'Accept': 'application/json'
-  };
-}
+const DEFAULT_HEADERS = {
+  'Content-Type': 'application/json',
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`,
+  'Accept': 'application/json'
+};
 
-// Base options without headers
-const BASE_OPTIONS = {
+const DEFAULT_OPTIONS = {
   method: 'GET',
+  headers: DEFAULT_HEADERS,
   agent,
   timeout: 30000
 };
@@ -29,13 +26,9 @@ async function fetchWordPress(endpoint, options = {}) {
   console.log(`[WordPress] Fetching: ${url}`);
   
   try {
-    // Add auth headers at runtime
-    const headers = { ...getAuthHeaders(), ...options.headers };
-    
     const response = await fetch(url, {
-      ...BASE_OPTIONS,
-      ...options,
-      headers
+      ...DEFAULT_OPTIONS,
+      ...options
     });
 
     if (!response.ok) {
