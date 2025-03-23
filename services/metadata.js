@@ -491,7 +491,7 @@ async function processJustificationMetadata(postId, postTitle, value) {
     
     // Generate HTML table from auction results
     console.log('Generating auction results HTML table');
-    const auctionTableHtml = generateAuctionTableHtml(auctionResults, numericValue);
+    const { tableHtml: auctionTableHtml, statistics } = generateAuctionTableHtml(auctionResults, numericValue);
     
     // Store auction table HTML separately
     try {
@@ -656,11 +656,16 @@ async function processJustificationMetadata(postId, postTitle, value) {
  * Generates an HTML table from auction results
  * @param {Array} auctionResults - Array of auction result objects
  * @param {number} targetValue - The appraisal value for comparison
- * @returns {string} HTML string containing the formatted table
+ * @returns {Object} Object containing the HTML table and statistics
+ * @returns {string} Object.tableHtml - HTML string containing the formatted table
+ * @returns {Object} Object.statistics - Statistics object with analysis data
  */
 function generateAuctionTableHtml(auctionResults, targetValue) {
   if (!auctionResults || !Array.isArray(auctionResults) || auctionResults.length === 0) {
-    return '<p>No comparable auction results found.</p>';
+    return { 
+      tableHtml: '<p>No comparable auction results found.</p>',
+      statistics: null
+    };
   }
   
   // Sort by closest price to target value
@@ -897,7 +902,7 @@ function generateAuctionTableHtml(auctionResults, targetValue) {
     </div>
   `;
   
-  return tableHtml;
+  return { tableHtml, statistics };
 }
 
 /**
