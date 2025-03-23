@@ -66,58 +66,43 @@
       </div>
       
       <div class="market-metrics">
-        <div class="metric-card" style="--target-dash: [get_percentage field_name='market_demand' default='75']">
-          <svg viewBox="0 0 36 36" class="circular-chart">
-            <defs>
-              <linearGradient id="gradient-market" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#4f72e9" />
-                <stop offset="100%" stop-color="#3a66db" />
-              </linearGradient>
-            </defs>
-            <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
-            <path class="circle" stroke="url(#gradient-market)" stroke-dasharray="[get_percentage field_name='market_demand' default='75'], 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
-            <text x="18" y="18.5" class="percentage">[get_custom_field field_name='market_demand' default='75']%</text>
-          </svg>
-          <div class="metric-info">
-            <div class="metric-name">Market Demand</div>
-            <div class="metric-desc">Current collector interest</div>
+        <!-- Market Demand -->
+        <div class="metric-card shadcn-style">
+          <div class="metric-header">
+            <span class="metric-title">Market Demand</span>
           </div>
+          <div class="donut-chart-container">
+            <div class="donut-chart" style="--percentage: [get_percentage field_name='market_demand' default='80']; --color: #3182CE;">
+              <span class="donut-label">[get_custom_field field_name='market_demand' default='80']%</span>
+            </div>
+          </div>
+          <div class="metric-desc">Current collector interest</div>
         </div>
         
-        <div class="metric-card" style="--target-dash: [get_percentage field_name='rarity' default='60']">
-          <svg viewBox="0 0 36 36" class="circular-chart">
-            <defs>
-              <linearGradient id="gradient-rarity" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#785ce4" />
-                <stop offset="100%" stop-color="#5d3dbf" />
-              </linearGradient>
-            </defs>
-            <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
-            <path class="circle" stroke="url(#gradient-rarity)" stroke-dasharray="[get_percentage field_name='rarity' default='60'], 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
-            <text x="18" y="18.5" class="percentage">[get_custom_field field_name='rarity' default='60']%</text>
-          </svg>
-          <div class="metric-info">
-            <div class="metric-name">Rarity</div>
-            <div class="metric-desc">Availability in the market</div>
+        <!-- Rarity -->
+        <div class="metric-card shadcn-style">
+          <div class="metric-header">
+            <span class="metric-title">Rarity</span>
           </div>
+          <div class="donut-chart-container">
+            <div class="donut-chart" style="--percentage: [get_percentage field_name='rarity' default='80']; --color: #805AD5;">
+              <span class="donut-label">[get_custom_field field_name='rarity' default='80']%</span>
+            </div>
+          </div>
+          <div class="metric-desc">Availability in the market</div>
         </div>
         
-        <div class="metric-card" style="--target-dash: [get_percentage field_name='condition_score' default='85']">
-          <svg viewBox="0 0 36 36" class="circular-chart">
-            <defs>
-              <linearGradient id="gradient-condition" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#3dbb7a" />
-                <stop offset="100%" stop-color="#31a066" />
-              </linearGradient>
-            </defs>
-            <path class="circle-bg" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
-            <path class="circle" stroke="url(#gradient-condition)" stroke-dasharray="[get_percentage field_name='condition_score' default='85'], 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"></path>
-            <text x="18" y="18.5" class="percentage">[get_custom_field field_name='condition_score' default='85']%</text>
-          </svg>
-          <div class="metric-info">
-            <div class="metric-name">Condition</div>
-            <div class="metric-desc">Physical state assessment</div>
+        <!-- Condition -->
+        <div class="metric-card shadcn-style">
+          <div class="metric-header">
+            <span class="metric-title">Condition</span>
           </div>
+          <div class="donut-chart-container">
+            <div class="donut-chart" style="--percentage: [get_percentage field_name='condition_score' default='85']; --color: #38A169;">
+              <span class="donut-label">[get_custom_field field_name='condition_score' default='85']%</span>
+            </div>
+          </div>
+          <div class="metric-desc">Physical state assessment</div>
         </div>
       </div>
     </div>
@@ -164,14 +149,15 @@
 /* Appraisal Summary Panel Styles */
 .appraisal-summary-panel {
   margin: 2rem 0 4rem;
-  font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   background: white;
-  border-radius: 16px;
-  box-shadow: 0 10px 40px rgba(0,0,0,0.08);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.06);
   overflow: hidden;
-  transition: all 0.3s ease;
-  border: 1px solid #f0f0f0;
-  max-width: 1100px;
+  transition: all 0.2s ease;
+  border: 1px solid #E2E8F0;
+  max-width: 1200px;
+  width: 94%;
   margin-left: auto;
   margin-right: auto;
 }
@@ -185,7 +171,7 @@
 }
 
 .summary-header {
-  background: linear-gradient(135deg, #3a66db, #5d7ce4);
+  background: linear-gradient(135deg, #3182CE, #2A4365);
   color: white;
   padding: 1.8rem 2.5rem;
   display: flex;
@@ -375,157 +361,115 @@
   font-size: 1.1rem;
 }
 
-/* Value estimation styles removed as requested */
-
+/* Shadcn-style metrics cards */
 .market-metrics {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 1.5rem;
 }
 
-@media (max-width: 992px) {
-  .market-metrics {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-@media (max-width: 768px) {
-  .market-metrics {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-@media (max-width: 480px) {
-  .market-metrics {
-    grid-template-columns: 1fr;
-  }
-}
-
-.metric-card {
+.metric-card.shadcn-style {
+  background: white;
+  border-radius: 12px;
+  border: 1px solid #E2E8F0;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   align-items: center;
-  text-align: center;
-  background: white;
-  padding: 1.8rem 1.2rem;
-  border-radius: 16px;
-  border: 1px solid #eaeaea;
-  transition: all 0.3s;
-  position: relative;
-  overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0,0,0,0.03);
+  transition: all 0.2s ease;
+  gap: 1rem;
 }
 
-.metric-card::before {
+.metric-card.shadcn-style:hover {
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  transform: translateY(-2px);
+}
+
+.metric-header {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 0.5rem;
+}
+
+.metric-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #4A5568;
+}
+
+.donut-chart-container {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 0.75rem 0;
+}
+
+.donut-chart {
+  --size: 120px;
+  --thickness: 10px;
+  --percentage: 75;
+  --color: #3182CE;
+  width: var(--size);
+  height: var(--size);
+  border-radius: 50%;
+  background: conic-gradient(
+    var(--color) 0%, 
+    var(--color) calc(var(--percentage) * 1%), 
+    #EDF2F7 calc(var(--percentage) * 1%) 100%
+  );
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  position: relative;
+}
+
+.donut-chart::before {
   content: '';
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 6px;
-  background: linear-gradient(90deg, #3a66db, #5d7ce4);
-  transition: height 0.3s ease;
+  width: calc(var(--size) - 2 * var(--thickness));
+  height: calc(var(--size) - 2 * var(--thickness));
+  background: white;
+  border-radius: 50%;
 }
 
-.metric-card:hover {
-  box-shadow: 0 8px 30px rgba(58, 102, 219, 0.12);
-  transform: translateY(-5px);
-}
-
-.metric-card:hover::before {
-  height: 8px;
-}
-
-.circular-chart {
-  width: 110px;
-  height: 110px;
-  margin-bottom: 1.2rem;
+.donut-label {
   position: relative;
-}
-
-.circle-bg {
-  fill: none;
-  stroke: #f0f5ff;
-  stroke-width: 4;
-}
-
-.circle {
-  fill: none;
-  stroke-width: 5;
-  stroke-linecap: round;
-  stroke: url(#gradient);
-  animation: progress 1.8s ease-out forwards;
-  filter: drop-shadow(0px 2px 4px rgba(58, 102, 219, 0.2));
-}
-
-/* Define gradient for circle */
-.metric-card svg defs {
-  position: absolute;
-}
-
-@keyframes progress {
-  0% {
-    stroke-dasharray: 0 100;
-  }
-  40% {
-    stroke-dasharray: var(--target-dash) 100;
-  }
-  70% {
-    stroke-dasharray: calc(var(--target-dash) - 2) 100;
-  }
-  100% {
-    stroke-dasharray: var(--target-dash) 100;
-  }
-}
-
-@keyframes fadeIn {
-  0% {
-    opacity: 0;
-    transform: translateY(10px);
-  }
-  60% {
-    opacity: 0.6;
-  }
-  100% {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.percentage {
-  fill: #2a2a2a;
-  font-size: 1.6rem;
+  font-size: 1.75rem;
   font-weight: 700;
-  text-anchor: middle;
-  dominant-baseline: middle;
-  animation: fadeIn 1s ease-out forwards;
-  animation-delay: 0.5s;
-  opacity: 0;
-  letter-spacing: -0.5px;
-}
-
-.metric-info {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  animation: fadeIn 0.8s ease-out forwards;
-  animation-delay: 0.3s;
-  opacity: 0;
-}
-
-.metric-name {
-  font-weight: 700;
-  font-size: 1.2rem;
-  color: #1a1a1a;
-  margin-bottom: 0.5rem;
-  letter-spacing: -0.3px;
+  color: #1A202C;
 }
 
 .metric-desc {
-  font-size: 0.85rem;
-  color: #666;
-  max-width: 140px;
+  text-align: center;
+  font-size: 0.875rem;
+  color: #718096;
   line-height: 1.4;
+}
+
+@keyframes donutAnimation {
+  0% {
+    background: conic-gradient(
+      var(--color) 0deg,
+      #EDF2F7 0deg 360deg
+    );
+  }
+  100% {
+    background: conic-gradient(
+      var(--color) 0deg calc(var(--percentage) * 3.6deg),
+      #EDF2F7 calc(var(--percentage) * 3.6deg) 360deg
+    );
+  }
+}
+
+.donut-chart {
+  animation: donutAnimation 1.5s ease-out forwards;
+  transform: rotate(-90deg); /* Start from top position */
+}
+
+.donut-label {
+  transform: rotate(90deg); /* Counter-rotate the label to make it readable */
 }
 
 .summary-tabs {
@@ -577,6 +521,11 @@
 @keyframes fadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
+}
+
+@keyframes percentileFill {
+  from { width: 0%; }
+  to { width: var(--percentile-width, 70%); }
 }
 
 .nutshell-details {
@@ -700,6 +649,21 @@
 }
 
 /* Responsive adjustments */
+@media (max-width: 992px) {
+  .summary-header {
+    padding: 1.8rem 1.5rem;
+  }
+  
+  .summary-content {
+    padding: 2rem 1.5rem;
+    gap: 2rem;
+  }
+  
+  .market-metrics {
+    gap: 1.25rem;
+  }
+}
+
 @media (max-width: 768px) {
   .summary-header {
     flex-direction: column;
@@ -710,6 +674,7 @@
   
   .value-badge {
     width: 100%;
+    max-width: 300px;
   }
   
   .summary-content {
@@ -722,10 +687,12 @@
   }
   
   .key-details-grid {
+    grid-template-columns: repeat(2, 1fr);
     gap: 1rem;
   }
   
   .market-metrics {
+    grid-template-columns: 1fr;
     gap: 1rem;
   }
   
@@ -770,6 +737,15 @@
   
   .similar-items-container {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .donut-chart {
+    --size: 100px;
+    --thickness: 8px;
+  }
+  
+  .donut-label {
+    font-size: 1.5rem;
   }
 }
 </style>
@@ -1077,7 +1053,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- /wp:heading -->
 
 <!-- wp:html -->
-[display_interactive_stats field_name="statistics"]
+[display_interactive_stats]
 <!-- /wp:html -->
 
 <!-- wp:kadence/rowlayout {"uniqueID":"142384_33e3a7-a6","columns":1,"colLayout":"equal","kbVersion":2} -->
