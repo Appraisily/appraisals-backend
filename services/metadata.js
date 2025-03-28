@@ -416,7 +416,11 @@ async function updateWordPressMetadata(postId, metadataKey, metadataValue) {
 
 async function processJustificationMetadata(postId, postTitle, value) {
   try {
-    console.log('Processing justification metadata for post:', postId);
+    // Add detailed tracing for better debugging
+    console.log(`=== JUSTIFICATION PROCESS START ===`);
+    console.log(`Post ID: ${postId}`);
+    console.log(`Post Title: ${postTitle}`);
+    console.log(`Appraisal Value: ${value}`);
     
     // Validate value
     if (!value) {
@@ -455,13 +459,31 @@ async function processJustificationMetadata(postId, postTitle, value) {
     }
 
     const valuerResponse = await response.json();
-    console.log('Valuer agent response received:', valuerResponse.success);
+    
+    // Enhanced logging for valuer agent response
+    console.log(`=== VALUER AGENT RESPONSE ===`);
+    console.log(`Success: ${valuerResponse.success}`);
     
     // Extract explanation and auction results from the response
     const { explanation, auctionResults, success } = valuerResponse;
     
     if (!success) {
       throw new Error('Valuer agent returned unsuccessful response');
+    }
+    
+    console.log(`Explanation Length: ${explanation.length} chars`);
+    console.log(`Auction Results Count: ${auctionResults ? auctionResults.length : 0}`);
+    if (auctionResults && auctionResults.length > 0) {
+      console.log(`First Result: ${JSON.stringify(auctionResults[0]).substring(0, 200)}...`);
+    }
+    
+    // Check consistency between post title and auction results
+    const isConsistent = verifyResultsConsistency(postTitle, auctionResults);
+    console.log(`Results consistency check: ${isConsistent ? 'PASSED' : 'FAILED'}`);
+    
+    if (!isConsistent) {
+      console.warn(`Warning: Auction results may not be consistent with item "${postTitle}"`);
+      await updateWordPressMetadata(postId, 'consistency_warning', `The auction results may not be relevant to the item "${postTitle}". Please verify the appraisal data.`);
     }
     
     // Save raw auction data first - this is critical for debugging
@@ -492,6 +514,14 @@ async function processJustificationMetadata(postId, postTitle, value) {
     // Generate HTML table from auction results
     console.log('Generating auction results HTML table');
     const { tableHtml: auctionTableHtml, statistics } = generateAuctionTableHtml(auctionResults, numericValue);
+    
+    // Enhanced logging for statistics
+    console.log(`=== STATISTICS PROCESSING ===`);
+    if (statistics && statistics.enhancedStats) {
+      console.log(`Generated Statistics: ${JSON.stringify(statistics.enhancedStats).substring(0, 200)}...`);
+    } else {
+      console.log(`No statistics generated`);
+    }
     
     // Store auction table HTML separately
     try {
@@ -544,12 +574,29 @@ async function processJustificationMetadata(postId, postTitle, value) {
       console.error('Error storing explanation:', explanationError);
     }
     
-    // Build the final prompt - include the explanation from valuer agent
-    let finalPrompt = `${prompt}\n\nValuer Agent Explanation: ${explanation}\n\nAuction Data: ${JSON.stringify(auctionResults, null, 2)}`;
+    // Build the final prompt - include the explanation from valuer agent with improved instructions
+    let finalPrompt = `${prompt}
+
+IMPORTANT: The item being appraised is specifically "${postTitle}". This is the source of truth.
+
+Valuer Agent Explanation: ${explanation}
+
+Auction Data for "${postTitle}": ${JSON.stringify(auctionResults, null, 2)}`;
     
     if (searchResults && searchResults.formattedContext) {
-      finalPrompt += `\n\n${searchResults.formattedContext}\n\nUsing the valuer agent explanation, auction data, and search results above, please generate a detailed justification for the valuation.`;
-      console.log('Using search results to enhance justification');
+      finalPrompt += `\n\nAdditional search results found:
+${searchResults.formattedContext}
+
+INSTRUCTIONS:
+1. ONLY use the search results if they are directly relevant to "${postTitle}"
+2. If search results refer to different items, DISREGARD them entirely
+3. The justification must be about "${postTitle}" and nothing else
+4. Base your analysis primarily on the auction data provided for "${postTitle}"
+5. Your response should be a detailed explanation for why the value of $${numericValue} is justified for "${postTitle}"
+`;
+      console.log('Using search results to enhance justification with improved prompt');
+    } else {
+      finalPrompt += `\n\nGenerate a detailed justification for the valuation of "${postTitle}" at $${numericValue} based on the auction data provided.`;
     }
     
     // Generate only the introduction text using OpenAI
@@ -599,23 +646,58 @@ async function processJustificationMetadata(postId, postTitle, value) {
       await updateWordPressMetadata(postId, 'justification_html', completeContent);
       console.log('Complete justification HTML stored successfully');
       
-      // Store enhanced statistics for interactive charts
+      // Store enhanced statistics for interactive charts with validation
       try {
         if (statistics && statistics.enhancedStats) {
-          const enhancedStatsJson = JSON.stringify(statistics.enhancedStats);
+          // Validate statistics data before storing
+          const validatedStats = validateStatisticsData(statistics.enhancedStats);
+          const enhancedStatsJson = JSON.stringify(validatedStats);
+          
+          // Log validation results
+          console.log('Validating statistics data before storage');
+          console.log('Original:', JSON.stringify(statistics.enhancedStats).substring(0, 200) + '...');
+          console.log('Validated:', enhancedStatsJson.substring(0, 200) + '...');
+          
           await updateWordPressMetadata(postId, 'statistics', enhancedStatsJson);
           console.log('Enhanced statistics data stored for interactive charts');
           
-          // Create a readable summary for the market tab in the summary panel
+          // Use validated data for summary
           const statsSummary = `
             <div class="statistics-summary">
-              <p>Market analysis reveals ${statistics.enhancedStats.comparable_sales.length} comparable items with an average value of $${statistics.enhancedStats.average_price.toLocaleString()}.</p>
-              <p>Your item's value of $${statistics.enhancedStats.value.toLocaleString()} places it in the ${statistics.enhancedStats.percentile} percentile, with a ${statistics.enhancedStats.price_trend_percentage} average annual growth rate.</p>
-              <p>Market confidence: <strong>${statistics.enhancedStats.confidence_level}</strong></p>
+              <p>Market analysis reveals ${validatedStats.comparable_sales.length} comparable items with an average value of $${validatedStats.average_price.toLocaleString()}.</p>
+              <p>Your item's value of $${validatedStats.value.toLocaleString()} places it in the ${validatedStats.percentile} percentile, with a ${validatedStats.price_trend_percentage} average annual growth rate.</p>
+              <p>Market confidence: <strong>${validatedStats.confidence_level}</strong></p>
             </div>
           `;
           await updateWordPressMetadata(postId, 'statistics_summary', statsSummary);
           console.log('Statistics summary stored for market panel');
+          
+          // Test retrieval to verify data integrity
+          try {
+            const testResponse = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
+              headers: {
+                'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+              }
+            });
+            
+            if (testResponse.ok) {
+              const testData = await testResponse.json();
+              if (testData.acf && testData.acf.statistics) {
+                try {
+                  const parsedStats = JSON.parse(testData.acf.statistics);
+                  console.log('Verification: Statistics data successfully retrieved and parsed');
+                } catch (parseError) {
+                  console.error('Verification FAILED: Statistics data could not be parsed after storage');
+                }
+              } else {
+                console.error('Verification FAILED: Statistics field not found in retrieved data');
+              }
+            } else {
+              console.error('Verification FAILED: Could not retrieve post data');
+            }
+          } catch (verificationError) {
+            console.error('Verification error:', verificationError);
+          }
         }
       } catch (statsError) {
         console.error('Error storing enhanced statistics:', statsError);
@@ -626,6 +708,8 @@ async function processJustificationMetadata(postId, postTitle, value) {
       console.error('Error storing complete content:', completeContentError);
       throw completeContentError; // This is critical, so rethrow
     }
+    
+    console.log(`=== JUSTIFICATION PROCESS COMPLETE ===`);
     
     return {
       field: 'justification_html',
@@ -1094,9 +1178,103 @@ function calculateAuctionStatistics(auctionResults, targetValue) {
   };
 }
 
+/**
+ * Validates statistics data against expected schema
+ * @param {Object} statsData - The statistics data object to validate
+ * @returns {Object} Validated and sanitized data object with defaults applied
+ */
+function validateStatisticsData(statsData) {
+  // Define required fields with defaults
+  const schema = {
+    count: { default: 0, type: 'number' },
+    average_price: { default: 0, type: 'number' },
+    median_price: { default: 0, type: 'number' },
+    price_min: { default: 0, type: 'number' },
+    price_max: { default: 0, type: 'number' },
+    standard_deviation: { default: 0, type: 'number' },
+    coefficient_of_variation: { default: 0, type: 'number' },
+    percentile: { default: '50th', type: 'string' },
+    confidence_level: { default: 'Low', type: 'string' },
+    price_trend_percentage: { default: '+0.0%', type: 'string' },
+    histogram: { default: [], type: 'array' },
+    comparable_sales: { default: [], type: 'array' },
+    value: { default: 0, type: 'number' },
+    target_marker_position: { default: 50, type: 'number' }
+  };
+  
+  const validated = {};
+  
+  // Validate each field
+  for (const [field, rules] of Object.entries(schema)) {
+    if (statsData && statsData[field] !== undefined) {
+      // Type checking
+      if (rules.type === 'number' && typeof statsData[field] === 'string') {
+        validated[field] = parseFloat(statsData[field]) || rules.default;
+      } else if (rules.type === 'array' && !Array.isArray(statsData[field])) {
+        validated[field] = rules.default;
+      } else {
+        validated[field] = statsData[field];
+      }
+    } else {
+      // Use default if field is missing
+      validated[field] = rules.default;
+    }
+  }
+  
+  // Ensure specific nested structures
+  if (!Array.isArray(validated.histogram) || validated.histogram.length === 0) {
+    validated.histogram = [
+      {min: 0, max: 0, count: 0, position: 0, height: 0, contains_target: false},
+      {min: 0, max: 0, count: 0, position: 20, height: 0, contains_target: false},
+      {min: 0, max: 0, count: 0, position: 40, height: 0, contains_target: false},
+      {min: 0, max: 0, count: 0, position: 60, height: 0, contains_target: true},
+      {min: 0, max: 0, count: 0, position: 80, height: 0, contains_target: false}
+    ];
+  }
+  
+  return validated;
+}
+
+/**
+ * Performs basic consistency check between post title and auction results
+ * @param {string} postTitle - The title of the post being appraised
+ * @param {Array} auctionResults - Array of auction results
+ * @returns {boolean} True if results appear consistent, false otherwise
+ */
+function verifyResultsConsistency(postTitle, auctionResults) {
+  if (!auctionResults || !Array.isArray(auctionResults) || auctionResults.length === 0) {
+    return false;
+  }
+  
+  // Extract key terms from post title
+  const titleTerms = postTitle.toLowerCase().split(/\s+/)
+    .filter(term => term.length > 3) // Only consider significant terms
+    .map(term => term.replace(/[^a-z0-9]/g, '')); // Clean terms
+  
+  // Check if auction results have similar items
+  let matchCount = 0;
+  
+  for (const result of auctionResults) {
+    if (!result.title) continue;
+    
+    const resultTitle = result.title.toLowerCase();
+    for (const term of titleTerms) {
+      if (resultTitle.includes(term)) {
+        matchCount++;
+        break; // Count each result only once
+      }
+    }
+  }
+  
+  // If at least 30% of results have some match with the title, consider it consistent
+  return (matchCount / auctionResults.length) >= 0.3;
+}
+
 module.exports = {
   processMainImageWithGoogleVision,
   processAllMetadata,
   processJustificationMetadata,
-  initializeVisionClient
+  initializeVisionClient,
+  validateStatisticsData,
+  verifyResultsConsistency
 };
