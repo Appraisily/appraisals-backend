@@ -61,10 +61,16 @@ async function moveFileToFolder(drive, fileId, folderId) {
   }
 }
 
+// Import the formatters
+const { buildAppraisalCard, buildStatisticsSection } = require('./formatters');
+
 async function replacePlaceholdersInDocument(docs, documentId, data) {
   try {
     console.log('Starting placeholder replacement');
     console.log('Checking for appraisal_value:', data.appraisal_value);
+    
+    // Process special container placeholders first
+    await handleContainerPlaceholders(docs, documentId, data);
     
     const document = await docs.documents.get({ documentId });
     const content = document.data.body.content;
@@ -77,6 +83,11 @@ async function replacePlaceholdersInDocument(docs, documentId, data) {
           for (const textElement of element.paragraph.elements) {
             if (textElement.textRun && textElement.textRun.content) {
               for (const [key, value] of Object.entries(data)) {
+                // Skip special objects like statistics
+                if (typeof value === 'object' && value !== null) {
+                  continue;
+                }
+                
                 const placeholder = `{{${key}}}`;
                 
                 // Special logging for appraisal value
@@ -132,6 +143,87 @@ async function replacePlaceholdersInDocument(docs, documentId, data) {
   } catch (error) {
     console.error('Error replacing placeholders:', error);
     throw error;
+  }
+}
+
+/**
+ * Handle special container placeholders that require custom formatted content
+ */
+async function handleContainerPlaceholders(docs, documentId, data) {
+  try {
+    console.log('Processing container placeholders...');
+    
+    // Find and replace the appraisal card placeholder
+    try {
+      console.log('Replacing appraisal_card placeholder...');
+      const appraisalCardContent = buildAppraisalCard(data);
+      
+      await docs.documents.batchUpdate({
+        documentId,
+        requestBody: {
+          requests: [{
+            replaceAllText: {
+              containsText: {
+                text: '{{appraisal_card}}',
+                matchCase: true,
+              },
+              replaceText: appraisalCardContent,
+            },
+          }],
+        },
+      });
+      console.log('Appraisal card placeholder replaced successfully');
+    } catch (error) {
+      console.error('Error replacing appraisal card placeholder:', error);
+    }
+    
+    // Find and replace the statistics section placeholder
+    try {
+      if (data.statistics) {
+        console.log('Replacing statistics_section placeholder...');
+        const statisticsSectionContent = buildStatisticsSection(data.statistics);
+        
+        await docs.documents.batchUpdate({
+          documentId,
+          requestBody: {
+            requests: [{
+              replaceAllText: {
+                containsText: {
+                  text: '{{statistics_section}}',
+                  matchCase: true,
+                },
+                replaceText: statisticsSectionContent,
+              },
+            }],
+          },
+        });
+        console.log('Statistics section placeholder replaced successfully');
+      } else {
+        console.log('No statistics data available, replacing statistics_section with empty content');
+        await docs.documents.batchUpdate({
+          documentId,
+          requestBody: {
+            requests: [{
+              replaceAllText: {
+                containsText: {
+                  text: '{{statistics_section}}',
+                  matchCase: true,
+                },
+                replaceText: '',
+              },
+            }],
+          },
+        });
+      }
+    } catch (error) {
+      console.error('Error replacing statistics section placeholder:', error);
+    }
+    
+    console.log('Container placeholders processing completed');
+    return true;
+  } catch (error) {
+    console.error('Error handling container placeholders:', error);
+    return false;
   }
 }
 
@@ -219,5 +311,6 @@ module.exports = {
   cloneTemplate,
   moveFileToFolder,
   replacePlaceholdersInDocument,
+  handleContainerPlaceholders,
   adjustTitleFontSize
 };

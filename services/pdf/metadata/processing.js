@@ -50,6 +50,37 @@ async function processMetadata(postData) {
     console.log(`Field ${key} after cleaning:`, acc[key] ? 'Present' : 'Empty');
     return acc;
   }, {});
+  
+  // Parse statistics data if available
+  console.log('\nProcessing statistics data...');
+  if (postData.acf?.statistics) {
+    try {
+      let statsData = postData.acf.statistics;
+      
+      // If it's a string, try to parse it as JSON
+      if (typeof statsData === 'string') {
+        statsData = JSON.parse(statsData);
+        console.log('Statistics data parsed from JSON');
+      }
+      
+      metadata.statistics = {
+        count: statsData.count || statsData.sample_size || 0,
+        mean: statsData.average_price || statsData.mean || 0,
+        percentile: statsData.percentile || 'N/A',
+        confidence_level: statsData.confidence_level || 'Low',
+        summary_text: postData.acf?.statistics_summary || 
+          'Market analysis shows this item is positioned favorably compared to similar items in the marketplace.'
+      };
+      
+      console.log('Statistics data processed successfully');
+    } catch (error) {
+      console.error('Error parsing statistics data:', error);
+      metadata.statistics = null;
+    }
+  } else {
+    console.log('No statistics data found');
+    metadata.statistics = null;
+  }
 
   // Add justification HTML if available
   if (postData.acf?.justification_html) {
