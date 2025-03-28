@@ -91,13 +91,26 @@ async function processMetadata(postData) {
 
   // Add static metadata fields
   console.log('\nProcessing static metadata fields');
-  metadata.Introduction = staticContent.Introduction || '';
-  metadata.ImageAnalysisText = staticContent.ImageAnalysisText || '';
-  metadata.SignatureText = staticContent.SignatureText || '';
-  metadata.ValuationText = staticContent.ValuationText || '';
-  metadata.AppraiserText = staticContent.AppraiserText || '';
-  metadata.LiabilityText = staticContent.LiabilityText || '';
-  metadata.SellingGuideText = staticContent.SellingGuideText || '';
+  // Ensure static content exists before accessing
+  if (!staticContent) {
+    console.warn('Static content is missing, initializing empty fields');
+    metadata.Introduction = '';
+    metadata.ImageAnalysisText = '';
+    metadata.SignatureText = '';
+    metadata.ValuationText = '';
+    metadata.AppraiserText = '';
+    metadata.LiabilityText = '';
+    metadata.SellingGuideText = '';
+  } else {
+    console.log('Using static content for metadata fields');
+    metadata.Introduction = staticContent.Introduction || '';
+    metadata.ImageAnalysisText = staticContent.ImageAnalysisText || '';
+    metadata.SignatureText = staticContent.SignatureText || '';
+    metadata.ValuationText = staticContent.ValuationText || '';
+    metadata.AppraiserText = staticContent.AppraiserText || '';
+    metadata.LiabilityText = staticContent.LiabilityText || '';
+    metadata.SellingGuideText = staticContent.SellingGuideText || '';
+  }
   
   console.log('\nCleaning static metadata fields');
   // Clean HTML from static metadata
@@ -119,7 +132,15 @@ async function processMetadata(postData) {
   console.log('\nFinal metadata content:');
   Object.entries(metadata).forEach(([key, value]) => {
     console.log(`\n${key}:`);
-    console.log(value.substring(0, 100) + (value.length > 100 ? '...' : ''));
+    if (value === null || value === undefined) {
+      console.log('[null or undefined]');
+    } else if (typeof value === 'string') {
+      console.log(value.substring(0, 100) + (value.length > 100 ? '...' : ''));
+    } else if (typeof value === 'object') {
+      console.log(JSON.stringify(value).substring(0, 100) + (JSON.stringify(value).length > 100 ? '...' : ''));
+    } else {
+      console.log(String(value));
+    }
   });
 
   // Format value if present
