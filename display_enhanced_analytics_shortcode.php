@@ -85,18 +85,52 @@ function display_enhanced_analytics_shortcode($atts) {
       echo "<p>Attempting to parse JSON string...</p>";
     }
     
-    // Clean the json string - replace smart quotes with regular quotes
-    $replacements = array(
+    // Clean the json string - replace smart quotes and other problematic characters
+    // To fix "Unable to parse statistics data" error:
+    // 1. First, replace hex encoded smart quotes with regular quotes
+    // 2. Also handle unicode smart quotes that might be in the data
+    // 3. Replace any other characters that could break JSON parsing
+    
+    // Approach 1: Using hex codes (most reliable for UTF-8 encoded text)
+    $hex_replacements = array(
       "\xE2\x80\x9C" => '"', // Left double quote
       "\xE2\x80\x9D" => '"', // Right double quote
       "\xE2\x80\x98" => "'", // Left single quote
-      "\xE2\x80\x99" => "'"  // Right single quote
+      "\xE2\x80\x99" => "'", // Right single quote
+      "\xE2\x80\xA2" => "-", // Bullet point
+      "\xC2\xA0" => " "      // Non-breaking space
     );
     
-    $fixed_string = str_replace(array_keys($replacements), array_values($replacements), $statistics_data);
+    // Approach 2: Handle unicode code points as well (for good measure)
+    $unicode_replacements = array(
+      "\u{201C}" => '"', // Left double quote
+      "\u{201D}" => '"', // Right double quote
+      "\u{2018}" => "'", // Left single quote
+      "\u{2019}" => "'", // Right single quote
+      "\u{2022}" => "-", // Bullet point
+      "\u{00A0}" => " "  // Non-breaking space
+    );
     
-    // Try direct decoding after simple replacements
-    $stats = json_decode($fixed_string, true);
+    // Apply both replacement approaches
+    $cleaned_string = str_replace(array_keys($hex_replacements), array_values($hex_replacements), $statistics_data);
+    $cleaned_string = str_replace(array_keys($unicode_replacements), array_values($unicode_replacements), $cleaned_string);
+    
+    // Additional cleaning for any remaining problematic characters
+    $pattern = '/[\x00-\x1F\x7F-\x9F\xA0]/u';
+    $cleaned_string = preg_replace($pattern, ' ', $cleaned_string);
+    
+    // Also fix common JSON syntax issues (extra commas, etc.)
+    $cleaned_string = preg_replace('/,\s*}/', '}', $cleaned_string);
+    $cleaned_string = preg_replace('/,\s*\]/', ']', $cleaned_string);
+    
+    // Try direct decoding after all replacements
+    $stats = json_decode($cleaned_string, true);
+    
+    // Logging for debugging purposes
+    if ($debug_mode && json_last_error() !== JSON_ERROR_NONE) {
+      echo "<p class='error'>JSON decode error: " . json_last_error_msg() . "</p>";
+      echo "<p>Processed string (first 100 chars): <code>" . htmlspecialchars(substr($cleaned_string, 0, 100)) . "...</code></p>";
+    }
     
     if ($debug_mode) {
       if (json_last_error() === JSON_ERROR_NONE) {
