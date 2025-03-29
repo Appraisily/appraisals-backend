@@ -718,13 +718,37 @@ INSTRUCTIONS:
             displaySubset.total_sales_count = fullSalesCount;
           }
           
-          const enhancedStatsJson = JSON.stringify(displaySubset);
+          // Ensure proper JSON encoding by strictly controlling the encoding process
+          // This prevents issues with smart quotes and other problematic characters
+          const safeJsonEncode = (obj) => {
+            // Use a replacer function to handle problematic characters
+            return JSON.stringify(obj, (key, value) => {
+              // Handle string values specifically to prevent smart quotes issues
+              if (typeof value === 'string') {
+                // Replace smart quotes and other problematic characters
+                return value.replace(/[\u2018\u2019\u201C\u201D]/g, match => {
+                  // Map smart quotes to their ASCII equivalents
+                  const replacements = {
+                    '\u201C': '"', // Left double quote
+                    '\u201D': '"', // Right double quote
+                    '\u2018': "'", // Left single quote
+                    '\u2019': "'"  // Right single quote
+                  };
+                  return replacements[match] || match;
+                });
+              }
+              return value;
+            });
+          };
+          
+          const enhancedStatsJson = safeJsonEncode(displaySubset);
           
           // Log validation results
           console.log('Validating statistics data before storage');
           console.log('Original sales count:', statistics.enhancedStats.comparable_sales?.length || 0);
           console.log('Validated sales count:', validatedStats.comparable_sales.length);
           console.log('Display subset sales count:', displaySubset.comparable_sales.length);
+          console.log('Using safe JSON encoding to prevent smart quotes issues');
           
           await updateWordPressMetadata(postId, 'statistics', enhancedStatsJson);
           console.log('Enhanced statistics data stored for interactive charts');
