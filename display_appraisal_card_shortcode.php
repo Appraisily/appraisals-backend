@@ -1230,15 +1230,53 @@ function initCharts() {
   marketCharts.forEach(canvas => {
     const ctx = canvas.getContext('2d');
     
-    // Create example price distribution data
-    const prices = [4500, 5000, 5500, 6000, 6500, 7000];
-    // Normalize counts to prevent excessive height - max height will be 8 
-    const counts = [2, 5, 7, 6, 3, 1];
+    // Generate dynamic price distribution based on actual value
+    const currentValue = <?php echo $value; ?>;
     
-    // Find current value
-    const valueDisplay = document.querySelector('.value-amount');
-    const currentValue = valueDisplay ? 
-      parseInt(valueDisplay.textContent.replace(/[^0-9]/g, '')) : 6500;
+    // Get actual histogram data if available in statistics
+    let prices = [];
+    let counts = [];
+    
+    <?php if (!empty($statistics_data)): ?>
+    try {
+      const stats = <?php echo $statistics_data; ?>;
+      if (stats && stats.histogram && Array.isArray(stats.histogram)) {
+        // Use the real histogram data from the enhanced statistics
+        prices = stats.histogram.map(bucket => Math.floor((bucket.min + bucket.max) / 2));
+        counts = stats.histogram.map(bucket => bucket.count);
+        console.log("Using real histogram data from enhanced statistics");
+      } else {
+        throw new Error("No histogram data found in statistics");
+      }
+    } catch (e) {
+      console.log("Error parsing statistics data:", e);
+      // Fallback to generated distribution data
+      generateFallbackDistribution();
+    }
+    <?php else: ?>
+    // Fallback to generated distribution data when statistics aren't available
+    generateFallbackDistribution();
+    <?php endif; ?>
+    
+    // Fallback function to generate a reasonable price distribution when real data isn't available
+    function generateFallbackDistribution() {
+      console.log("Using fallback price distribution");
+      // Create a distribution around the current value
+      const range = currentValue * 0.5; // 50% of the current value for range
+      const step = range / 3;
+      
+      prices = [
+        Math.floor(currentValue - range),
+        Math.floor(currentValue - step * 2),
+        Math.floor(currentValue - step),
+        Math.floor(currentValue),
+        Math.floor(currentValue + step),
+        Math.floor(currentValue + step * 2)
+      ];
+      
+      // Create a bell curve distribution centered around the current value
+      counts = [1, 3, 6, 7, 4, 2];
+    }
     
     new Chart(ctx, {
       type: 'bar',

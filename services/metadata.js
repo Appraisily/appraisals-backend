@@ -529,7 +529,9 @@ async function processJustificationMetadata(postId, postTitle, value) {
         body: JSON.stringify({
           text: postTitle,
           value: numericValue,
-          limit: 20 // Limit to 20 comparable sales for UI display, but calculations use all available data
+          limit: 20, // Limit to 20 comparable sales for UI display, but calculations use all available data
+          minPrice: Math.floor(numericValue * 0.6), // Set minimum price to 60% of appraisal value
+          maxPrice: Math.ceil(numericValue * 1.6)   // Set maximum price to 160% of appraisal value
         })
       });
       
