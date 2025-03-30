@@ -741,6 +741,7 @@ INSTRUCTIONS:
             });
           };
           
+          // Convert object to a clean JSON string
           const enhancedStatsJson = safeJsonEncode(displaySubset);
           
           // Log validation results
@@ -750,7 +751,9 @@ INSTRUCTIONS:
           console.log('Display subset sales count:', displaySubset.comparable_sales.length);
           console.log('Using safe JSON encoding to prevent smart quotes issues');
           
-          await updateWordPressMetadata(postId, 'statistics', enhancedStatsJson);
+          // IMPORTANT: We're storing the object itself, not the JSON string
+          // WordPress will automatically JSON-encode this through the ACF API
+          await updateWordPressMetadata(postId, 'statistics', displaySubset);
           console.log('Enhanced statistics data stored for interactive charts');
           
           // Use validated data for summary

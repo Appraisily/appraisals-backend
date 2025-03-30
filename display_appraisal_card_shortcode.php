@@ -42,10 +42,51 @@ function display_appraisal_card_shortcode($atts) {
   $stats = [];
   
   // Check if statistics data is valid and attempt to decode
-  if (!empty($statistics_data) && is_string($statistics_data)) {
-    $decoded = json_decode($statistics_data, true);
-    if (is_array($decoded)) {
-      $stats = $decoded;
+  if (!empty($statistics_data)) {
+    if (is_string($statistics_data)) {
+      // Clean the json string - replace smart quotes and other problematic characters
+      $hex_replacements = array(
+        "\xE2\x80\x9C" => '"', // Left double quote
+        "\xE2\x80\x9D" => '"', // Right double quote
+        "\xE2\x80\x98" => "'", // Left single quote
+        "\xE2\x80\x99" => "'", // Right single quote
+        "\xE2\x80\xA2" => "-", // Bullet point
+        "\xC2\xA0" => " "      // Non-breaking space
+      );
+      
+      $unicode_replacements = array(
+        "\u{201C}" => '"', // Left double quote
+        "\u{201D}" => '"', // Right double quote
+        "\u{2018}" => "'", // Left single quote
+        "\u{2019}" => "'", // Right single quote
+        "\u{2022}" => "-", // Bullet point
+        "\u{00A0}" => " "  // Non-breaking space
+      );
+      
+      // Apply both replacement approaches
+      $cleaned_string = str_replace(array_keys($hex_replacements), array_values($hex_replacements), $statistics_data);
+      $cleaned_string = str_replace(array_keys($unicode_replacements), array_values($unicode_replacements), $cleaned_string);
+      
+      // Additional cleaning for any remaining problematic characters
+      $pattern = '/[\x00-\x1F\x7F-\x9F\xA0]/u';
+      $cleaned_string = preg_replace($pattern, ' ', $cleaned_string);
+      
+      // Fix common JSON syntax issues
+      $cleaned_string = preg_replace('/,\s*}/', '}', $cleaned_string);
+      $cleaned_string = preg_replace('/,\s*\]/', ']', $cleaned_string);
+      
+      // Try direct decoding after all replacements
+      $decoded = json_decode($cleaned_string, true);
+      
+      // Log any errors
+      if (json_last_error() !== JSON_ERROR_NONE) {
+        error_log("Appraisal Card JSON decode error: " . json_last_error_msg() . " - First 100 chars: " . substr($cleaned_string, 0, 100));
+      } else if (is_array($decoded)) {
+        $stats = $decoded;
+      }
+    } else if (is_array($statistics_data)) {
+      // Already an array, use directly
+      $stats = $statistics_data;
     }
   }
   
@@ -1030,339 +1071,424 @@ function display_appraisal_card_shortcode($atts) {
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-  initAppraisalCard();
-});
-
-function initAppraisalCard() {
-  // Initialize tabs
-  const tabButtons = document.querySelectorAll('.tab-button');
-  const tabPanels = document.querySelectorAll('.tab-panel');
-  
-  tabButtons.forEach(button => {
-    button.addEventListener('click', () => {
-      // Remove active class from all buttons and panels
-      tabButtons.forEach(btn => btn.classList.remove('active'));
-      tabPanels.forEach(panel => panel.classList.remove('active'));
-      
-      // Add active class to clicked button and corresponding panel
-      button.classList.add('active');
-      const tabId = button.getAttribute('data-tab');
-      document.getElementById(tabId).classList.add('active');
-    });
-  });
-  
-  // Detailed report button functionality
-  const detailReportButton = document.querySelector('.detail-report-button');
-  if (detailReportButton) {
-    detailReportButton.addEventListener('click', (e) => {
-      e.preventDefault();
-      // This would typically navigate to a detailed report page
-      // For now, let's just toggle a class for demonstration
-      const card = document.querySelector('.modern-appraisal-card');
-      
-      // You can implement the actual navigation or modal display here
-      // For example:
-      // window.location.href = '/detailed-report?id=' + postId;
-      
-      // Or, for demonstration purposes:
-      alert('Navigating to detailed report view');
-    });
-  }
-  
-  // Initialize charts if Chart.js is available
-  if (typeof Chart === 'undefined') {
-    loadScript('https://cdn.jsdelivr.net/npm/chart.js', initCharts);
-  } else {
-    initCharts();
-  }
-}
-
-function loadScript(src, callback) {
-  const script = document.createElement('script');
-  script.src = src;
-  script.onload = callback;
-  document.head.appendChild(script);
-}
-
-function initCharts() {
-  if (typeof Chart === 'undefined') return;
-  
-  // Set default font
-  Chart.defaults.font.family = "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
-  Chart.defaults.font.size = 12;
-  
-  // Initialize gauge chart
-  const gaugeCharts = document.querySelectorAll('[id^="gauge-chart-"]');
-  gaugeCharts.forEach(canvas => {
-    // Get percentile from nearest indicator
-    const container = canvas.closest('.gauge-container');
-    const percentileEl = container?.querySelector('.percentile-value');
-    const percentile = percentileEl ? parseInt(percentileEl.textContent) : 75;
+// Use a true isolated initialization approach with delayed execution
+(function() {
+  var initializeCharts = function() {
+    console.log("Appraisal Card: Starting initialization");
     
-    const ctx = canvas.getContext('2d');
-    new Chart(ctx, {
-      type: 'doughnut',
-      data: {
-        datasets: [{
-          data: [percentile, 100 - percentile],
-          backgroundColor: [
-            createGradient(ctx, ['#3b82f6', '#1d4ed8']),
-            '#e5e7eb'
-          ],
-          borderWidth: 0,
-          circumference: 180,
-          rotation: 270
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: false,
-        cutout: '75%',
-        plugins: {
-          legend: {
-            display: false
-          },
-          tooltip: {
-            enabled: false
-          }
-        },
-        animation: {
-          animateRotate: true,
-          animateScale: false,
-          duration: 2000,
-          easing: 'easeOutQuart'
-        }
-      }
-    });
-  });
-  
-  // Initialize metrics chart (bar chart)
-  const metricsCharts = document.querySelectorAll('[id^="metrics-chart-"]');
-  metricsCharts.forEach(canvas => {
-    const ctx = canvas.getContext('2d');
-    
-    // Get metrics from the page
-    let marketDemand = 75;
-    let rarity = 70;
-    let condition = 80;
-    
-    // Try to get the actual values if available
-    document.querySelectorAll('.metric-bar').forEach(bar => {
-      const width = bar.style.width;
-      const value = parseInt(width);
-      const metricName = bar.closest('.metric-detail-item').querySelector('h4').textContent.toLowerCase();
-      
-      if (metricName.includes('market') || metricName.includes('demand')) {
-        marketDemand = value;
-      } else if (metricName.includes('rarity')) {
-        rarity = value;
-      } else if (metricName.includes('condition')) {
-        condition = value;
-      }
-    });
-    
-    new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: ['Market Demand', 'Rarity', 'Condition'],
-        datasets: [{
-          data: [marketDemand, rarity, condition],
-          backgroundColor: [
-            'rgba(59, 130, 246, 0.8)',
-            'rgba(139, 92, 246, 0.8)',
-            'rgba(16, 185, 129, 0.8)'
-          ],
-          borderRadius: 6,
-          maxBarThickness: 50
-        }]
-      },
-      options: {
-        indexAxis: 'y',
-        responsive: true,
-        maintainAspectRatio: true,
-        aspectRatio: 2, // Control the aspect ratio
-        scales: {
-          x: {
-            beginAtZero: true,
-            max: 100,
-            grid: {
-              display: true,
-              color: 'rgba(0, 0, 0, 0.05)'
-            },
-            ticks: {
-              callback: function(value) {
-                return value + '%';
-              }
-            }
-          },
-          y: {
-            grid: {
-              display: false
-            }
-          }
-        },
-        plugins: {
-          legend: {
-            display: false
-          },
-          tooltip: {
-            callbacks: {
-              label: function(context) {
-                return context.parsed.x + '%';
-              }
-            }
-          }
-        },
-        animation: {
-          delay: function(context) {
-            return context.dataIndex * 200;
-          },
-          duration: 1000,
-          easing: 'easeOutQuart'
-        }
-      }
-    });
-  });
-  
-  // Initialize market chart (price distribution)
-  const marketCharts = document.querySelectorAll('[id^="market-chart-"]');
-  marketCharts.forEach(canvas => {
-    const ctx = canvas.getContext('2d');
-    
-    // Generate dynamic price distribution based on actual value
-    const currentValue = <?php echo $value; ?>;
-    
-    // Get actual histogram data if available in statistics
-    let prices = [];
-    let counts = [];
-    
-    <?php if (!empty($statistics_data)): ?>
     try {
-      const stats = <?php echo $statistics_data; ?>;
-      if (stats && stats.histogram && Array.isArray(stats.histogram)) {
-        // Use the real histogram data from the enhanced statistics
-        prices = stats.histogram.map(bucket => Math.floor((bucket.min + bucket.max) / 2));
-        counts = stats.histogram.map(bucket => bucket.count);
-        console.log("Using real histogram data from enhanced statistics");
-      } else {
-        throw new Error("No histogram data found in statistics");
+      // Only proceed if the card element exists on the page
+      if (document.querySelector('.modern-appraisal-card')) {
+        // Set up tabs without jQuery
+        setupTabs();
+        
+        // Set up details button
+        setupDetailsButton();
+        
+        // Load Chart.js if needed for visualization
+        if (typeof window.AppraisalCardChart === 'undefined') {
+          var chartScript = document.createElement('script');
+          chartScript.onload = function() {
+            // Create our own instance to avoid conflicts
+            window.AppraisalCardChart = window.Chart;
+            initAppraisalCharts();
+          };
+          chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';
+          document.head.appendChild(chartScript);
+        } else {
+          // Chart already available
+          initAppraisalCharts();
+        }
       }
     } catch (e) {
-      console.log("Error parsing statistics data:", e);
-      // Fallback to generated distribution data
-      generateFallbackDistribution();
+      console.error("Error during appraisal card initialization:", e);
     }
-    <?php else: ?>
-    // Fallback to generated distribution data when statistics aren't available
-    generateFallbackDistribution();
-    <?php endif; ?>
+  };
+  
+  // Set up the tabs
+  function setupTabs() {
+    var tabButtons = document.querySelectorAll('.tab-button');
+    var tabPanels = document.querySelectorAll('.tab-panel');
     
-    // Fallback function to generate a reasonable price distribution when real data isn't available
-    function generateFallbackDistribution() {
-      console.log("Using fallback price distribution");
-      // Create a distribution around the current value
-      const range = currentValue * 0.5; // 50% of the current value for range
-      const step = range / 3;
-      
-      prices = [
-        Math.floor(currentValue - range),
-        Math.floor(currentValue - step * 2),
-        Math.floor(currentValue - step),
-        Math.floor(currentValue),
-        Math.floor(currentValue + step),
-        Math.floor(currentValue + step * 2)
-      ];
-      
-      // Create a bell curve distribution centered around the current value
-      counts = [1, 3, 6, 7, 4, 2];
-    }
-    
-    new Chart(ctx, {
-      type: 'bar',
-      data: {
-        labels: prices.map(p => '$' + p.toLocaleString()),
-        datasets: [{
-          data: counts,
-          backgroundColor: prices.map(p => {
-            const price = parseInt(p);
-            return (price >= currentValue - 250 && price <= currentValue + 250) 
-              ? 'rgba(239, 68, 68, 0.7)' 
-              : 'rgba(59, 130, 246, 0.7)';
-          }),
-          borderRadius: 4,
-          maxBarThickness: 40
-        }]
-      },
-      options: {
-        responsive: true,
-        maintainAspectRatio: true,
-        aspectRatio: 2, // Control the aspect ratio
-        layout: {
-          padding: {
-            top: 10
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            grid: {
-              color: 'rgba(0, 0, 0, 0.05)'
-            },
-            ticks: {
-              precision: 0
-            },
-            suggestedMax: 10, // Limit max height
-            title: {
-              display: true,
-              text: 'Number of Items',
-              color: '#6b7280',
-              font: {
-                size: 12,
-                weight: '500'
-              }
-            }
-          },
-          x: {
-            grid: {
-              display: false
-            },
-            title: {
-              display: true,
-              text: 'Price Range',
-              color: '#6b7280',
-              font: {
-                size: 12,
-                weight: '500'
-              }
-            }
-          }
-        },
-        plugins: {
-          legend: {
-            display: false
-          },
-          tooltip: {
-            callbacks: {
-              title: function(context) {
-                return 'Price: ' + context[0].label;
-              },
-              label: function(context) {
-                return context.parsed.y + ' items';
-              }
-            }
-          }
-        },
-        animation: {
-          delay: function(context) {
-            return context.dataIndex * 100;
-          },
-          duration: 800,
-          easing: 'easeOutQuad'
+    tabButtons.forEach(function(button) {
+      button.addEventListener('click', function() {
+        // Remove active class from all buttons and panels
+        tabButtons.forEach(function(btn) { 
+          btn.classList.remove('active');
+        });
+        tabPanels.forEach(function(panel) {
+          panel.classList.remove('active');
+        });
+        
+        // Add active class to clicked button and panel
+        button.classList.add('active');
+        var tabId = button.getAttribute('data-tab');
+        var panel = document.getElementById(tabId);
+        if (panel) {
+          panel.classList.add('active');
         }
+      });
+    });
+  }
+  
+  // Set up the details button
+  function setupDetailsButton() {
+    var detailsButton = document.querySelector('.detail-report-button');
+    if (detailsButton) {
+      detailsButton.addEventListener('click', function(e) {
+        e.preventDefault();
+        
+        // Get current URL and add a query parameter
+        var currentUrl = window.location.href;
+        var separator = currentUrl.includes('?') ? '&' : '?';
+        var reportUrl = currentUrl + separator + 'view=detailed';
+        
+        // Navigate to detailed report
+        window.location.href = reportUrl;
+      });
+    }
+  }
+  
+  // Delay execution to avoid jQuery conflicts
+  window.setTimeout(initializeCharts, 1000);
+})();
+
+// Initialize chart display
+function initAppraisalCharts() {
+  // Use our isolated Chart instance
+  if (typeof window.AppraisalCardChart === 'undefined') {
+    console.error("Chart.js not available in AppraisalCardChart");
+    return;
+  }
+  
+  try {
+    console.log("Initializing appraisal charts");
+    
+    // Set default font
+    window.AppraisalCardChart.defaults.font = {
+      family: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      size: 12
+    };
+    
+    // Initialize gauge chart
+    initGaugeCharts();
+    
+    // Initialize metrics chart
+    initMetricsCharts();
+    
+    // Initialize market chart
+    initMarketCharts();
+    
+    console.log("Appraisal charts initialized successfully");
+  } catch (e) {
+    console.error("Error in chart initialization:", e);
+  }
+  
+  // Initialize gauge charts
+  function initGaugeCharts() {
+    const gaugeCharts = document.querySelectorAll('[id^="gauge-chart-"]');
+    if (!gaugeCharts.length) {
+      console.log("No gauge charts found");
+      return;
+    }
+    
+    gaugeCharts.forEach(canvas => {
+      try {
+        // Get percentile from nearest indicator
+        const container = canvas.closest('.gauge-container');
+        const percentileEl = container ? container.querySelector('.percentile-value') : null;
+        let percentile = 75; // Default
+        
+        if (percentileEl) {
+          // Extract numeric value from text like "58th"
+          const matches = percentileEl.textContent.match(/(\d+)/);
+          if (matches && matches[1]) {
+            percentile = parseInt(matches[1]);
+          }
+        }
+        
+        const ctx = canvas.getContext('2d');
+        new window.AppraisalCardChart(ctx, {
+          type: 'doughnut',
+          data: {
+            datasets: [{
+              data: [percentile, 100 - percentile],
+              backgroundColor: [
+                createGradient(ctx, ['#3b82f6', '#1d4ed8']),
+                '#e5e7eb'
+              ],
+              borderWidth: 0,
+              circumference: 180,
+              rotation: 270
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '75%',
+            plugins: {
+              legend: { display: false },
+              tooltip: { enabled: false }
+            },
+            animation: {
+              animateRotate: true,
+              animateScale: false,
+              duration: 2000,
+              easing: 'easeOutQuart'
+            }
+          }
+        });
+      } catch (e) {
+        console.error("Error initializing gauge chart:", e);
       }
     });
-  });
+  }
+  
+  // Initialize metrics charts
+  function initMetricsCharts() {
+    const metricsCharts = document.querySelectorAll('[id^="metrics-chart-"]');
+    if (!metricsCharts.length) {
+      console.log("No metrics charts found");
+      return;
+    }
+    
+    metricsCharts.forEach(canvas => {
+      try {
+        const ctx = canvas.getContext('2d');
+        
+        // Get metrics from the page
+        let marketDemand = 75;
+        let rarity = 70;
+        let condition = 80;
+        
+        // Try to get the actual values if available
+        document.querySelectorAll('.metric-bar').forEach(bar => {
+          if (!bar || !bar.style || !bar.style.width) return;
+          
+          const width = bar.style.width;
+          const value = parseInt(width);
+          if (isNaN(value)) return;
+          
+          const metricItem = bar.closest('.metric-detail-item');
+          if (!metricItem) return;
+          
+          const heading = metricItem.querySelector('h4');
+          if (!heading) return;
+          
+          const metricName = heading.textContent.toLowerCase();
+          
+          if (metricName.includes('market') || metricName.includes('demand')) {
+            marketDemand = value;
+          } else if (metricName.includes('rarity')) {
+            rarity = value;
+          } else if (metricName.includes('condition')) {
+            condition = value;
+          }
+        });
+        
+        new window.AppraisalCardChart(ctx, {
+          type: 'bar',
+          data: {
+            labels: ['Market Demand', 'Rarity', 'Condition'],
+            datasets: [{
+              data: [marketDemand, rarity, condition],
+              backgroundColor: [
+                'rgba(59, 130, 246, 0.8)',
+                'rgba(139, 92, 246, 0.8)',
+                'rgba(16, 185, 129, 0.8)'
+              ],
+              borderRadius: 6,
+              maxBarThickness: 50
+            }]
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: 2,
+            scales: {
+              x: {
+                beginAtZero: true,
+                max: 100,
+                grid: {
+                  display: true,
+                  color: 'rgba(0, 0, 0, 0.05)'
+                },
+                ticks: {
+                  callback: function(value) {
+                    return value + '%';
+                  }
+                }
+              },
+              y: {
+                grid: {
+                  display: false
+                }
+              }
+            },
+            plugins: {
+              legend: {
+                display: false
+              },
+              tooltip: {
+                callbacks: {
+                  label: function(context) {
+                    return context.parsed.x + '%';
+                  }
+                }
+              }
+            }
+          }
+        });
+      } catch (e) {
+        console.error("Error initializing metrics chart:", e);
+      }
+    });
+  }
+  
+  // Initialize market charts
+  function initMarketCharts() {
+    const marketCharts = document.querySelectorAll('[id^="market-chart-"]');
+    if (!marketCharts.length) {
+      console.log("No market charts found");
+      return;
+    }
+    
+    marketCharts.forEach(canvas => {
+      try {
+        const ctx = canvas.getContext('2d');
+        
+        // Generate dynamic price distribution based on actual value
+        const currentValue = <?php echo $value; ?>;
+        
+        // Get statistics data for chart
+        let prices = [];
+        let counts = [];
+        
+        // Process statistics data
+        <?php if (!empty($stats) && isset($stats['histogram']) && is_array($stats['histogram'])): ?>
+        try {
+          // Use PHP to encode the histogram data directly
+          const histogramData = <?php echo json_encode($stats['histogram']); ?>;
+          
+          if (Array.isArray(histogramData) && histogramData.length > 0) {
+            prices = histogramData.map(bucket => Math.floor((bucket.min + bucket.max) / 2));
+            counts = histogramData.map(bucket => bucket.count);
+            console.log("Using real histogram data from statistics");
+          } else {
+            throw new Error("Invalid histogram data structure");
+          }
+        } catch (e) {
+          console.error("Error processing histogram data:", e);
+          generateFallbackDistribution();
+        }
+        <?php else: ?>
+        // No statistics data available, use fallback
+        generateFallbackDistribution();
+        <?php endif; ?>
+        
+        // Fallback distribution generator
+        function generateFallbackDistribution() {
+          console.log("Using fallback price distribution");
+          // Create distribution around current value
+          const range = currentValue * 0.5;
+          const step = range / 3;
+          
+          prices = [
+            Math.floor(currentValue - range),
+            Math.floor(currentValue - step * 2),
+            Math.floor(currentValue - step),
+            Math.floor(currentValue),
+            Math.floor(currentValue + step),
+            Math.floor(currentValue + step * 2)
+          ];
+          
+          counts = [1, 3, 6, 7, 4, 2]; // Bell curve
+        }
+        
+        // Create chart
+        new window.AppraisalCardChart(ctx, {
+          type: 'bar',
+          data: {
+            labels: prices.map(p => '$' + p.toLocaleString()),
+            datasets: [{
+              data: counts,
+              backgroundColor: prices.map(p => {
+                const price = parseInt(p);
+                return (price >= currentValue - 250 && price <= currentValue + 250) 
+                  ? 'rgba(239, 68, 68, 0.7)' 
+                  : 'rgba(59, 130, 246, 0.7)';
+              }),
+              borderRadius: 4,
+              maxBarThickness: 40
+            }]
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: 2,
+            layout: {
+              padding: {
+                top: 10
+              }
+            },
+            scales: {
+              y: {
+                beginAtZero: true,
+                grid: {
+                  color: 'rgba(0, 0, 0, 0.05)'
+                },
+                ticks: {
+                  precision: 0
+                },
+                suggestedMax: 10,
+                title: {
+                  display: true,
+                  text: 'Number of Items',
+                  color: '#6b7280',
+                  font: {
+                    size: 12,
+                    weight: '500'
+                  }
+                }
+              },
+              x: {
+                grid: {
+                  display: false
+                },
+                title: {
+                  display: true,
+                  text: 'Price Range',
+                  color: '#6b7280',
+                  font: {
+                    size: 12,
+                    weight: '500'
+                  }
+                }
+              }
+            },
+            plugins: {
+              legend: {
+                display: false
+              },
+              tooltip: {
+                callbacks: {
+                  title: function(context) {
+                    return 'Price: ' + context[0].label;
+                  },
+                  label: function(context) {
+                    return context.parsed.y + ' items';
+                  }
+                }
+              }
+            }
+          }
+        });
+      } catch (e) {
+        console.error("Error initializing market chart:", e);
+      }
+    });
+  }
 }
 
 function createGradient(ctx, colors) {

@@ -11,27 +11,16 @@ function display_enhanced_analytics_shortcode($atts) {
     'show_radar' => 'true',
     'show_history' => 'true',
     'show_stats' => 'true',
-    'title' => 'Enhanced Market Analytics',
-    'debug' => 'false'
+    'title' => 'Enhanced Market Analytics'
   ), $atts);
   
   // Start output buffer
   ob_start();
   
-  $debug_mode = filter_var($atts['debug'], FILTER_VALIDATE_BOOLEAN);
-  
   // Field name for statistics
   $field_name = $atts['field_name'];
   
-  // Get raw statistics data from ACF field with debug logging
-  if ($debug_mode) {
-    echo "<div class='debug-info' style='background:#f8f9fa;padding:10px;border:1px solid #ddd;margin-bottom:20px;'>";
-    echo "<h4>Debug Information</h4>";
-    echo "<p>Using field name: <code>" . esc_html($field_name) . "</code></p>";
-  }
-  
-  // Debugging - log the field name and retrieved data
-  error_log("Enhanced Analytics: Using field name: " . $field_name);
+  // Get raw statistics data from ACF field
   $statistics_data = get_field($field_name);
   
   if (empty($statistics_data)) {
@@ -39,122 +28,88 @@ function display_enhanced_analytics_shortcode($atts) {
     global $post;
     if ($post) {
       $statistics_data = get_post_meta($post->ID, $field_name, true);
-      error_log("Enhanced Analytics: Fallback - retrieved from post meta");
-      if ($debug_mode && !empty($statistics_data)) {
-        echo "<p>Data retrieved from post meta as fallback.</p>";
-      }
     }
   }
   
   if (empty($statistics_data)) {
     // If no statistics data is available, return empty or default message
-    if ($debug_mode) {
-      echo "<p class='error'>No data found in field or post meta.</p>";
-      echo "</div>";
-    }
-    
     if (!empty($atts['default'])) {
       return $atts['default'];
     }
     return '<div class="no-stats-message">Market statistics data is not available for this item.</div>';
   }
   
-  // Debug the data type and format
-  error_log("Enhanced Analytics: Data type: " . gettype($statistics_data));
-  if (is_string($statistics_data)) {
-    error_log("Enhanced Analytics: Data sample: " . substr($statistics_data, 0, 100) . "...");
-  } elseif (is_array($statistics_data)) {
-    error_log("Enhanced Analytics: Data is an array");
-  }
-  
-  if ($debug_mode) {
-    echo "<p>Data type: <code>" . gettype($statistics_data) . "</code></p>";
-    if (is_string($statistics_data)) {
-      echo "<p>String length: " . strlen($statistics_data) . " characters</p>";
-      echo "<p>First 50 chars: <code>" . esc_html(substr($statistics_data, 0, 50)) . "...</code></p>";
-    } elseif (is_array($statistics_data)) {
-      echo "<p>Array with " . count($statistics_data) . " items</p>";
-    }
-  }
-  
   // Parse the data - simplified approach that should work properly
   $stats = null;
   
   if (is_string($statistics_data)) {
-    if ($debug_mode) {
-      echo "<p>Attempting to parse JSON string...</p>";
-    }
+    error_log("Enhanced Analytics Debug: Attempting to decode statistics data (first 1000 chars): " . substr($statistics_data, 0, 1000)); // DEBUG LOG
     
-    // Clean the json string - replace smart quotes and other problematic characters
-    // To fix "Unable to parse statistics data" error:
-    // 1. First, replace hex encoded smart quotes with regular quotes
-    // 2. Also handle unicode smart quotes that might be in the data
-    // 3. Replace any other characters that could break JSON parsing
+    // Try direct decoding first
+    $stats = json_decode($statistics_data, true);
     
-    // Approach 1: Using hex codes (most reliable for UTF-8 encoded text)
-    $hex_replacements = array(
-      "\xE2\x80\x9C" => '"', // Left double quote
-      "\xE2\x80\x9D" => '"', // Right double quote
-      "\xE2\x80\x98" => "'", // Left single quote
-      "\xE2\x80\x99" => "'", // Right single quote
-      "\xE2\x80\xA2" => "-", // Bullet point
-      "\xC2\xA0" => " "      // Non-breaking space
-    );
-    
-    // Approach 2: Handle unicode code points as well (for good measure)
-    $unicode_replacements = array(
-      "\u{201C}" => '"', // Left double quote
-      "\u{201D}" => '"', // Right double quote
-      "\u{2018}" => "'", // Left single quote
-      "\u{2019}" => "'", // Right single quote
-      "\u{2022}" => "-", // Bullet point
-      "\u{00A0}" => " "  // Non-breaking space
-    );
-    
-    // Apply both replacement approaches
-    $cleaned_string = str_replace(array_keys($hex_replacements), array_values($hex_replacements), $statistics_data);
-    $cleaned_string = str_replace(array_keys($unicode_replacements), array_values($unicode_replacements), $cleaned_string);
-    
-    // Additional cleaning for any remaining problematic characters
-    $pattern = '/[\x00-\x1F\x7F-\x9F\xA0]/u';
-    $cleaned_string = preg_replace($pattern, ' ', $cleaned_string);
-    
-    // Also fix common JSON syntax issues (extra commas, etc.)
-    $cleaned_string = preg_replace('/,\s*}/', '}', $cleaned_string);
-    $cleaned_string = preg_replace('/,\s*\]/', ']', $cleaned_string);
-    
-    // Try direct decoding after all replacements
-    $stats = json_decode($cleaned_string, true);
-    
-    // Logging for debugging purposes
-    if ($debug_mode && json_last_error() !== JSON_ERROR_NONE) {
-      echo "<p class='error'>JSON decode error: " . json_last_error_msg() . "</p>";
-      echo "<p>Processed string (first 100 chars): <code>" . htmlspecialchars(substr($cleaned_string, 0, 100)) . "...</code></p>";
-    }
-    
-    if ($debug_mode) {
-      if (json_last_error() === JSON_ERROR_NONE) {
-        echo "<p class='success'>Successfully parsed JSON.</p>";
-      } else {
-        echo "<p class='error'>JSON error: " . json_last_error_msg() . "</p>";
+    // If that fails, try removing slashes (standard practice for WP meta)
+    if (json_last_error() !== JSON_ERROR_NONE) {
+      $stripped_data = stripslashes($statistics_data);
+      $stats = json_decode($stripped_data, true);
+      
+      // If still failing, try more extensive character replacement
+      if (json_last_error() !== JSON_ERROR_NONE) {
+        // Replace problematic quotes and characters
+        $hex_replacements = array(
+          "\xE2\x80\x9C" => '"', // Left double quote
+          "\xE2\x80\x9D" => '"', // Right double quote
+          "\xE2\x80\x98" => "'", // Left single quote
+          "\xE2\x80\x99" => "'", // Right single quote
+          "\xE2\x80\xA2" => "-", // Bullet point
+          "\xC2\xA0" => " "      // Non-breaking space
+        );
+        
+        $unicode_replacements = array(
+          "\u{201C}" => '"', // Left double quote
+          "\u{201D}" => '"', // Right double quote
+          "\u{2018}" => "'", // Left single quote
+          "\u{2019}" => "'", // Right single quote
+          "\u{2022}" => "-", // Bullet point
+          "\u{00A0}" => " "  // Non-breaking space
+        );
+        
+        // Apply both replacement approaches
+        $cleaned_string = str_replace(array_keys($hex_replacements), array_values($hex_replacements), $stripped_data);
+        $cleaned_string = str_replace(array_keys($unicode_replacements), array_values($unicode_replacements), $cleaned_string);
+        
+        // Additional cleaning for any remaining problematic characters
+        $pattern = '/[\x00-\x1F\x7F-\x9F\xA0]/u';
+        $cleaned_string = preg_replace($pattern, ' ', $cleaned_string);
+        
+        // Fix common JSON syntax issues
+        $cleaned_string = preg_replace('/,\s*}/', '}', $cleaned_string);
+        $cleaned_string = preg_replace('/,\s*\]/', ']', $cleaned_string);
+        
+        $stats = json_decode($cleaned_string, true);
       }
+    }
+    
+    // Check for JSON errors after all attempts
+    if (json_last_error() !== JSON_ERROR_NONE) {
+      $decode_error_msg = json_last_error_msg(); // Store error message
+      error_log("Enhanced Analytics Debug: JSON decode failed ({$decode_error_msg}) after multiple attempts."); // DEBUG LOG
+      error_log("Enhanced Analytics Debug: Raw data type: " . gettype($statistics_data)); // DEBUG LOG
+      $stats = null; // Ensure stats is null if decode failed
     }
   } elseif (is_array($statistics_data)) {
     // Already an array, use directly
+    error_log("Enhanced Analytics Debug: Statistics data is already an array. Success!"); // DEBUG LOG
     $stats = $statistics_data;
-    
-    if ($debug_mode) {
-      echo "<p class='success'>Data is already an array, no parsing needed.</p>";
-    }
+  } else {
+    error_log("Enhanced Analytics Debug: Statistics data is neither a string nor an array. Type: " . gettype($statistics_data)); // DEBUG LOG
   }
   
   // Check if parsing was successful
   if (empty($stats) || !is_array($stats)) {
-    if ($debug_mode) {
-      echo "<p class='error'>Failed to parse data into a usable array.</p>";
-      echo "</div>";
-    }
+    error_log("Enhanced Analytics Debug: Parsing failed or resulted in empty/non-array stats. Triggering fallback."); // DEBUG LOG
     
+    // If still not successful, fall back to default message
     if (!empty($atts['default'])) {
       return $atts['default'];
     }
@@ -201,29 +156,6 @@ function display_enhanced_analytics_shortcode($atts) {
         $stats['price_trend_percentage'] = '+' . $stats['price_trend_percentage'];
       }
     }
-  }
-  
-  if ($debug_mode) {
-    echo "<p>Successfully parsed data with " . count($stats) . " fields.</p>";
-    echo "<p>Fields: " . implode(", ", array_keys($stats)) . "</p>";
-    
-    // Check for key metrics
-    $required_fields = ['average_price', 'median_price', 'price_trend_percentage', 'percentile', 'price_min', 'price_max', 'value'];
-    $missing_fields = [];
-    foreach ($required_fields as $field) {
-      if (!isset($stats[$field])) {
-        $missing_fields[] = $field;
-      }
-    }
-    
-    if (!empty($missing_fields)) {
-      echo "<p class='warning'>Missing key fields: " . implode(", ", $missing_fields) . "</p>";
-      echo "<p>Note: Missing fields will use default fallback values.</p>";
-    } else {
-      echo "<p class='success'>All key fields are present.</p>";
-    }
-    
-    echo "</div>";
   }
   
   // Get various item metrics either from statistics or custom fields
@@ -361,7 +293,7 @@ function display_enhanced_analytics_shortcode($atts) {
     $sales_html .= '</td>';
     $sales_html .= '<td>' . $house . '</td>';
     $sales_html .= '<td>' . $date . '</td>';
-    $sales_html .= '<td class="price-cell">' . $price . '</td>';
+    $sales_html .= '<td class="price-cell">' . $price . ' <span class="currency-symbol">' . (isset($sale['currency']) ? $sale['currency'] : '') . '</span></td>';
     $sales_html .= '<td class="diff-cell ' . $diff_class . '">' . $diff . '</td>';
     $sales_html .= '</tr>';
   }
@@ -571,21 +503,6 @@ function display_enhanced_analytics_shortcode($atts) {
       </div>
     </div>
     
-    <!-- Price History Analysis -->
-    <div class="chart-card">
-      <div class="chart-card-header">
-        <h4>Price History Analysis</h4>
-        <div class="price-trend-badge <?php echo $is_trend_positive ? 'positive' : 'negative'; ?>">
-          <?php echo $price_trend; ?> annual
-        </div>
-      </div>
-      <div class="chart-content">
-        <div class="price-chart-wrapper">
-          <canvas id="<?php echo uniqid('price-history-'); ?>" height="300"></canvas>
-        </div>
-      </div>
-    </div>
-    
     <!-- Market Position Gauge -->
     <div class="chart-card">
       <div class="chart-card-header">
@@ -710,132 +627,117 @@ function display_enhanced_analytics_shortcode($atts) {
         </div>
       </div>
 
-      <!-- Value Component Breakdown -->
-      <div class="chart-card component-card">
+      <!-- Market Metrics Cards -->
+      <div class="metrics-grid stats-metrics-grid">
+        <div class="metric-card shadcn-card">
+          <div class="metric-header">
+            <h4>Market Averages</h4>
+            <span class="trend-badge <?php echo $is_trend_positive ? 'positive' : 'negative'; ?>"><?php echo $price_trend; ?> annual</span>
+          </div>
+          <div class="metric-values">
+            <div class="metric-value-row">
+              <span class="metric-label">Mean</span>
+              <span class="metric-value"><?php echo $avg_price; ?></span>
+            </div>
+            <div class="metric-value-row">
+              <span class="metric-label">Median</span>
+              <span class="metric-value"><?php echo $median_price; ?></span>
+            </div>
+          </div>
+          <div class="metric-footer">
+            <div class="metric-description">Based on <?php echo $count; ?> comparable items</div>
+          </div>
+        </div>
+        
+        <div class="metric-card shadcn-card">
+          <div class="metric-header">
+            <h4>Price Range & Variation</h4>
+          </div>
+          <div class="price-range-display">
+            <div class="price-range-value"><?php echo $price_min; ?> - <?php echo $price_max; ?></div>
+            <div class="price-range-bar">
+              <div class="range-track"></div>
+              <div class="range-fill"></div>
+              <div class="range-thumb min"></div>
+              <div class="range-thumb max"></div>
+              <div class="target-indicator" style="left: calc(<?php echo $target_position; ?>% - 6px);"></div>
+            </div>
+          </div>
+          <div class="metric-footer">
+            <div class="badge">CV: <?php echo $coefficient_variation; ?>%</div>
+            <div class="badge secondary">SD: <?php echo $std_dev; ?></div>
+          </div>
+        </div>
+        
+        <div class="metric-card shadcn-card highlighted">
+          <div class="metric-header">
+            <h4>Investment Potential</h4>
+          </div>
+          <div class="investment-rating-display">
+            <div class="investment-rating">
+              <span class="rating-value"><?php echo $investment_potential; ?>%</span>
+              <span class="rating-label">Potential</span>
+            </div>
+            <div class="investment-scale">
+              <div class="scale-bar" style="--fill-width: <?php echo $investment_potential; ?>%"></div>
+            </div>
+          </div>
+          <div class="metric-footer">
+            <div class="metric-description">Based on market trends and item characteristics</div>
+          </div>
+        </div>
+        
+        <div class="metric-card shadcn-card">
+          <div class="metric-header">
+            <h4>Market Confidence</h4>
+          </div>
+          <div class="confidence-display">
+            <div class="confidence-indicator <?php echo strtolower($confidence); ?>">
+              <?php echo $confidence_html; ?>
+            </div>
+            <div class="confidence-value"><?php echo $confidence; ?></div>
+          </div>
+          <div class="metric-footer">
+            <div class="metric-description">Based on sample size and data consistency</div>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Interactive Data Table -->
+      <div class="chart-card advanced-data-table-card">
         <div class="chart-card-header">
-          <h4>Value Component Breakdown</h4>
-        </div>
-        <div class="chart-content">
-          <div class="value-components-container">
-            <canvas id="componentBreakdown-<?php echo uniqid(); ?>" height="250"></canvas>
-          </div>
-          <div class="components-description">
-            <p>Analysis of specific factors contributing to the item's appraised value</p>
-          </div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Market Metrics Cards -->
-    <div class="metrics-grid stats-metrics-grid">
-      <div class="metric-card shadcn-card">
-        <div class="metric-header">
-          <h4>Market Averages</h4>
-          <span class="trend-badge <?php echo $is_trend_positive ? 'positive' : 'negative'; ?>"><?php echo $price_trend; ?> annual</span>
-        </div>
-        <div class="metric-values">
-          <div class="metric-value-row">
-            <span class="metric-label">Mean</span>
-            <span class="metric-value"><?php echo $avg_price; ?></span>
-          </div>
-          <div class="metric-value-row">
-            <span class="metric-label">Median</span>
-            <span class="metric-value"><?php echo $median_price; ?></span>
+          <h4>Comprehensive Market Data</h4>
+          <div class="data-table-controls">
+            <div class="search-filter">
+              <input type="text" id="searchResults" placeholder="Search items..." class="search-input">
+            </div>
+            <div class="filter-controls">
+              <button class="filter-btn active" data-filter="all">All Results</button>
+            </div>
           </div>
         </div>
-        <div class="metric-footer">
-          <div class="metric-description">Based on <?php echo $count; ?> comparable items</div>
+        <div class="sales-table-container">
+          <table class="sales-table advanced-table">
+            <thead>
+              <tr>
+                <th class="sortable" data-sort="title">Item <span class="sort-icon">↕</span></th>
+                <th class="sortable" data-sort="house">Auction House <span class="sort-icon">↕</span></th>
+                <th class="sortable" data-sort="date">Date <span class="sort-icon">↕</span></th>
+                <th class="sortable" data-sort="price">Price <span class="sort-icon">↕</span></th>
+                <th class="sortable" data-sort="diff">Difference <span class="sort-icon">↕</span></th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php echo $sales_html; ?>
+            </tbody>
+          </table>
         </div>
-      </div>
-      
-      <div class="metric-card shadcn-card">
-        <div class="metric-header">
-          <h4>Price Range & Variation</h4>
-        </div>
-        <div class="price-range-display">
-          <div class="price-range-value"><?php echo $price_min; ?> - <?php echo $price_max; ?></div>
-          <div class="price-range-bar">
-            <div class="range-track"></div>
-            <div class="range-fill"></div>
-            <div class="range-thumb min"></div>
-            <div class="range-thumb max"></div>
-            <div class="target-indicator" style="left: calc(<?php echo $target_position; ?>% - 6px);"></div>
+        <div class="table-footer">
+          <div class="table-pagination">
+            <button class="pagination-btn">Previous</button>
+            <span class="pagination-info">Showing 1-5 of <?php echo $count; ?></span>
+            <button class="pagination-btn">Next</button>
           </div>
-        </div>
-        <div class="metric-footer">
-          <div class="badge">CV: <?php echo $coefficient_variation; ?>%</div>
-          <div class="badge secondary">SD: <?php echo $std_dev; ?></div>
-        </div>
-      </div>
-      
-      <div class="metric-card shadcn-card highlighted">
-        <div class="metric-header">
-          <h4>Investment Potential</h4>
-        </div>
-        <div class="investment-rating-display">
-          <div class="investment-rating">
-            <span class="rating-value"><?php echo $investment_potential; ?>%</span>
-            <span class="rating-label">Potential</span>
-          </div>
-          <div class="investment-scale">
-            <div class="scale-bar" style="--fill-width: <?php echo $investment_potential; ?>%"></div>
-          </div>
-        </div>
-        <div class="metric-footer">
-          <div class="metric-description">Based on market trends and item characteristics</div>
-        </div>
-      </div>
-      
-      <div class="metric-card shadcn-card">
-        <div class="metric-header">
-          <h4>Market Confidence</h4>
-        </div>
-        <div class="confidence-display">
-          <div class="confidence-indicator <?php echo strtolower($confidence); ?>">
-            <?php echo $confidence_html; ?>
-          </div>
-          <div class="confidence-value"><?php echo $confidence; ?></div>
-        </div>
-        <div class="metric-footer">
-          <div class="metric-description">Based on sample size and data consistency</div>
-        </div>
-      </div>
-    </div>
-    
-    <!-- Interactive Data Table -->
-    <div class="chart-card advanced-data-table-card">
-      <div class="chart-card-header">
-        <h4>Comprehensive Market Data</h4>
-        <div class="data-table-controls">
-          <div class="search-filter">
-            <input type="text" id="searchResults" placeholder="Search items..." class="search-input">
-          </div>
-          <div class="filter-controls">
-            <button class="filter-btn active" data-filter="all">All Results</button>
-          </div>
-        </div>
-      </div>
-      <div class="sales-table-container">
-        <table class="sales-table advanced-table">
-          <thead>
-            <tr>
-              <th class="sortable" data-sort="title">Item <span class="sort-icon">↕</span></th>
-              <th class="sortable" data-sort="house">Auction House <span class="sort-icon">↕</span></th>
-              <th class="sortable" data-sort="date">Date <span class="sort-icon">↕</span></th>
-              <th class="sortable" data-sort="price">Price <span class="sort-icon">↕</span></th>
-              <th class="sortable" data-sort="diff">Difference <span class="sort-icon">↕</span></th>
-            </tr>
-          </thead>
-          <tbody>
-            <?php echo $sales_html; ?>
-          </tbody>
-        </table>
-      </div>
-      <div class="table-footer">
-        <div class="table-pagination">
-          <button class="pagination-btn">Previous</button>
-          <span class="pagination-info">Showing 1-5 of <?php echo $count; ?></span>
-          <button class="pagination-btn">Next</button>
         </div>
       </div>
     </div>
@@ -1114,8 +1016,6 @@ function display_enhanced_analytics_shortcode($atts) {
   border-radius: 50%;
   border: 20px solid #3182CE;
   clip-path: polygon(0 100%, 50% 0, 100% 100%);
-  clip-path: path('M 100 100 L 0 100 A 100 100 0 0 1 200 100 Z');
-  /* The "fill" amount determined by CSS variable */
   clip-path: path('M 100 100 L 0 100 A 100 100 0 0 1 calc(100 - 100 * cos(3.14159 * var(--percentage) / 100)) calc(100 - 100 * sin(3.14159 * var(--percentage) / 100)) Z');
 }
 
@@ -1410,6 +1310,12 @@ function display_enhanced_analytics_shortcode($atts) {
   font-weight: 600;
 }
 
+.currency-symbol {
+  font-size: 0.75em;
+  color: #718096;
+  margin-left: 0.25rem;
+}
+
 .diff-cell {
   font-weight: 600;
 }
@@ -1538,6 +1444,190 @@ function display_enhanced_analytics_shortcode($atts) {
 }
 </style>
 
+<?php
+  // Add isolated Chart.js implementation that bypasses jQuery entirely
+?>
+<script type="text/javascript">
+// Create a standalone initialization function in an isolated scope
+(function() {
+  // Use a longer delay for initialization to ensure DOM and WordPress scripts are fully loaded
+  window.setTimeout(function() {
+    try {
+      console.log("Enhanced Analytics: Starting initialization");
+      
+      // First, verify all required DOM elements exist
+      var radarChartEl = document.getElementById('<?php echo $radar_chart_id; ?>');
+      var priceChartEl = document.getElementById('<?php echo $price_chart_id; ?>');
+      
+      if (!radarChartEl && !priceChartEl) {
+        console.warn("Enhanced Analytics: Chart canvas elements not found in DOM, skipping initialization");
+        return;
+      }
+      
+      // Create data objects before loading Chart.js to avoid jQuery conflicts
+      var chartData = {
+        radar: {
+          labels: ['Condition', 'Rarity', 'Market Demand', 'Historical Significance', 'Investment Potential', 'Provenance'],
+          data: [
+            <?php echo $condition_score; ?>, 
+            <?php echo $rarity_score; ?>, 
+            <?php echo $market_demand; ?>, 
+            <?php echo $historical_significance; ?>, 
+            <?php echo $investment_potential; ?>, 
+            <?php echo $provenance_strength; ?>
+          ]
+        },
+        priceHistory: {
+          labels: <?php echo json_encode($years); ?>,
+          data: <?php echo json_encode($prices); ?>
+        }
+      };
+      
+      // Add error checking for chart data
+      if (!chartData.radar.data.every(item => !isNaN(item))) {
+        console.warn("Enhanced Analytics: Invalid radar chart data, using default values");
+        chartData.radar.data = [70, 65, 60, 75, 68, 72]; // Default values
+      }
+      
+      if (!Array.isArray(chartData.priceHistory.labels) || !chartData.priceHistory.labels.length || 
+          !Array.isArray(chartData.priceHistory.data) || !chartData.priceHistory.data.length) {
+        console.warn("Enhanced Analytics: Invalid price history data, using generated data");
+        
+        // Generate fallback data
+        var currentYear = new Date().getFullYear();
+        chartData.priceHistory.labels = [];
+        chartData.priceHistory.data = [];
+        
+        for (var i = 5; i >= 0; i--) {
+          chartData.priceHistory.labels.push((currentYear - i).toString());
+          chartData.priceHistory.data.push(4500 * (0.8 + (i * 0.04)));
+        }
+      }
+      
+      console.log("Enhanced Analytics: Chart data prepared successfully");
+      
+      // Only load Chart.js once, with a distinct global variable
+      if (typeof window.EnhancedAnalyticsChart === 'undefined') {
+        console.log("Enhanced Analytics: Loading Chart.js library");
+        var chartScript = document.createElement('script');
+        
+        // Add error handling for script loading
+        chartScript.onerror = function() {
+          console.error("Enhanced Analytics: Failed to load Chart.js library");
+        };
+        
+        chartScript.onload = function() {
+          console.log("Enhanced Analytics: Chart.js loaded successfully");
+          // Store in our own variable to avoid conflicts
+          window.EnhancedAnalyticsChart = window.Chart;
+          
+          // Initialize after a short delay to avoid jQuery errors
+          window.setTimeout(function() {
+            initializeCharts(chartData);
+          }, 500);
+        };
+        
+        chartScript.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';
+        document.head.appendChild(chartScript);
+      } else {
+        // Charts already loaded, initialize directly
+        console.log("Enhanced Analytics: Chart.js already available, initializing charts");
+        window.setTimeout(function() {
+          initializeCharts(chartData);
+        }, 500);
+      }
+    } catch (e) {
+      console.error("Enhanced Analytics error:", e);
+    }
+  }, 1500); // Using a longer delay to ensure WordPress is fully initialized
+  
+  // Function to initialize charts with isolated Chart.js instance
+  function initializeCharts(chartData) {
+    try {
+      if (typeof window.EnhancedAnalyticsChart !== 'undefined') {
+        // Set global defaults
+        window.EnhancedAnalyticsChart.defaults.font = {
+          family: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+          size: 12
+        };
+        
+        // Ensure the canvas elements exist in DOM
+        var radarChartEl = document.getElementById('<?php echo $radar_chart_id; ?>');
+        var priceChartEl = document.getElementById('<?php echo $price_chart_id; ?>');
+        
+        // Initialize radar chart
+        if (radarChartEl) {
+          var radarCtx = radarChartEl.getContext('2d');
+          new window.EnhancedAnalyticsChart(radarCtx, {
+            type: 'radar',
+            data: {
+              labels: chartData.radar.labels,
+              datasets: [{
+                label: 'Item Metrics',
+                data: chartData.radar.data,
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                pointBackgroundColor: 'rgba(54, 162, 235, 1)'
+              }]
+            },
+            options: {
+              scales: {
+                r: {
+                  angleLines: { display: true },
+                  suggestedMin: 0,
+                  suggestedMax: 100
+                }
+              }
+            }
+          });
+        }
+        
+        // Initialize price history chart
+        if (priceChartEl) {
+          var priceCtx = priceChartEl.getContext('2d');
+          new window.EnhancedAnalyticsChart(priceCtx, {
+            type: 'line',
+            data: {
+              labels: chartData.priceHistory.labels,
+              datasets: [{
+                label: 'Price History',
+                data: chartData.priceHistory.data,
+                borderColor: 'rgb(75, 192, 192)',
+                backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                tension: 0.1,
+                fill: true
+              }]
+            },
+            options: {
+              responsive: true,
+              scales: {
+                y: {
+                  beginAtZero: false,
+                  title: {
+                    display: true,
+                    text: 'Price (USD)'
+                  }
+                }
+              }
+            }
+          });
+        }
+      } else {
+        console.error("Chart.js not available for Enhanced Analytics");
+      }
+    } catch (e) {
+      console.error("Error initializing Enhanced Analytics charts:", e);
+    }
+  }
+})();
+</script>
+
+<!-- Fallback for charts in case JavaScript fails -->
+<noscript>
+  <div class="chart-fallback">
+    <p>Charts require JavaScript to be enabled in your browser.</p>
+  </div>
+</noscript>
 <?php
   $html = ob_get_clean();
   return $html;
