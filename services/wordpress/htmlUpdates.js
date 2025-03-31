@@ -123,8 +123,47 @@ async function updateAppraisalCardHtml(postId, appraisalData, statisticsData) {
   }
 }
 
+/**
+ * Checks if HTML visualization fields already exist and have content
+ * 
+ * @param {number|string} postId - WordPress post ID
+ * @returns {Promise<Object>} - Object with exists flag and field details
+ */
+async function checkHtmlFields(postId) {
+  try {
+    console.log(`Checking if HTML visualization fields exist for post ${postId}`);
+    
+    const response = await client.getPost(postId, {
+      _fields: 'acf.enhanced_analytics_html,acf.appraisal_card_html'
+    });
+    
+    const enhancedAnalyticsExists = response.acf?.enhanced_analytics_html && 
+                                   response.acf.enhanced_analytics_html.length > 100;
+    
+    const appraisalCardExists = response.acf?.appraisal_card_html && 
+                               response.acf.appraisal_card_html.length > 100;
+    
+    // Both need to exist and have sufficient content
+    const exists = enhancedAnalyticsExists && appraisalCardExists;
+    
+    console.log(`HTML visualization fields: ${exists ? 'exist' : 'do not exist'} for post ${postId}`);
+    console.log(`- Enhanced analytics: ${enhancedAnalyticsExists ? 'exists' : 'missing'}`);
+    console.log(`- Appraisal card: ${appraisalCardExists ? 'exists' : 'missing'}`);
+    
+    return {
+      exists,
+      enhancedAnalytics: enhancedAnalyticsExists,
+      appraisalCard: appraisalCardExists
+    };
+  } catch (error) {
+    console.error(`Error checking HTML fields for post ${postId}:`, error);
+    return { exists: false, enhancedAnalytics: false, appraisalCard: false };
+  }
+}
+
 module.exports = {
   updateHtmlFields,
   updateEnhancedAnalyticsHtml,
-  updateAppraisalCardHtml
+  updateAppraisalCardHtml,
+  checkHtmlFields
 };

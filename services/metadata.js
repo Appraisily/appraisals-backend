@@ -770,6 +770,22 @@ INSTRUCTIONS:
           // No longer storing statistics_summary separately as it can be generated from statistics
           console.log('Statistics summary will be generated dynamically from statistics data');
           
+          // NEW CODE: Generate HTML visualizations directly with the clean data
+          console.log('Generating HTML visualizations with direct data from valuer-agent');
+          
+          try {
+            // Prepare the appraisal data object
+            const appraisalData = await fetchAppraisalData(postId);
+            
+            // Generate HTML using direct statistics data from valuer-agent
+            const wordpress = require('./wordpress');
+            await wordpress.updateHtmlFields(postId, appraisalData, sanitizedStats);
+            
+            console.log('HTML visualizations (enhanced_analytics_html and appraisal_card_html) generated directly from valuer-agent data');
+          } catch (htmlError) {
+            console.error('Error generating HTML visualizations:', htmlError);
+          }
+          
           // Test retrieval to verify data integrity
           try {
             const testResponse = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf`, {
@@ -1665,6 +1681,61 @@ function verifyResultsConsistency(postTitle, auctionResults) {
   return (matchCount / auctionResults.length) >= 0.3;
 }
 
+/**
+ * Helper function to fetch appraisal data for HTML generation
+ * @param {number|string} postId - WordPress post ID
+ * @returns {Promise<Object>} - Object with appraisal data
+ */
+async function fetchAppraisalData(postId) {
+  try {
+    const response = await fetch(`${config.WORDPRESS_API_URL}/appraisals/${postId}?_fields=acf,title`, {
+      headers: {
+        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Error fetching post data: ${await response.text()}`);
+    }
+    
+    const postData = await response.json();
+    const featuredImage = await getImageUrl(postData.acf?.main);
+    
+    return {
+      title: postData.title?.rendered || '',
+      featured_image: featuredImage || '',
+      creator: postData.acf?.creator || '',
+      object_type: postData.acf?.object_type || '',
+      estimated_age: postData.acf?.estimated_age || '',
+      medium: postData.acf?.medium || '',
+      condition_summary: postData.acf?.condition_summary || '',
+      market_demand: postData.acf?.market_demand || '',
+      rarity: postData.acf?.rarity || '',
+      condition_score: postData.acf?.condition_score || '',
+      value: postData.acf?.value || '',
+      appraiser_name: postData.acf?.appraiser_name || 'Andrés Gómez',
+      // Additional fields
+      artist_dates: postData.acf?.artist_dates || '',
+      color_palette: postData.acf?.color_palette || '',
+      style: postData.acf?.style || '',
+      dimensions: postData.acf?.dimensions || '',
+      framed: postData.acf?.framed || '',
+      edition: postData.acf?.edition || '',
+      publisher: postData.acf?.publisher || '',
+      composition_description: postData.acf?.composition_description || '',
+      signed: postData.acf?.signed || '',
+      provenance: postData.acf?.provenance || '',
+      registration_number: postData.acf?.registration_number || '',
+      notes: postData.acf?.notes || '',
+      coa: postData.acf?.coa || '',
+      meaning: postData.acf?.meaning || ''
+    };
+  } catch (error) {
+    console.error(`Error fetching appraisal data for post ${postId}:`, error);
+    throw error;
+  }
+}
+
 module.exports = {
   processMainImageWithGoogleVision,
   processAllMetadata,
@@ -1672,5 +1743,6 @@ module.exports = {
   initializeVisionClient,
   validateStatisticsData,
   verifyResultsConsistency,
-  generateEnhancedAuctionTableHtml
+  generateEnhancedAuctionTableHtml,
+  fetchAppraisalData
 };

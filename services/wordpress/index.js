@@ -1,7 +1,7 @@
 const { getPost, getMedia, updatePost } = require('./client');
 const { fetchPostData, getImageUrl } = require('./dataFetching');
 const { updatePostACFFields, updateWordPressMetadata, updateNotes } = require('./updates');
-const { updateHtmlFields, updateEnhancedAnalyticsHtml, updateAppraisalCardHtml } = require('./htmlUpdates');
+const { updateHtmlFields, updateEnhancedAnalyticsHtml, updateAppraisalCardHtml, checkHtmlFields } = require('./htmlUpdates');
 const { testWordPressConnection } = require('./connectionTest');
 const { testWithCurl } = require('./curlTest');
 const { runNetworkDiagnostics } = require('./networkDiagnostics');
@@ -23,6 +23,7 @@ module.exports = {
   updateHtmlFields,
   updateEnhancedAnalyticsHtml,
   updateAppraisalCardHtml,
+  checkHtmlFields,
   // Testing and diagnostics
   testWordPressConnection,
   testWithCurl,
