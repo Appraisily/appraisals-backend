@@ -72,10 +72,12 @@ async function startServer() {
     // Load routers after secrets are available
     const appraisalRouter = require('./routes/appraisal');
     const pdfRouter = require('./routes/pdf');
+    const htmlRouter = require('./routes/html');
 
     // Use routers
     app.use('/', appraisalRouter);
     app.use('/', pdfRouter);
+    app.use('/api/html', htmlRouter);
 
     const PORT = process.env.PORT || 8080;
     app.listen(PORT, () => {

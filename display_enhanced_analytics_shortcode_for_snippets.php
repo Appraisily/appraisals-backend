@@ -1,4 +1,3 @@
-<?php
 /**
  * Snippet Name: Display Enhanced Analytics Shortcode
  * Description: Comprehensive analytics dashboard with radar chart, price history, and interactive statistics
@@ -1661,4 +1660,3 @@ function display_enhanced_analytics_shortcode($atts) {
   return $html;
 }
 add_shortcode('display_enhanced_analytics', 'display_enhanced_analytics_shortcode');
-?>

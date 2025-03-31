@@ -103,4 +103,105 @@ router.post('/complete-appraisal-report', async (req, res) => {
   }
 });
 
+/**
+ * Generate HTML visualizations for an appraisal post
+ * POST /generate-visualizations
+ */
+router.post('/generate-visualizations', async (req, res) => {
+  console.log('[Appraisal] Starting HTML visualization generation');
+
+  const { postId } = req.body;
+
+  if (!postId) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'postId is required.' 
+    });
+  }
+
+  try {
+    // Fetch post data from WordPress
+    const { postData, images, title: postTitle } = await wordpress.fetchPostData(postId);
+
+    if (!postTitle) {
+      console.warn('[Appraisal] Post not found for HTML generation');
+      return res.status(404).json({
+        success: false,
+        message: 'Post not found or title is missing',
+      });
+    }
+
+    console.log(`[Appraisal] Generating HTML visualizations for: "${postTitle}"`);
+
+    // Extract the statistics data
+    const statisticsData = postData.acf?.statistics || {};
+    
+    // Prepare the appraisal data object
+    const appraisalData = {
+      title: postTitle,
+      featured_image: images.main?.url || '',
+      creator: postData.acf?.creator || '',
+      object_type: postData.acf?.object_type || '',
+      estimated_age: postData.acf?.estimated_age || '',
+      medium: postData.acf?.medium || '',
+      condition_summary: postData.acf?.condition_summary || '',
+      market_demand: postData.acf?.market_demand || '',
+      rarity: postData.acf?.rarity || '',
+      condition_score: postData.acf?.condition_score || '',
+      value: postData.acf?.value || '',
+      appraiser_name: postData.acf?.appraiser_name || 'Andrés Gómez',
+      // Additional fields
+      artist_dates: postData.acf?.artist_dates || '',
+      color_palette: postData.acf?.color_palette || '',
+      style: postData.acf?.style || '',
+      dimensions: postData.acf?.dimensions || '',
+      framed: postData.acf?.framed || '',
+      edition: postData.acf?.edition || '',
+      publisher: postData.acf?.publisher || '',
+      composition_description: postData.acf?.composition_description || '',
+      signed: postData.acf?.signed || '',
+      provenance: postData.acf?.provenance || '',
+      registration_number: postData.acf?.registration_number || '',
+      notes: postData.acf?.notes || '',
+      coa: postData.acf?.coa || '',
+      meaning: postData.acf?.meaning || ''
+    };
+
+    // Check if statistics data is a string and try to parse it
+    let parsedStatistics = statisticsData;
+    if (typeof statisticsData === 'string') {
+      try {
+        parsedStatistics = JSON.parse(statisticsData);
+      } catch (error) {
+        console.warn('[Appraisal] Could not parse statistics data as JSON, using as-is');
+      }
+    }
+
+    // Update the HTML fields in WordPress
+    await wordpress.updateHtmlFields(postId, appraisalData, parsedStatistics);
+
+    console.log('[Appraisal] HTML visualization generation complete');
+
+    res.status(200).json({
+      success: true,
+      message: 'HTML visualizations generated successfully.',
+      details: {
+        postId,
+        title: postTitle,
+        visualizations: ['enhanced_analytics_html', 'appraisal_card_html']
+      }
+    });
+  } catch (error) {
+    console.error(`[Appraisal] HTML generation error: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error generating HTML visualizations.',
+      details: {
+        postId,
+        error: error.message
+      }
+    });
+  }
+});
+
 module.exports = router;
