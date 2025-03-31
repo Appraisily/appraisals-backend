@@ -39,23 +39,30 @@ function display_enhanced_analytics_shortcode($atts) {
     return '<div class="no-stats-message">Market statistics data is not available for this item.</div>';
   }
   
-  // Parse the data - simplified approach that should work properly
+  // Parse the data - enhanced approach with extensive error handling
   $stats = null;
   
   if (is_string($statistics_data)) {
     error_log("Enhanced Analytics Debug: Attempting to decode statistics data (first 1000 chars): " . substr($statistics_data, 0, 1000)); // DEBUG LOG
     
-    // Try direct decoding first
-    $stats = json_decode($statistics_data, true);
+    // Keep a copy of the original data for debugging
+    $original_data = $statistics_data;
     
-    // If that fails, try removing slashes (standard practice for WP meta)
+    // Multi-stage decoding process with extensive error handling
+    
+    // Stage 1: Try direct decoding
+    $stats = @json_decode($statistics_data, true);
+    
+    // Stage 2: If that fails, try removing WordPress slashes
     if (json_last_error() !== JSON_ERROR_NONE) {
       $stripped_data = stripslashes($statistics_data);
-      $stats = json_decode($stripped_data, true);
+      $stats = @json_decode($stripped_data, true);
       
-      // If still failing, try more extensive character replacement
+      // Stage 3: If still failing, try comprehensive character replacement
       if (json_last_error() !== JSON_ERROR_NONE) {
-        // Replace problematic quotes and characters
+        // Replace multiple versions of problematic quotes and characters
+        
+        // Hex UTF-8 multibyte sequences
         $hex_replacements = array(
           "\xE2\x80\x9C" => '"', // Left double quote
           "\xE2\x80\x9D" => '"', // Right double quote
@@ -65,6 +72,7 @@ function display_enhanced_analytics_shortcode($atts) {
           "\xC2\xA0" => " "      // Non-breaking space
         );
         
+        // Unicode codepoint syntax for PHP 7+
         $unicode_replacements = array(
           "\u{201C}" => '"', // Left double quote
           "\u{201D}" => '"', // Right double quote
@@ -74,27 +82,62 @@ function display_enhanced_analytics_shortcode($atts) {
           "\u{00A0}" => " "  // Non-breaking space
         );
         
-        // Apply both replacement approaches
+        // HTML entities that might be in the data
+        $html_replacements = array(
+          '&quot;' => '"',
+          '&apos;' => "'",
+          '&lsquo;' => "'",
+          '&rsquo;' => "'",
+          '&ldquo;' => '"',
+          '&rdquo;' => '"',
+          '&nbsp;' => ' ',
+          '&bull;' => '-'
+        );
+        
+        // Apply all replacement approaches
         $cleaned_string = str_replace(array_keys($hex_replacements), array_values($hex_replacements), $stripped_data);
         $cleaned_string = str_replace(array_keys($unicode_replacements), array_values($unicode_replacements), $cleaned_string);
+        $cleaned_string = str_replace(array_keys($html_replacements), array_values($html_replacements), $cleaned_string);
         
-        // Additional cleaning for any remaining problematic characters
+        // Remove all control characters and other problematic bytes
         $pattern = '/[\x00-\x1F\x7F-\x9F\xA0]/u';
         $cleaned_string = preg_replace($pattern, ' ', $cleaned_string);
         
         // Fix common JSON syntax issues
-        $cleaned_string = preg_replace('/,\s*}/', '}', $cleaned_string);
-        $cleaned_string = preg_replace('/,\s*\]/', ']', $cleaned_string);
+        $cleaned_string = preg_replace('/,\s*}/', '}', $cleaned_string); // Remove trailing commas in objects
+        $cleaned_string = preg_replace('/,\s*\]/', ']', $cleaned_string); // Remove trailing commas in arrays
+        $cleaned_string = preg_replace('/(\\\\)+\"/', '\\"', $cleaned_string); // Fix double escaped quotes
         
-        $stats = json_decode($cleaned_string, true);
+        $stats = @json_decode($cleaned_string, true);
+        
+        // Stage 4: Last resort - try with additional json_decode options
+        if (json_last_error() !== JSON_ERROR_NONE) {
+          // Try with JSON_INVALID_UTF8_IGNORE flag (PHP 7.2+)
+          if (defined('JSON_INVALID_UTF8_IGNORE')) {
+            $stats = @json_decode($cleaned_string, true, 512, JSON_INVALID_UTF8_IGNORE);
+          }
+          
+          // If still failing, try more aggressive string manipulation
+          if (json_last_error() !== JSON_ERROR_NONE) {
+            // Replace all non-ASCII characters with empty string as last resort
+            $ascii_only = preg_replace('/[^\x00-\x7F]/', '', $cleaned_string);
+            $stats = @json_decode($ascii_only, true);
+          }
+        }
       }
     }
     
-    // Check for JSON errors after all attempts
+    // Final error check and logging
     if (json_last_error() !== JSON_ERROR_NONE) {
       $decode_error_msg = json_last_error_msg(); // Store error message
       error_log("Enhanced Analytics Debug: JSON decode failed ({$decode_error_msg}) after multiple attempts."); // DEBUG LOG
       error_log("Enhanced Analytics Debug: Raw data type: " . gettype($statistics_data)); // DEBUG LOG
+      
+      // Log a sample of the problematic data for debugging
+      $sample = substr($original_data, 0, 100);
+      $escaped_sample = addslashes($sample);
+      error_log("Enhanced Analytics Debug: Sample data: " . $escaped_sample); // DEBUG LOG
+      
       $stats = null; // Ensure stats is null if decode failed
     }
   } elseif (is_array($statistics_data)) {
@@ -496,7 +539,11 @@ function display_enhanced_analytics_shortcode($atts) {
       </div>
       <div class="chart-content">
         <div class="statistics-summary">
-          <p>Market analysis reveals <?php echo $count; ?> comparable items with an average value of <?php echo $avg_price; ?>.</p>
+          <?php 
+          // Generate the summary dynamically from statistics data instead of using statistics_summary field
+          $summary_total_count = isset($stats['total_count']) ? $stats['total_count'] : $count;
+          ?>
+          <p>Market analysis reveals <?php echo $summary_total_count; ?> comparable items with an average value of <?php echo $avg_price; ?>.</p>
           <p>Your item's value of <?php echo $value; ?> places it in the <?php echo $percentile; ?> percentile, with a <?php echo $price_trend; ?> average annual growth rate.</p>
           <p>Market confidence: <strong><?php echo $confidence; ?></strong></p>
         </div>
@@ -1544,6 +1591,8 @@ function display_enhanced_analytics_shortcode($atts) {
   // Function to initialize charts with isolated Chart.js instance
   function initializeCharts(chartData) {
     try {
+      console.log("Enhanced Analytics: Beginning chart initialization");
+      
       if (typeof window.EnhancedAnalyticsChart !== 'undefined') {
         // Set global defaults
         window.EnhancedAnalyticsChart.defaults.font = {
@@ -1555,68 +1604,150 @@ function display_enhanced_analytics_shortcode($atts) {
         var radarChartEl = document.getElementById('<?php echo $radar_chart_id; ?>');
         var priceChartEl = document.getElementById('<?php echo $price_chart_id; ?>');
         
+        // Track successful initializations
+        var chartsInitialized = 0;
+        
         // Initialize radar chart
         if (radarChartEl) {
-          var radarCtx = radarChartEl.getContext('2d');
-          new window.EnhancedAnalyticsChart(radarCtx, {
-            type: 'radar',
-            data: {
-              labels: chartData.radar.labels,
-              datasets: [{
-                label: 'Item Metrics',
-                data: chartData.radar.data,
-                backgroundColor: 'rgba(54, 162, 235, 0.2)',
-                borderColor: 'rgba(54, 162, 235, 1)',
-                pointBackgroundColor: 'rgba(54, 162, 235, 1)'
-              }]
-            },
-            options: {
-              scales: {
-                r: {
-                  angleLines: { display: true },
-                  suggestedMin: 0,
-                  suggestedMax: 100
+          try {
+            var radarCtx = radarChartEl.getContext('2d');
+            if (!radarCtx) {
+              console.warn("Enhanced Analytics: Could not get 2D context for radar chart");
+            } else {
+              console.log("Enhanced Analytics: Initializing radar chart");
+              new window.EnhancedAnalyticsChart(radarCtx, {
+                type: 'radar',
+                data: {
+                  labels: chartData.radar.labels,
+                  datasets: [{
+                    label: 'Item Metrics',
+                    data: chartData.radar.data,
+                    backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    pointBackgroundColor: 'rgba(54, 162, 235, 1)'
+                  }]
+                },
+                options: {
+                  scales: {
+                    r: {
+                      angleLines: { display: true },
+                      suggestedMin: 0,
+                      suggestedMax: 100
+                    }
+                  },
+                  plugins: {
+                    legend: {
+                      display: true,
+                      position: 'bottom'
+                    }
+                  }
                 }
-              }
+              });
+              chartsInitialized++;
+              console.log("Enhanced Analytics: Radar chart initialized successfully");
             }
-          });
+          } catch (radarError) {
+            console.error("Enhanced Analytics: Error initializing radar chart:", radarError);
+            // Try to show fallback content
+            if (radarChartEl.parentNode) {
+              var fallbackElement = document.createElement('div');
+              fallbackElement.className = 'chart-fallback';
+              fallbackElement.innerHTML = '<p>Item metrics visualization unavailable</p>';
+              radarChartEl.parentNode.replaceChild(fallbackElement, radarChartEl);
+            }
+          }
+        } else {
+          console.warn("Enhanced Analytics: Radar chart element not found");
         }
         
         // Initialize price history chart
         if (priceChartEl) {
-          var priceCtx = priceChartEl.getContext('2d');
-          new window.EnhancedAnalyticsChart(priceCtx, {
-            type: 'line',
-            data: {
-              labels: chartData.priceHistory.labels,
-              datasets: [{
-                label: 'Price History',
-                data: chartData.priceHistory.data,
-                borderColor: 'rgb(75, 192, 192)',
-                backgroundColor: 'rgba(75, 192, 192, 0.1)',
-                tension: 0.1,
-                fill: true
-              }]
-            },
-            options: {
-              responsive: true,
-              scales: {
-                y: {
-                  beginAtZero: false,
-                  title: {
-                    display: true,
-                    text: 'Price (USD)'
+          try {
+            var priceCtx = priceChartEl.getContext('2d');
+            if (!priceCtx) {
+              console.warn("Enhanced Analytics: Could not get 2D context for price chart");
+            } else {
+              console.log("Enhanced Analytics: Initializing price history chart");
+              new window.EnhancedAnalyticsChart(priceCtx, {
+                type: 'line',
+                data: {
+                  labels: chartData.priceHistory.labels,
+                  datasets: [{
+                    label: 'Price History',
+                    data: chartData.priceHistory.data,
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.1)',
+                    tension: 0.1,
+                    fill: true
+                  }]
+                },
+                options: {
+                  responsive: true,
+                  maintainAspectRatio: true,
+                  scales: {
+                    y: {
+                      beginAtZero: false,
+                      title: {
+                        display: true,
+                        text: 'Price (USD)'
+                      }
+                    },
+                    x: {
+                      title: {
+                        display: true,
+                        text: 'Year'
+                      }
+                    }
+                  },
+                  plugins: {
+                    legend: {
+                      display: true,
+                      position: 'bottom'
+                    },
+                    tooltip: {
+                      callbacks: {
+                        label: function(context) {
+                          var value = context.parsed.y;
+                          return '$' + value.toLocaleString();
+                        }
+                      }
+                    }
                   }
                 }
-              }
+              });
+              chartsInitialized++;
+              console.log("Enhanced Analytics: Price history chart initialized successfully");
             }
-          });
+          } catch (priceError) {
+            console.error("Enhanced Analytics: Error initializing price history chart:", priceError);
+            // Try to show fallback content
+            if (priceChartEl.parentNode) {
+              var fallbackElement = document.createElement('div');
+              fallbackElement.className = 'chart-fallback';
+              fallbackElement.innerHTML = '<p>Price history visualization unavailable</p>';
+              priceChartEl.parentNode.replaceChild(fallbackElement, priceChartEl);
+            }
+          }
+        } else {
+          console.warn("Enhanced Analytics: Price chart element not found");
         }
+        
+        // Report final status
+        console.log("Enhanced Analytics: Chart initialization complete. " + chartsInitialized + " charts successfully initialized.");
       } else {
-        console.error("Chart.js not available for Enhanced Analytics");
+        console.error("Enhanced Analytics: Chart.js not available for initialization");
+        // Try to show fallback content for all charts
+        document.querySelectorAll('canvas').forEach(function(canvas) {
+          if (canvas.id.includes('chart')) {
+            var fallbackElement = document.createElement('div');
+            fallbackElement.className = 'chart-fallback';
+            fallbackElement.innerHTML = '<p>Chart visualization unavailable</p>';
+            canvas.parentNode.replaceChild(fallbackElement, canvas);
+          }
+        });
       }
     } catch (e) {
-      console.error("Error initializing Enhanced Analytics charts:", e);
+      console.error("Enhanced Analytics: Error during chart initialization:", e);
     }
   }
 })();

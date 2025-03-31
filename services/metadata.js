@@ -502,13 +502,8 @@ async function processJustificationMetadata(postId, postTitle, value) {
     } else {
       console.log(`Received ${auctionResults.length} auction results`);
       
-      // Store auction results separately for better access
-      try {
-        await updateWordPressMetadata(postId, 'auction_results', JSON.stringify(auctionResults));
-        console.log('Auction results stored separately for easier access');
-      } catch (auctionDataError) {
-        console.error('Error storing auction results:', auctionDataError);
-      }
+      // No longer storing auction_results separately as they're included in statistics
+      console.log('Auction results will be included in statistics metadata only');
     }
     
     // Generate HTML table from auction results
@@ -574,13 +569,8 @@ async function processJustificationMetadata(postId, postTitle, value) {
       console.log(`No statistics generated`);
     }
     
-    // Store auction table HTML separately
-    try {
-      await updateWordPressMetadata(postId, 'auction_table_html', auctionTableHtml);
-      console.log('Auction table HTML stored separately');
-    } catch (tableError) {
-      console.error('Error storing auction table HTML:', tableError);
-    }
+    // No longer storing auction_table_html separately as it can be generated from statistics
+    console.log('Auction table HTML will be generated dynamically from statistics data');
     
     // Get justification prompt
     const prompt = await getPrompt('justification');
@@ -603,27 +593,15 @@ async function processJustificationMetadata(postId, postTitle, value) {
       
       console.log('Search results received');
       
-      // Store search results
-      try {
-        await updateWordPressMetadata(postId, 'justification_search_results', JSON.stringify({
-          query: searchQuery,
-          results: googleResults
-        }));
-      } catch (searchStoreError) {
-        console.error('Error storing search results:', searchStoreError);
-      }
+      // No longer storing search results separately as they're only used during generation
+      console.log('Search results used for generation but not stored separately');
     } catch (searchError) {
       console.error('Error during search:', searchError);
       searchResults = null;
     }
     
-    // Store explanation text directly
-    try {
-      await updateWordPressMetadata(postId, 'justification_explanation', explanation);
-      console.log('Explanation text stored successfully');
-    } catch (explanationError) {
-      console.error('Error storing explanation:', explanationError);
-    }
+    // No longer storing explanation text separately as it's included in justification_html
+    console.log('Explanation text will be included in the final justification HTML only');
     
     // Build the final prompt - include the explanation from valuer agent with improved instructions
     let finalPrompt = `${prompt}
@@ -662,13 +640,8 @@ INSTRUCTIONS:
       'o3-mini'
     );
     
-    // Store introduction text separately
-    try {
-      await updateWordPressMetadata(postId, 'justification_introduction', introductionText);
-      console.log('Introduction text stored separately');
-    } catch (introError) {
-      console.error('Error storing introduction text:', introError);
-    }
+    // No longer storing introduction text separately as it's included in justification_html
+    console.log('Introduction text will be included in the final justification HTML only');
     
     // Combine the introduction text with the auction table
     // Format the value as currency
@@ -753,22 +726,31 @@ INSTRUCTIONS:
           
           // IMPORTANT: We're storing the object itself, not the JSON string
           // WordPress will automatically JSON-encode this through the ACF API
-          await updateWordPressMetadata(postId, 'statistics', displaySubset);
+          // Apply additional safety measures for WordPress storage
+          // Clean any problematic characters in string values before storage
+          const sanitizedStats = JSON.parse(JSON.stringify(displaySubset, (key, value) => {
+            // Extra safety: clean all string values to ensure WordPress compatibility
+            if (typeof value === 'string') {
+              // Replace problematic quotes and Unicode characters
+              return value
+                .replace(/[\u2018\u2019]/g, "'") // Replace smart single quotes
+                .replace(/[\u201C\u201D]/g, '"') // Replace smart double quotes
+                .replace(/\u00A0/g, ' ')         // Replace non-breaking spaces
+                .replace(/\u2022/g, '-')         // Replace bullet points
+                .replace(/[^\x00-\x7F]/g, '');   // Strip other non-ASCII characters for safety
+            }
+            return value;
+          }));
+          
+          await updateWordPressMetadata(postId, 'statistics', sanitizedStats);
           console.log('Enhanced statistics data stored for interactive charts');
           
           // Use validated data for summary
           // Total count is either the full sales count or what's shown on the UI
           const totalItemsCount = validatedStats.total_count || fullSalesCount;
           
-          const statsSummary = `
-            <div class="statistics-summary">
-              <p>Market analysis reveals ${totalItemsCount} comparable items with an average value of $${validatedStats.average_price.toLocaleString()}.</p>
-              <p>Your item's value of $${validatedStats.value.toLocaleString()} places it in the ${validatedStats.percentile} percentile, with a ${validatedStats.price_trend_percentage} average annual growth rate.</p>
-              <p>Market confidence: <strong>${validatedStats.confidence_level}</strong></p>
-            </div>
-          `;
-          await updateWordPressMetadata(postId, 'statistics_summary', statsSummary);
-          console.log('Statistics summary stored for market panel');
+          // No longer storing statistics_summary separately as it can be generated from statistics
+          console.log('Statistics summary will be generated dynamically from statistics data');
           
           // Test retrieval to verify data integrity
           try {
