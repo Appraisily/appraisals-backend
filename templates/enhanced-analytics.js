@@ -182,6 +182,38 @@ exports.generateEnhancedAnalytics = function(stats, options = {}) {
     });
   }
   
+  // Sort by similarity and limit to 20 items for display
+  if (comparable_sales.length > 5) {
+    // Get the current item
+    const currentIndex = comparable_sales.findIndex(item => item.is_current);
+    const currentItem = currentIndex >= 0 ? comparable_sales[currentIndex] : null;
+    
+    // If we found the current item, remove it from the array temporarily
+    if (currentItem) {
+      comparable_sales.splice(currentIndex, 1);
+    }
+    
+    // Sort by price similarity to the appraised value
+    comparable_sales.sort((a, b) => {
+      const aPrice = typeof a.price === 'number' ? a.price : parseFloat(String(a.price).replace(/[^0-9.]/g, '')) || 0;
+      const bPrice = typeof b.price === 'number' ? b.price : parseFloat(String(b.price).replace(/[^0-9.]/g, '')) || 0;
+      
+      const aDiff = Math.abs(aPrice - raw_value);
+      const bDiff = Math.abs(bPrice - raw_value);
+      
+      return aDiff - bDiff;
+    });
+    
+    // Limit to 19 items (or 20 if no current item)
+    const limit = currentItem ? 19 : 20;
+    comparable_sales = comparable_sales.slice(0, limit);
+    
+    // Re-insert the current item at position 1 if it exists
+    if (currentItem) {
+      comparable_sales.splice(1, 0, currentItem);
+    }
+  }
+  
   // Generate sales table rows
   for (const sale of comparable_sales) {
     const title = sale.title || 'Unknown Item';
@@ -638,7 +670,7 @@ exports.generateEnhancedAnalytics = function(stats, options = {}) {
           <div class="table-footer">
             <div class="table-pagination">
               <button class="pagination-btn">Previous</button>
-              <span class="pagination-info">Showing 1-5 of ${count}</span>
+              <span class="pagination-info">Showing 1-5 of ${Math.min(comparable_sales.length, 20)}</span>
               <button class="pagination-btn">Next</button>
             </div>
           </div>

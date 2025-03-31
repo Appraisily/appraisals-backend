@@ -1,6 +1,7 @@
 const { validateMetadata, REQUIRED_METADATA_FIELDS } = require('./validation');
 const staticMetadata = require('../../constants/staticMetadata');
 const he = require('he');
+const { cleanAndParseJSON } = require('../../utils/jsonCleaner');
 
 function stripHtml(html) {
   // Handle non-string values
@@ -57,15 +58,18 @@ async function processMetadata(postData) {
     try {
       let statsData = postData.acf.statistics;
       
-      // If it's a string, try to parse it as JSON
+      // If it's a string, try to parse it as JSON with our robust cleaner
       if (typeof statsData === 'string') {
-        statsData = JSON.parse(statsData);
-        console.log('Statistics data parsed from JSON');
+        statsData = cleanAndParseJSON(statsData);
+        console.log('Statistics data cleaned and parsed successfully');
       }
       
       metadata.statistics = {
         count: statsData.count || statsData.sample_size || 0,
         mean: statsData.average_price || statsData.mean || 0,
+        median_price: statsData.median_price || 0,
+        price_min: statsData.price_min || 0,
+        price_max: statsData.price_max || 0,
         percentile: statsData.percentile || 'N/A',
         confidence_level: statsData.confidence_level || 'Low',
         summary_text: postData.acf?.statistics_summary || 
@@ -82,11 +86,80 @@ async function processMetadata(postData) {
     metadata.statistics = null;
   }
 
-  // Add justification HTML if available
-  if (postData.acf?.justification_html) {
-    console.log('\nProcessing justification HTML');
-    metadata.justification_html = stripHtml(postData.acf.justification_html);
-    console.log('Justification HTML processed');
+  // Process justification and valuer agent data
+  console.log('\nProcessing justification data...');
+  try {
+    // 1. Check for valuer_agent_data first (contains full data including auction results)
+    if (postData.acf?.valuer_agent_data) {
+      console.log('Found valuer_agent_data, extracting justification');
+      let valuerData;
+      
+      // Parse if it's a string using our robust cleaner
+      if (typeof postData.acf.valuer_agent_data === 'string') {
+        valuerData = cleanAndParseJSON(postData.acf.valuer_agent_data);
+      } else {
+        valuerData = postData.acf.valuer_agent_data;
+      }
+      
+      // Extract key components from valuer data
+      metadata.justification = {
+        explanation: valuerData.explanation || '',
+        auctionResults: valuerData.auctionResults || []
+      };
+      
+      console.log(`Extracted justification explanation (${metadata.justification.explanation.length} chars) and ${metadata.justification.auctionResults.length} auction results`);
+    } 
+    // 2. Check for separate auction results field
+    else if (postData.acf?.auction_results) {
+      console.log('Found auction_results field');
+      let auctionResults;
+      
+      // Parse if it's a string using our robust cleaner
+      if (typeof postData.acf.auction_results === 'string') {
+        auctionResults = cleanAndParseJSON(postData.acf.auction_results);
+      } else {
+        auctionResults = postData.acf.auction_results;
+      }
+      
+      // Get explanation from separate field if available
+      const explanation = postData.acf?.justification_text || 
+                          postData.acf?.explanation || 
+                          'This appraisal value is based on comparable auction results and market data.';
+      
+      metadata.justification = {
+        explanation: explanation,
+        auctionResults: Array.isArray(auctionResults) ? auctionResults : []
+      };
+      
+      console.log(`Created justification with separate explanation and ${metadata.justification.auctionResults.length} auction results`);
+    }
+    // 3. Use justification HTML if available 
+    else if (postData.acf?.justification_html || postData.acf?.justification_text) {
+      console.log('Using justification HTML/text field');
+      const justificationText = stripHtml(postData.acf.justification_html || postData.acf.justification_text || '');
+      
+      metadata.justification = {
+        explanation: justificationText,
+        auctionResults: []
+      };
+      
+      console.log('Created justification from HTML/text content');
+    }
+    // 4. No justification data found
+    else {
+      console.log('No justification data found, using default explanation');
+      metadata.justification = {
+        explanation: 'This appraisal is based on market research and expert valuation.',
+        auctionResults: []
+      };
+    }
+  } catch (error) {
+    console.error('Error processing justification data:', error);
+    // Create default justification if error occurs
+    metadata.justification = {
+      explanation: 'An error occurred while processing justification data. This appraisal is based on expert opinion.',
+      auctionResults: []
+    };
   }
 
   // Add static metadata fields

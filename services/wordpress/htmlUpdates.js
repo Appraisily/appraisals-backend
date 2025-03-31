@@ -7,6 +7,7 @@ const client = require('./client');
 const { generateEnhancedAnalytics } = require('../../templates/enhanced-analytics');
 const { generateAppraisalCard } = require('../../templates/appraisal-card');
 const { updateNotes } = require('./updates');
+const { cleanAndParseJSON } = require('../utils/jsonCleaner');
 
 /**
  * Updates the HTML visualization fields in WordPress
@@ -20,9 +21,21 @@ async function updateHtmlFields(postId, appraisalData, statisticsData) {
   try {
     console.log(`Generating and updating HTML fields for post ${postId}`);
     
+    // Clean and ensure statisticsData is a valid object
+    let cleanedStats = statisticsData;
+    if (typeof statisticsData === 'string') {
+      try {
+        cleanedStats = cleanAndParseJSON(statisticsData);
+        console.log('Successfully cleaned and parsed statistics data');
+      } catch (error) {
+        console.error('Error cleaning statistics data:', error);
+        cleanedStats = {}; // fallback
+      }
+    }
+    
     // Generate the HTML content
-    const enhancedAnalyticsHtml = generateEnhancedAnalytics(statisticsData);
-    const appraisalCardHtml = generateAppraisalCard(appraisalData, statisticsData);
+    const enhancedAnalyticsHtml = generateEnhancedAnalytics(cleanedStats);
+    const appraisalCardHtml = generateAppraisalCard(appraisalData, cleanedStats);
     
     // Update the WordPress post
     await client.updatePost(postId, {

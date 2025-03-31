@@ -168,7 +168,7 @@ router.post('/complete-appraisal-report', async (req, res) => {
                 console.log('[Appraisal] Successfully parsed stripped statistics data');
               } catch (strippedError) {
                 // If all parsing attempts fail, log details for debugging
-                console.warn('[Appraisal] Could not parse statistics data as JSON:', error.message);
+                console.warn('[Appraisal] Could not parse statistics data as JSON:', cleanedError.message);
                 console.log('[Appraisal] First 100 chars of statistics data:', statisticsData.substring(0, 100));
                 // Continue with original data as fallback
               }
@@ -358,7 +358,7 @@ router.post('/generate-visualizations', async (req, res) => {
             console.log('[Appraisal] Successfully parsed stripped statistics data');
           } catch (strippedError) {
             // If all parsing attempts fail, log details for debugging
-            console.warn('[Appraisal] Could not parse statistics data as JSON:', error.message);
+            console.warn('[Appraisal] Could not parse statistics data as JSON:', cleanedError.message);
             console.log('[Appraisal] First 100 chars of statistics data:', statisticsData.substring(0, 100));
             // Continue with original data as fallback
           }
