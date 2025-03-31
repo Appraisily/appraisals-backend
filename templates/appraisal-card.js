@@ -4,6 +4,29 @@
  */
 
 /**
+ * Helper function to decode HTML entities in text
+ * @param {string} text - Text that may contain HTML entities
+ * @returns {string} Decoded text with HTML entities converted to characters
+ */
+function decodeHtmlEntities(text) {
+  if (!text || typeof text !== 'string') return '';
+  
+  // Create a textarea element to decode entities
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = text;
+  const decoded = textarea.value;
+  
+  // Handle common entities that might not be decoded correctly
+  return decoded
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#039;/g, "'")
+    .replace(/&#215;/g, '×');
+}
+
+/**
  * Generate HTML for appraisal card visualization
  * @param {Object} appraisal - The appraisal data object
  * @param {Object} stats - The statistics data object
@@ -16,8 +39,16 @@ exports.generateAppraisalCard = function(appraisal, stats, options = {}) {
   const statsData = stats || {};
   
   // Extract data from the appraisal and stats objects or use defaults
-  const title = appraisalData.title || 'Untitled Artwork';
+  let title = appraisalData.title || 'Untitled Artwork';
   const creator = appraisalData.creator || 'Unknown Artist';
+  
+  // Decode HTML entities in the title and other text fields
+  title = title.replace(/&amp;/g, '&')
+               .replace(/&lt;/g, '<')
+               .replace(/&gt;/g, '>')
+               .replace(/&quot;/g, '"')
+               .replace(/&#039;/g, "'")
+               .replace(/&#215;/g, '×');
   const object_type = appraisalData.object_type || 'Art Object';
   const age = appraisalData.estimated_age || '20th Century';
   const medium = appraisalData.medium || 'Mixed Media';
