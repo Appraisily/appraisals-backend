@@ -431,13 +431,14 @@ async function updateWordPressMetadata(postId, metadataKey, metadataValue) {
   }
 }
 
-async function processJustificationMetadata(postId, postTitle, value) {
+async function processJustificationMetadata(postId, postTitle, value, skipMetadataGeneration = false) {
   try {
     // Add detailed tracing for better debugging
     console.log(`=== JUSTIFICATION PROCESS START ===`);
     console.log(`Post ID: ${postId}`);
     console.log(`Post Title: ${postTitle}`);
     console.log(`Appraisal Value: ${value}`);
+    console.log(`Skip Metadata Generation: ${skipMetadataGeneration}`);
     
     // Validate value
     if (!value) {
@@ -456,33 +457,111 @@ async function processJustificationMetadata(postId, postTitle, value) {
     
     console.log(`Processing justification for value: ${numericValue}`);
     
-    // Make request to valuer agent
-    console.log('Sending request to valuer agent');
-    const response = await fetch('https://valuer-agent-856401495068.us-central1.run.app/api/justify', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({
-        text: postTitle,
-        value: numericValue
-      })
-    });
+    // Make request to valuer agent with increased timeout (10 minutes)
+    console.log('Sending request to valuer agent with 10 minute timeout');
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 600000); // 10 minute timeout
+    
+    try {
+      const response = await fetch('https://valuer-agent-856401495068.us-central1.run.app/api/justify', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          text: postTitle,
+          value: numericValue
+        }),
+        signal: controller.signal
+      });
+      
+      clearTimeout(timeoutId); // Clear the timeout
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Error response from valuer agent:', errorText);
-      throw new Error(`Valuer agent error: ${errorText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Error response from valuer agent:', errorText);
+        throw new Error(`Valuer agent error: ${errorText}`);
+      }
+
+      const valuerResponse = await response.json();
+      
+      // Enhanced logging for valuer agent response
+      console.log(`=== VALUER AGENT RESPONSE ===`);
+      console.log(`Success: ${valuerResponse.success}`);
+      
+      // Extract explanation, auction results, and allSearchResults from the response
+      const { explanation, auctionResults, allSearchResults, success } = valuerResponse;
+      
+      // Track unique items from all search results
+      let uniqueItems = new Set();
+      let totalItems = 0;
+      
+      // Log details about allSearchResults if available
+      if (allSearchResults && Array.isArray(allSearchResults)) {
+        console.log(`All Search Results Count: ${allSearchResults.length}`);
+        
+        // Calculate total unique items across all search results
+        allSearchResults.forEach(result => {
+          if (result.data && Array.isArray(result.data)) {
+            totalItems += result.data.length;
+            result.data.forEach(item => {
+              const itemKey = `${item.title}|${item.house}|${item.date}|${item.price}`;
+              uniqueItems.add(itemKey);
+            });
+          }
+        });
+        
+        console.log(`Total items across all searches: ${totalItems}`);
+        console.log(`Unique items count: ${uniqueItems.size}`);
+        
+        // If auctionResults is empty but we have data in allSearchResults, try to use those
+        if ((!auctionResults || auctionResults.length === 0) && uniqueItems.size > 0) {
+          console.log(`No direct auction results but found ${uniqueItems.size} items in allSearchResults, using these instead`);
+          
+          // Create a flat list of all items from allSearchResults
+          const flattenedResults = [];
+          allSearchResults.forEach(result => {
+            if (result.data && Array.isArray(result.data)) {
+              result.data.forEach(item => flattenedResults.push(item));
+            }
+          });
+          
+          // Sort by relevance (closeness to target value)
+          const sortedResults = flattenedResults.sort((a, b) => {
+            const diffA = Math.abs(a.price - numericValue);
+            const diffB = Math.abs(b.price - numericValue);
+            return diffA - diffB;
+          });
+          
+          // Use up to 20 most relevant results
+          const topResults = sortedResults.slice(0, 20);
+          console.log(`Using top ${topResults.length} most relevant results from allSearchResults`);
+          
+          // Use this data instead of empty auctionResults
+          valuerResponse.auctionResults = topResults;
+        }
+      }
+      
+      // Check for testing mode - return early with minimal data
+      if (skipMetadataGeneration) {
+        console.log('Skipping metadata generation steps as requested (testing mode)');
+        return {
+          field: 'justification_html',
+          status: 'success',
+          testing: true,
+          auctionResultsCount: auctionResults ? auctionResults.length : 0,
+          allSearchResultsCount: allSearchResults ? allSearchResults.length : 0,
+          uniqueItemsCount: uniqueItems.size,
+          totalItemsCount: totalItems
+        };
+      }
+      
+      // Continue with the original data extraction for normal processing
+      const { explanation, auctionResults, success } = valuerResponse;
+    } catch (fetchError) {
+      clearTimeout(timeoutId); // Clear the timeout on error too
+      throw fetchError;
     }
-
-    const valuerResponse = await response.json();
-    
-    // Enhanced logging for valuer agent response
-    console.log(`=== VALUER AGENT RESPONSE ===`);
-    console.log(`Success: ${valuerResponse.success}`);
-    
-    // Extract explanation and auction results from the response
-    const { explanation, auctionResults, success } = valuerResponse;
     
     if (!success) {
       throw new Error('Valuer agent returned unsuccessful response');

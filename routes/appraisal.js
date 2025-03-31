@@ -8,13 +8,53 @@ const { getClientIp } = require('request-ip');
 router.post('/complete-appraisal-report', async (req, res) => {
   console.log('[Appraisal] Starting report generation');
 
-  const { postId } = req.body;
+  const { postId, justificationOnly } = req.body;
 
   if (!postId) {
     return res.status(400).json({ 
       success: false, 
       message: 'postId is required.' 
     });
+  }
+  
+  // If justificationOnly is true, skip directly to justification process
+  if (justificationOnly === true) {
+    console.log('[Appraisal] Skipping to justification process as requested');
+    
+    try {
+      const { postData, title: postTitle } = await wordpress.fetchPostData(postId);
+      
+      if (!postTitle) {
+        console.warn('[Appraisal] Post title not found');
+        return res.status(404).json({
+          success: false,
+          message: 'Post not found or title is missing'
+        });
+      }
+      
+      const justificationResult = await processJustificationMetadata(
+        postId,
+        postTitle,
+        postData.acf?.value
+      );
+      
+      return res.status(200).json({
+        success: true,
+        message: 'Justification process completed successfully.',
+        details: {
+          postId,
+          title: postTitle,
+          processedFields: [justificationResult]
+        }
+      });
+    } catch (error) {
+      console.error(`[Appraisal] Justification error: ${error.message}`);
+      return res.status(500).json({
+        success: false,
+        message: error.message,
+        details: { postId, error: error.message }
+      });
+    }
   }
 
   try {
@@ -388,6 +428,67 @@ router.post('/generate-visualizations', async (req, res) => {
     res.status(500).json({
       success: false,
       message: error.message || 'Error generating HTML visualizations.',
+      details: {
+        postId,
+        error: error.message
+      }
+    });
+  }
+});
+
+/**
+ * Process justification for an appraisal post directly (for debugging/testing)
+ * POST /process-justification
+ */
+router.post('/process-justification', async (req, res) => {
+  console.log('[Appraisal] Starting direct justification process');
+
+  const { postId, skipMetadataGeneration } = req.body;
+
+  if (!postId) {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'postId is required.' 
+    });
+  }
+
+  try {
+    const { postData, title: postTitle } = await wordpress.fetchPostData(postId);
+
+    if (!postTitle) {
+      console.warn('[Appraisal] Post title not found');
+      return res.status(404).json({
+        success: false,
+        message: 'Post not found or title is missing'
+      });
+    }
+
+    console.log(`[Appraisal] Processing justification for: "${postTitle}"`);
+
+    // Process justification metadata with optional skip flag for testing
+    const justificationResult = await processJustificationMetadata(
+      postId,
+      postTitle,
+      postData.acf?.value,
+      skipMetadataGeneration === true
+    );
+
+    console.log('[Appraisal] Justification process complete');
+
+    res.status(200).json({
+      success: true,
+      message: 'Justification process completed successfully.',
+      details: {
+        postId,
+        title: postTitle,
+        result: justificationResult
+      }
+    });
+  } catch (error) {
+    console.error(`[Appraisal] Justification error: ${error.message}`);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error processing justification.',
       details: {
         postId,
         error: error.message
