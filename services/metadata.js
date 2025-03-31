@@ -340,19 +340,33 @@ async function updateWordPressMetadata(postId, metadataKey, metadataValue) {
         processedValue = metadataValue.substring(0, 100000) + '... [truncated]';
       }
     } else if (isObject) {
-      const jsonString = JSON.stringify(metadataValue);
-      console.log(`Metadata value for ${metadataKey} is object, JSON size: ${jsonString.length}`);
+      // Always convert objects to JSON strings for WordPress ACF compatibility
+      const jsonString = JSON.stringify(metadataValue, (key, value) => {
+        // Clean any string values to ensure WordPress compatibility
+        if (typeof value === 'string') {
+          return value
+            .replace(/[\u2018\u2019]/g, "'") // Replace smart single quotes
+            .replace(/[\u201C\u201D]/g, '"') // Replace smart double quotes
+            .replace(/\u00A0/g, ' ')         // Replace non-breaking spaces
+            .replace(/\u2022/g, '-')         // Replace bullet points
+            .replace(/[^\x00-\x7F]/g, '');   // Strip other non-ASCII characters
+        }
+        return value;
+      });
+      
+      console.log(`Metadata value for ${metadataKey} is object, converted to JSON string, size: ${jsonString.length}`);
       
       // If JSON is too large, truncate it
       if (jsonString.length > 100000) {
-        console.warn(`Object too large for ${metadataKey}, reducing to essential data`);
+        console.warn(`JSON string too large for ${metadataKey}, reducing data`);
         // Try to extract essential data or truncate as needed
         if (Array.isArray(metadataValue)) {
           // For arrays, limit number of items
-          processedValue = metadataValue.slice(0, 10);
+          const truncatedArray = metadataValue.slice(0, 10);
           if (metadataValue.length > 10) {
             console.log(`Array truncated from ${metadataValue.length} to 10 items`);
           }
+          processedValue = JSON.stringify(truncatedArray);
         } else {
           // For objects, limit to a few key properties
           const simpleObj = {};
@@ -365,9 +379,12 @@ async function updateWordPressMetadata(postId, metadataKey, metadataValue) {
               break;
             }
           }
-          processedValue = simpleObj;
+          processedValue = JSON.stringify(simpleObj);
           console.log(`Object properties truncated to ${count} items`);
         }
+      } else {
+        // Use the full JSON string if not too large
+        processedValue = jsonString;
       }
     }
     
@@ -724,8 +741,8 @@ INSTRUCTIONS:
           console.log('Display subset sales count:', displaySubset.comparable_sales.length);
           console.log('Using safe JSON encoding to prevent smart quotes issues');
           
-          // IMPORTANT: We're storing the object itself, not the JSON string
-          // WordPress will automatically JSON-encode this through the ACF API
+          // IMPORTANT: We now need to ensure we pass a sanitized object
+          // Our updateWordPressMetadata function will convert it to a JSON string
           // Apply additional safety measures for WordPress storage
           // Clean any problematic characters in string values before storage
           const sanitizedStats = JSON.parse(JSON.stringify(displaySubset, (key, value) => {
@@ -742,6 +759,7 @@ INSTRUCTIONS:
             return value;
           }));
           
+          // Send the object to updateWordPressMetadata which will now stringify it
           await updateWordPressMetadata(postId, 'statistics', sanitizedStats);
           console.log('Enhanced statistics data stored for interactive charts');
           
