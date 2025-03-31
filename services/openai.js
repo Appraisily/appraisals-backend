@@ -23,7 +23,7 @@ async function buildMessageContent(prompt, imageUrl, type) {
   return content;
 }
 
-async function generateContent(prompt, postTitle, images = {}, model = 'gpt-4o') {
+async function generateContent(prompt, postTitle, images = {}, model = 'gpt-4o', systemMessage = null) {
   try {
     console.log('Generating content with OpenAI...');
     
@@ -31,7 +31,7 @@ async function generateContent(prompt, postTitle, images = {}, model = 'gpt-4o')
       role: "system",
       content: [{
         type: "text",
-        text: "You are a professional art expert specializing in appraisals and artwork analysis."
+        text: systemMessage || "You are a professional art expert specializing in appraisals and artwork analysis."
       }]
     }];
 

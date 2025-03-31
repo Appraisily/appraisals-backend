@@ -556,16 +556,17 @@ async function processJustificationMetadata(postId, postTitle, value, skipMetada
         };
       }
       
-      // Continue with the original data extraction for normal processing
-      const { explanation, auctionResults, success } = valuerResponse;
+      // Continue with the original flow - no need to extract variables again
+      // The variables were already extracted earlier
+      if (!success) {
+        throw new Error('Valuer agent returned unsuccessful response');
+      }
     } catch (fetchError) {
       clearTimeout(timeoutId); // Clear the timeout on error too
       throw fetchError;
     }
     
-    if (!success) {
-      throw new Error('Valuer agent returned unsuccessful response');
-    }
+    // This check was moved inside the try block
     
     console.log(`Explanation Length: ${explanation.length} chars`);
     console.log(`Auction Results Count: ${auctionResults ? auctionResults.length : 0}`);
@@ -728,13 +729,20 @@ INSTRUCTIONS:
     // We'll append the auction table later
     finalPrompt += '\n\nYour response should be a detailed explanation that will be followed by a table of auction results, so please do not describe the specific auction results in detail, as they will be displayed in the table.';
     
-    console.log('Generating introduction text...');
-    const introductionText = await generateContent(
+    console.log('Generating plain text justification...');
+    // Override the default system message to explicitly request plain text
+    const systemMessage = "You are a professional art expert specializing in appraisals and artwork analysis. IMPORTANT: Generate PLAIN TEXT only, with NO HTML tags or formatting whatsoever.";
+    
+    let introductionText = await generateContent(
       finalPrompt,
       postTitle,
       {},
-      'o3-mini'
+      'o3-mini',
+      systemMessage
     );
+    
+    // Extra safety: Strip any HTML that might still be included
+    introductionText = introductionText.replace(/<[^>]*>/g, '');
     
     // No longer storing introduction text separately as it's included in justification_html
     console.log('Introduction text will be included in the final justification HTML only');

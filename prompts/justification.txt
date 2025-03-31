@@ -22,6 +22,9 @@ CRITICAL REQUIREMENTS:
 - DO NOT invent or fabricate any sales data
 - If a detail is not provided in the data, simply omit it rather than making assumptions
 - Maintain strict factual accuracy based on the provided data
+- IMPORTANT: Output PLAIN TEXT ONLY. Do NOT include any HTML tags, formatting, or special characters
+- Output should be completely clean plain text without any markup whatsoever
+- Use simple paragraph breaks instead of HTML formatting
 
 Format the response as a professional, well-structured analysis that can be directly included in an appraisal report. Use formal language and maintain a factual, evidence-based tone throughout.
 
