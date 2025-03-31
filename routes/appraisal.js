@@ -76,6 +76,81 @@ router.post('/complete-appraisal-report', async (req, res) => {
       });
     }
 
+    // Generate HTML visualizations
+    let htmlResults;
+    try {
+      console.log(`[Appraisal] Generating HTML visualizations for: "${postTitle}"`);
+      
+      // Extract the statistics data
+      const statisticsData = postData.acf?.statistics || {};
+      
+      // Prepare the appraisal data object
+      const appraisalData = {
+        title: postTitle,
+        featured_image: images.main?.url || '',
+        creator: postData.acf?.creator || '',
+        object_type: postData.acf?.object_type || '',
+        estimated_age: postData.acf?.estimated_age || '',
+        medium: postData.acf?.medium || '',
+        condition_summary: postData.acf?.condition_summary || '',
+        market_demand: postData.acf?.market_demand || '',
+        rarity: postData.acf?.rarity || '',
+        condition_score: postData.acf?.condition_score || '',
+        value: postData.acf?.value || '',
+        appraiser_name: postData.acf?.appraiser_name || 'Andrés Gómez',
+        // Additional fields
+        artist_dates: postData.acf?.artist_dates || '',
+        color_palette: postData.acf?.color_palette || '',
+        style: postData.acf?.style || '',
+        dimensions: postData.acf?.dimensions || '',
+        framed: postData.acf?.framed || '',
+        edition: postData.acf?.edition || '',
+        publisher: postData.acf?.publisher || '',
+        composition_description: postData.acf?.composition_description || '',
+        signed: postData.acf?.signed || '',
+        provenance: postData.acf?.provenance || '',
+        registration_number: postData.acf?.registration_number || '',
+        notes: postData.acf?.notes || '',
+        coa: postData.acf?.coa || '',
+        meaning: postData.acf?.meaning || ''
+      };
+
+      // Check if statistics data is a string and try to parse it
+      let parsedStatistics = statisticsData;
+      if (typeof statisticsData === 'string') {
+        try {
+          parsedStatistics = JSON.parse(statisticsData);
+        } catch (error) {
+          console.warn('[Appraisal] Could not parse statistics data as JSON, using as-is');
+        }
+      }
+
+      // Update the HTML fields in WordPress
+      await wordpress.updateHtmlFields(postId, appraisalData, parsedStatistics);
+      
+      // Add HTML generation result to metadata results
+      metadataResults.push({
+        field: 'enhanced_analytics_html',
+        status: 'success',
+        message: 'HTML visualizations generated successfully'
+      });
+      
+      metadataResults.push({
+        field: 'appraisal_card_html',
+        status: 'success',
+        message: 'HTML visualizations generated successfully'
+      });
+      
+      console.log('[Appraisal] HTML visualization generation complete');
+    } catch (error) {
+      console.error(`[Appraisal] HTML generation error: ${error.message}`);
+      metadataResults.push({
+        field: 'html_visualizations',
+        status: 'error',
+        error: error.message
+      });
+    }
+
     console.log('[Appraisal] Report generation complete');
 
     res.status(200).json({
