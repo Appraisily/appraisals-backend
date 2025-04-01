@@ -66,16 +66,24 @@ function cleanAndParseJSON(data, doNotParse = false) {
         });
       }
       
+      // Remove any [ERROR] sections which might be embedded in the JSON
+      if (cleanedData.includes('[ERROR]')) {
+        console.log('Found [ERROR] sections in JSON, attempting to remove');
+        cleanedData = cleanedData.replace(/\[ERROR\][^\[]*(\[\/ERROR\]|$)/g, '""');
+      }
+      
       // Fix incomplete objects or arrays
       const openBraces = (cleanedData.match(/\{/g) || []).length;
       const closeBraces = (cleanedData.match(/\}/g) || []).length;
       if (openBraces > closeBraces) {
+        console.log(`Adding ${openBraces - closeBraces} missing closing braces`);
         cleanedData += '}'.repeat(openBraces - closeBraces);
       }
       
       const openBrackets = (cleanedData.match(/\[/g) || []).length;
       const closeBrackets = (cleanedData.match(/\]/g) || []).length;
       if (openBrackets > closeBrackets) {
+        console.log(`Adding ${openBrackets - closeBrackets} missing closing brackets`);
         cleanedData += ']'.repeat(openBrackets - closeBrackets);
       }
       
@@ -104,6 +112,25 @@ function cleanAndParseJSON(data, doNotParse = false) {
               const startPos = Math.max(0, pos - 20);
               const endPos = Math.min(cleanedData.length, pos + 20);
               console.error(`JSON error context: ...${cleanedData.substring(startPos, pos)}[ERROR]${cleanedData.substring(pos, endPos)}...`);
+              
+              // Try removing the problematic section and everything after it
+              try {
+                console.log('Attempting to truncate JSON at error position');
+                const truncatedData = cleanedData.substring(0, pos);
+                
+                // Make sure the truncated data still forms a valid object
+                const lastBrace = truncatedData.lastIndexOf('}');
+                const lastBracket = truncatedData.lastIndexOf(']');
+                const lastPos = Math.max(lastBrace, lastBracket);
+                
+                if (lastPos > 0) {
+                  const validTruncated = truncatedData.substring(0, lastPos + 1);
+                  console.log(`Truncated JSON to position ${lastPos}`);
+                  return JSON.parse(validTruncated);
+                }
+              } catch (truncateError) {
+                console.error('Error truncating JSON:', truncateError.message);
+              }
             }
           }
           
@@ -142,7 +169,14 @@ function safeStringify(data) {
   }
 }
 
+// Export both the old API for compatibility and a new jsonCleaner object
 module.exports = {
   cleanAndParseJSON,
-  safeStringify
+  safeStringify,
+  
+  // New API as an object for the new routes
+  jsonCleaner: {
+    cleanAndParse: cleanAndParseJSON,
+    stringify: safeStringify
+  }
 };

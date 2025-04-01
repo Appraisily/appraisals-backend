@@ -7,7 +7,8 @@ const { initializeGoogleApis } = require('./services/pdf');
 const app = express();
 
 // Middleware
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use(cors({
   origin: [
     'https://appraisers-frontend-856401495068.us-central1.run.app',
@@ -16,6 +17,11 @@ app.use(cors({
   ],
   credentials: true
 }));
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+});
 
 // Initialize Secret Manager client
 const secretClient = new SecretManagerServiceClient();
@@ -73,15 +79,29 @@ async function startServer() {
     const appraisalRouter = require('./routes/appraisal');
     const pdfRouter = require('./routes/pdf');
     const htmlRouter = require('./routes/html');
+    const visualizationsRouter = require('./routes/visualizations');
 
     // Use routers
     app.use('/', appraisalRouter);
     app.use('/', pdfRouter);
     app.use('/api/html', htmlRouter);
+    app.use('/api/visualizations', visualizationsRouter);
+
+    // Error handling middleware (must be after routers)
+    app.use((err, req, res, next) => {
+      console.error('Unhandled error:', err);
+      res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'production' ? undefined : err.message
+      });
+    });
 
     const PORT = process.env.PORT || 8080;
     app.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
+      console.log(`Health check available at: http://localhost:${PORT}/health`);
+      console.log(`Visualization debugging available at: http://localhost:${PORT}/api/visualizations/debug`);
     });
   } catch (error) {
     console.error('Error starting server:', error);
