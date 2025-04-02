@@ -78,12 +78,14 @@ async function startServer() {
     // Load routers after secrets are available
     const appraisalRouter = require('./routes/appraisal');
     const pdfRouter = require('./routes/pdf');
+    const pdfStepsRouter = require('./routes/pdf-steps');
     const htmlRouter = require('./routes/html');
     const visualizationsRouter = require('./routes/visualizations');
 
     // Use routers
     app.use('/', appraisalRouter);
     app.use('/', pdfRouter);
+    app.use('/api/pdf', pdfStepsRouter);
     app.use('/api/html', htmlRouter);
     app.use('/api/visualizations', visualizationsRouter);
 
@@ -102,6 +104,8 @@ async function startServer() {
       console.log(`Server running on port ${PORT}`);
       console.log(`Health check available at: http://localhost:${PORT}/health`);
       console.log(`Visualization debugging available at: http://localhost:${PORT}/api/visualizations/debug`);
+      console.log(`Step-by-step PDF generation available at: http://localhost:${PORT}/api/pdf/generate-pdf-steps`);
+      console.log(`Get PDF steps available at: http://localhost:${PORT}/api/pdf/steps`);
     });
   } catch (error) {
     console.error('Error starting server:', error);
