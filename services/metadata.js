@@ -864,11 +864,11 @@ INSTRUCTIONS:
             // Prepare the appraisal data object
             const appraisalData = await fetchAppraisalData(postId);
             
-            // Generate HTML using direct statistics data from valuer-agent
+            // Generate HTML using Gemini with statistics data from valuer-agent
             const wordpress = require('./wordpress');
             await wordpress.updateHtmlFields(postId, appraisalData, sanitizedStats);
             
-            console.log('HTML visualizations (enhanced_analytics_html and appraisal_card_html) generated directly from valuer-agent data');
+            console.log('HTML visualizations (enhanced_analytics_html and appraisal_card_html) generated using Gemini with valuer-agent data');
           } catch (htmlError) {
             console.error('Error generating HTML visualizations:', htmlError);
           }
