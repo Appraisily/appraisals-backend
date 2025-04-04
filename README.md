@@ -42,6 +42,7 @@ A scalable, serverless API service built with Node.js that automates the generat
 - Professional PDF report formatting
 - Enhanced analytics with interactive visualizations
 - Statistics fields with market data analysis
+- Detailed metadata processing for reports
 
 ## Architecture
 
@@ -173,6 +174,17 @@ curl -X POST https://[SERVICE_URL]/generate-pdf \
   }'
 ```
 
+### WordPress HTML Content Integration
+
+```bash
+curl -X POST https://[SERVICE_URL]/html-content \
+  -H "Content-Type: application/json" \
+  -d '{
+    "postId": "YOUR_POST_ID",
+    "contentType": "enhanced-analytics"
+  }'
+```
+
 ## Development
 
 ### Running Locally
@@ -183,7 +195,19 @@ npm start
 ```
 
 ### Available Commands
-See the [CLAUDE.md](./CLAUDE.md) file for development commands and code style guidelines.
+
+```bash
+# Start development server
+npm start
+
+# Run linting
+npm run lint
+
+# Run tests
+npm test
+```
+
+See the [CLAUDE.md](../CLAUDE.md) file for development commands and code style guidelines.
 
 ### Shortcodes
 The project includes several WordPress shortcodes for displaying appraisal data:
@@ -192,6 +216,32 @@ The project includes several WordPress shortcodes for displaying appraisal data:
 - `display_radar_chart_shortcode.php`: Radar chart visualization
 - `display_price_history_shortcode.php`: Price history charts
 
+## PDF Processing Steps
+
+The PDF generation involves a multi-step process:
+
+1. **Content Preparation**
+   - Extract metadata from WordPress
+   - Process image assets and resize appropriately
+   - Generate market analysis using the Valuer Agent
+
+2. **Template Population**
+   - Load Google Docs template
+   - Insert text content at designated placeholders
+   - Replace image placeholders with actual images
+   - Format tables and charts with accurate data
+
+3. **PDF Generation**
+   - Convert Google Doc to PDF
+   - Apply professional formatting
+   - Add headers, footers, and page numbers
+   - Include appropriate metadata in PDF properties
+
+4. **Delivery**
+   - Upload to Google Drive
+   - Generate shareable links
+   - Update WordPress with downloadable link
+
 ## Troubleshooting
 
 Common issues and solutions:
@@ -199,7 +249,7 @@ Common issues and solutions:
 1. **WordPress Connection Issues:**
    - Check API credentials
    - Verify CORS settings
-   - Test network connectivity
+   - Test network connectivity using the diagnostic tools in `services/wordpress/networkDiagnostics.js`
 
 2. **Vision AI Errors:**
    - Verify API credentials
@@ -210,6 +260,12 @@ Common issues and solutions:
    - Verify template document access
    - Check Google Drive permissions
    - Review image dimensions
+   - Ensure all template placeholders are properly defined
+
+4. **HTML Content Rendering Problems:**
+   - Check entity encoding settings
+   - Verify JavaScript dependencies are properly loaded
+   - Test HTML template rendering in isolation
 
 ## License
 

@@ -11,6 +11,7 @@
   "dependencies": {
     "@google-cloud/secret-manager": "^3.0.0",
     "@google-cloud/vision": "^4.0.0",
+    "@google/generative-ai": "^0.24.0",
     "cors": "^2.8.5",
     "date-fns": "^2.29.3",
     "express": "^4.18.2",
@@ -18,9 +19,9 @@
     "googleapis": "^105.0.0",
     "handlebars": "^4.7.7",
     "he": "^1.2.0",
-    "request-ip": "^3.3.0",
     "image-size": "^1.0.2",
     "node-fetch": "^2.6.7",
+    "request-ip": "^3.3.0",
     "uuid": "^9.0.0"
   }
 }
