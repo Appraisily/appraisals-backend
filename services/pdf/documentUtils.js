@@ -181,10 +181,11 @@ async function handleContainerPlaceholders(docs, documentId, data) {
     try {
       if (data.statistics) {
         console.log('Replacing statistics_section placeholder...');
-        // Pass both statistics and justification data to the formatter
+        // Pass statistics, justification, and the full metadata to the formatter
         const statisticsSectionContent = buildStatisticsSection(
           data.statistics,
-          data.justification || {}
+          data.justification || {},
+          data // Pass the full metadata object
         );
         
         await docs.documents.batchUpdate({

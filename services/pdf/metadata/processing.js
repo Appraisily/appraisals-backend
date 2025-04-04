@@ -2,6 +2,64 @@ const { validateMetadata, REQUIRED_METADATA_FIELDS } = require('./validation');
 const staticMetadata = require('../../constants/staticMetadata');
 const he = require('he');
 const { cleanAndParseJSON } = require('../../utils/jsonCleaner');
+const openai = require('../../openai');
+
+/**
+ * Generate an AI-enhanced statistics summary using OpenAI
+ * @param {Object} statistics The statistics data object
+ * @param {string} title The title or description of the item
+ * @returns {Promise<string>} The generated summary text
+ */
+async function generateAIStatisticsSummary(statistics, title) {
+  try {
+    console.log('Generating AI-enhanced statistics summary');
+    
+    // Format the statistics data for the prompt
+    const statsInfo = {
+      count: statistics.count || statistics.sample_size || 0,
+      average: statistics.average_price || statistics.mean || 0,
+      median: statistics.median_price || 0,
+      min: statistics.price_min || 0,
+      max: statistics.price_max || 0,
+      percentile: statistics.percentile || '50th',
+      confidence: statistics.confidence_level || 'Moderate',
+      trend: statistics.price_trend_percentage || '+0.0%'
+    };
+    
+    // Create a prompt for the AI
+    const prompt = `
+Write a professional and insightful two-paragraph summary of the market statistics for "${title}".
+Use the following data points in your analysis:
+
+- Sample size: ${statsInfo.count} comparable items
+- Average price: $${Math.round(statsInfo.average).toLocaleString()}
+- Median price: $${Math.round(statsInfo.median).toLocaleString()}
+- Price range: $${Math.round(statsInfo.min).toLocaleString()} to $${Math.round(statsInfo.max).toLocaleString()}
+- Percentile position: ${statsInfo.percentile}
+- Price trend: ${statsInfo.trend}
+- Confidence level: ${statsInfo.confidence}
+
+The first paragraph should describe the market context and overall position of this item.
+The second paragraph should interpret what these statistics mean for the item's value and investment potential.
+Keep the tone professional, precise, and credible. Avoid speculative language.
+`;
+
+    // Generate the summary using OpenAI
+    const systemMessage = 'You are an expert art appraiser and market analyst specializing in art, antiques, and collectibles.';
+    const response = await openai.generateContent(prompt, title, {}, 'gpt-4o', systemMessage);
+    
+    // Ensure we have a response
+    if (!response || response.trim().length === 0) {
+      throw new Error('Empty response from AI service');
+    }
+    
+    console.log('Successfully generated AI statistics summary');
+    return response.trim();
+  } catch (error) {
+    console.error('Error generating AI statistics summary:', error);
+    return null;
+  }
+}
 
 function stripHtml(html) {
   // Handle non-string values
@@ -76,14 +134,56 @@ async function processMetadata(postData) {
           'Market analysis shows this item is positioned favorably compared to similar items in the marketplace.'
       };
       
+      // Extract top 10 auction results if available
+      if (statsData.comparable_sales && Array.isArray(statsData.comparable_sales)) {
+        // Get top 10 most relevant results
+        const topResults = statsData.comparable_sales.slice(0, 10);
+        metadata.top_auction_results = topResults;
+        console.log(`Extracted ${topResults.length} top auction results for PDF`);
+      }
+      
+      // Get or generate statistics summary text
+      if (postData.acf?.statistics_summary_text) {
+        metadata.statistics_summary_text = postData.acf.statistics_summary_text;
+        console.log('Using existing statistics summary text');
+      } else if (statsData.summary_text) {
+        metadata.statistics_summary_text = statsData.summary_text;
+        console.log('Using summary text from statistics data');
+      } else {
+        try {
+          // Try to generate an AI-enhanced summary if possible
+          console.log('Attempting to generate AI-enhanced statistics summary');
+          const enhancedSummary = await generateAIStatisticsSummary(statsData, postData.acf?.title || 'this item');
+          if (enhancedSummary) {
+            metadata.statistics_summary_text = enhancedSummary;
+            console.log('Successfully generated AI-enhanced statistics summary');
+          } else {
+            throw new Error('AI summary generation failed');
+          }
+        } catch (error) {
+          console.log('Falling back to basic statistics summary:', error.message);
+          // Generate a basic summary text using available stats
+          const summary = `Based on an analysis of ${statsData.count || 0} comparable items, this appraisal ` +
+                          `is positioned at the ${statsData.percentile || '50th'} percentile. ` +
+                          `The average price for similar items is $${Math.round(statsData.average_price || statsData.mean || 0).toLocaleString()}, ` +
+                          `with a range from $${Math.round(statsData.price_min || 0).toLocaleString()} to $${Math.round(statsData.price_max || 0).toLocaleString()}.`;
+          metadata.statistics_summary_text = summary;
+          console.log('Generated basic statistics summary text');
+        }
+      }
+      
       console.log('Statistics data processed successfully');
     } catch (error) {
       console.error('Error parsing statistics data:', error);
       metadata.statistics = null;
+      metadata.top_auction_results = [];
+      metadata.statistics_summary_text = 'No statistical data available for this appraisal.';
     }
   } else {
     console.log('No statistics data found');
     metadata.statistics = null;
+    metadata.top_auction_results = [];
+    metadata.statistics_summary_text = 'No statistical data available for this appraisal.';
   }
 
   // Process justification and valuer agent data

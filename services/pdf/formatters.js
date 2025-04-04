@@ -90,9 +90,10 @@ function buildAppraisalCard(metadata) {
  * Builds a comprehensive statistics and justification section
  * @param {Object} statistics - Statistics data
  * @param {Object} justification - Justification data including explanation and auction results
+ * @param {Object} metadata - Full metadata object containing any additional fields
  * @returns {string} - Formatted HTML for Google Docs
  */
-function buildStatisticsSection(statistics, justification = {}) {
+function buildStatisticsSection(statistics, justification = {}, metadata = {}) {
   // Default values and data validation
   const count = statistics?.count || 'N/A';
   const mean = statistics?.average_price 
@@ -105,18 +106,19 @@ function buildStatisticsSection(statistics, justification = {}) {
     ? `${formatCurrency(statistics.price_min)} - ${formatCurrency(statistics.price_max)}`
     : 'Not available';
   
-  // Getting the summary text - either from statistics or default message
-  const summaryText = statistics?.summary_text || 'Market statistics analysis is based on comparable items.';
+  // Get enhanced statistics summary from metadata or fallback to basic summary
+  const statisticsSummaryText = metadata?.statistics_summary_text || statistics?.summary_text || 
+    'Market statistics analysis is based on comparable items.';
   
   // Justification text - from justification object or default message
   const justificationText = justification?.explanation || 'No detailed justification available for this appraisal.';
   
-  // Get comparable auction results
-  const auctionResults = justification?.auctionResults || [];
+  // Get comparable auction results - preferring the top_auction_results if available
+  const auctionResults = metadata?.top_auction_results || justification?.auctionResults || [];
   let auctionTableRows = '';
   
-  // Build auction results table rows (limit to 5 most relevant)
-  const topResults = auctionResults.slice(0, 5);
+  // Build auction results table rows (limit to 10 most relevant)
+  const topResults = auctionResults.slice(0, 10);
   for (const result of topResults) {
     const title = result.title || 'Unknown Item';
     const price = result.price ? formatCurrency(result.price) : 'N/A';
@@ -124,13 +126,15 @@ function buildStatisticsSection(statistics, justification = {}) {
     const date = result.date 
       ? new Date(result.date).toLocaleDateString('en-US', {year: 'numeric', month: 'short', day: 'numeric'})
       : 'Unknown';
+    // Add percentage difference if available
+    const diffString = result.diff ? ` (${result.diff})` : '';
     
     auctionTableRows += `
-      <tr>
+      <tr${result.is_current ? ' style="background-color:#F0F7FF; font-weight:bold;"' : ''}>
         <td style="padding:6pt; border:1pt solid #DDDDDD;">${title}</td>
         <td style="padding:6pt; border:1pt solid #DDDDDD;">${house}</td>
         <td style="padding:6pt; border:1pt solid #DDDDDD;">${date}</td>
-        <td style="padding:6pt; border:1pt solid #DDDDDD;">${price}</td>
+        <td style="padding:6pt; border:1pt solid #DDDDDD;">${price}${diffString}</td>
       </tr>
     `;
   }
@@ -160,10 +164,10 @@ function buildStatisticsSection(statistics, justification = {}) {
       </tr>
     </table>
     
-    <p style="line-height:1.5; text-align:justify; margin-bottom:15pt;">${summaryText}</p>
+    <h2 style="color:#2C5282; font-size:14pt; margin-top:18pt; margin-bottom:10pt;">Statistical Market Analysis</h2>
+    <p style="line-height:1.5; text-align:justify; margin-bottom:15pt;">${statisticsSummaryText}</p>
     
     <h2 style="color:#2C5282; font-size:14pt; margin-top:18pt; margin-bottom:10pt;">Valuation Justification</h2>
-    
     <p style="line-height:1.5; text-align:justify; margin-bottom:15pt;">${justificationText}</p>
     
     ${auctionResults.length > 0 ? `
