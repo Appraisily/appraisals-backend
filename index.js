@@ -9,12 +9,25 @@ const app = express();
 // Middleware
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Read CORS origins from environment variable, default to empty array if not set
+const allowedOrigins = (process.env.CORS_ALLOWED_ORIGINS || '')
+  .split(',')
+  .map(origin => origin.trim()) // Trim whitespace
+  .filter(origin => origin); // Remove empty entries
+
 app.use(cors({
-  origin: [
-    'https://appraisers-frontend-856401495068.us-central1.run.app',
-    'https://appraisers-task-queue-856401495068.us-central1.run.app',
-    'https://appraisers-backend-856401495068.us-central1.run.app'
-  ],
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+    // Allow if the origin is in the allowed list
+    if (allowedOrigins.length === 0 || allowedOrigins.indexOf(origin) !== -1) {
+      return callback(null, true);
+    } else {
+      console.warn(`CORS blocked for origin: ${origin}`);
+      return callback(new Error('Not allowed by CORS'));
+    }
+  },
   credentials: true
 }));
 
@@ -56,7 +69,10 @@ async function loadSecrets() {
 // Get secret from Secret Manager
 async function getSecret(secretName) {
   try {
-    const projectId = 'civil-forge-403609';
+    const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID; // Read from env var
+    if (!projectId) {
+      throw new Error('GOOGLE_CLOUD_PROJECT_ID environment variable is not set.');
+    }
     const secretPath = `projects/${projectId}/secrets/${secretName}/versions/latest`;
     const [version] = await secretClient.accessSecretVersion({ name: secretPath });
     return version.payload.data.toString('utf8');

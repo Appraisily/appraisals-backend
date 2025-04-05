@@ -1,6 +1,6 @@
 const { getPost, getMedia, updatePost } = require('./client');
 const { fetchPostData, getImageUrl } = require('./dataFetching');
-const { updatePostACFFields, updateWordPressMetadata, updateNotes, updatePostMeta } = require('./updates');
+const { updatePostACFFields, updateNotes, updatePostMeta } = require('./updates');
 const { updateHtmlFields, updateEnhancedAnalyticsHtml, updateAppraisalCardHtml, checkHtmlFields } = require('./htmlUpdates');
 const { testWordPressConnection } = require('./connectionTest');
 const { testWithCurl } = require('./curlTest');
@@ -202,7 +202,6 @@ module.exports = {
   fetchPostData,
   // Updates
   updatePostACFFields,
-  updateWordPressMetadata,
   updateNotes,
   updatePostMeta,
   // HTML updates
