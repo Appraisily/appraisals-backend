@@ -497,4 +497,183 @@ router.post('/process-justification', async (req, res) => {
   }
 });
 
+/**
+ * Regenerate statistics and HTML visualizations for an appraisal post
+ * POST /regenerate-statistics-and-visualizations
+ */
+router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
+  console.log('[Appraisal] Starting statistics and visualizations regeneration');
+
+  const { postId } = req.body;
+  
+  if (!postId) {
+    return res.status(400).json({
+      success: false, 
+      message: 'postId is required.' 
+    });
+  }
+
+  try {
+    // Get post data from WordPress
+    const { postData, images, title: postTitle } = await wordpress.fetchPostData(postId);
+    
+    if (!postTitle) {
+      console.warn('[Appraisal] Post not found for statistics regeneration');
+      return res.status(404).json({
+        success: false,
+        message: 'Post not found or title is missing',
+      });
+    }
+
+    // Get the target value
+    const targetValue = parseFloat(postData.acf?.value);
+    if (isNaN(targetValue)) {
+      console.warn('[Appraisal] Post has invalid or missing value');
+      return res.status(400).json({
+        success: false,
+        message: 'Post has invalid or missing value'
+      });
+    }
+    
+    console.log(`[Appraisal] Regenerating statistics for: "${postTitle}" with value ${targetValue}`);
+    
+    // Call valuer-agent to regenerate statistics
+    console.log('[Appraisal] Calling valuer-agent for enhanced statistics');
+    const response = await fetch('https://valuer-agent-856401495068.us-central1.run.app/api/enhanced-statistics', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        text: postTitle,
+        value: targetValue,
+        limit: 20,
+        minPrice: Math.floor(targetValue * 0.6),
+        maxPrice: Math.ceil(targetValue * 1.6)
+      })
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Appraisal] Error from valuer-agent:', errorText);
+      return res.status(500).json({
+        success: false,
+        message: 'Error regenerating statistics from valuer agent',
+        error: errorText
+      });
+    }
+    
+    const statsResponse = await response.json();
+    if (!statsResponse.success || !statsResponse.statistics) {
+      console.error('[Appraisal] Invalid response from valuer-agent:', statsResponse);
+      return res.status(500).json({
+        success: false,
+        message: 'Invalid response from valuer agent'
+      });
+    }
+    
+    console.log('[Appraisal] Statistics regenerated successfully, saving to WordPress');
+    
+    // Apply validation and sanitization to statistics data
+    // Similar to what's done in processJustificationMetadata
+    const { validateStatisticsData } = require('../services/metadata');
+    const validatedStats = validateStatisticsData(statsResponse.statistics);
+    
+    // Create a sanitized version for WordPress storage
+    const sanitizedStats = JSON.parse(JSON.stringify(validatedStats, (key, value) => {
+      // Extra safety: clean all string values to ensure WordPress compatibility
+      if (typeof value === 'string') {
+        // Replace problematic quotes and Unicode characters
+        return value
+          .replace(/[\u2018\u2019]/g, "'") // Replace smart single quotes
+          .replace(/[\u201C\u201D]/g, '"') // Replace smart double quotes
+          .replace(/\u00A0/g, ' ')         // Replace non-breaking spaces
+          .replace(/\u2022/g, '-')         // Replace bullet points
+          .replace(/[^\x00-\x7F]/g, '');   // Strip other non-ASCII characters
+      }
+      return value;
+    }));
+    
+    // Save the regenerated statistics to WordPress
+    await wordpress.updatePostACFFields(postId, {
+      statistics: JSON.stringify(sanitizedStats)
+    });
+    
+    console.log('[Appraisal] Statistics saved, regenerating HTML visualizations');
+    
+    // Prepare the appraisal data object
+    const appraisalData = {
+      title: postTitle,
+      featured_image: images.main?.url || '',
+      creator: postData.acf?.creator || '',
+      object_type: postData.acf?.object_type || '',
+      estimated_age: postData.acf?.estimated_age || '',
+      medium: postData.acf?.medium || '',
+      condition_summary: postData.acf?.condition_summary || '',
+      market_demand: postData.acf?.market_demand || '',
+      rarity: postData.acf?.rarity || '',
+      condition_score: postData.acf?.condition_score || '',
+      value: postData.acf?.value || '',
+      appraiser_name: postData.acf?.appraiser_name || 'Andrés Gómez',
+      // Additional fields
+      artist_dates: postData.acf?.artist_dates || '',
+      color_palette: postData.acf?.color_palette || '',
+      style: postData.acf?.style || '',
+      dimensions: postData.acf?.dimensions || '',
+      framed: postData.acf?.framed || '',
+      edition: postData.acf?.edition || '',
+      publisher: postData.acf?.publisher || '',
+      composition_description: postData.acf?.composition_description || '',
+      signed: postData.acf?.signed || '',
+      provenance: postData.acf?.provenance || '',
+      registration_number: postData.acf?.registration_number || '',
+      notes: postData.acf?.notes || '',
+      coa: postData.acf?.coa || '',
+      meaning: postData.acf?.meaning || ''
+    };
+    
+    // Regenerate HTML visualizations
+    await wordpress.updateHtmlFields(postId, appraisalData, sanitizedStats);
+    
+    console.log('[Appraisal] HTML visualizations regenerated successfully');
+    
+    // Update processing metadata to track the regeneration
+    const timestamp = new Date().toISOString();
+    await wordpress.updatePostMeta(postId, 'processing_history', [
+      {
+        step: 'regenerate_statistics',
+        timestamp,
+        status: 'completed'
+      },
+      {
+        step: 'regenerate_visualizations',
+        timestamp,
+        status: 'completed'
+      }
+    ]);
+    
+    return res.json({
+      success: true,
+      message: 'Statistics and visualizations regenerated successfully',
+      details: {
+        postId,
+        title: postTitle,
+        statistics: {
+          count: sanitizedStats.count || 0,
+          average_price: sanitizedStats.average_price || 0,
+          confidence_level: sanitizedStats.confidence_level || 'N/A'
+        }
+      }
+    });
+  } catch (error) {
+    console.error('[Appraisal] Error regenerating statistics and visualizations:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Error regenerating statistics and visualizations',
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
 module.exports = router;

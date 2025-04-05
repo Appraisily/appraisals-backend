@@ -18,16 +18,38 @@ async function updateWordPressMetadata(postId, metadataKey, metadataValue) {
   }
 }
 
-async function updatePostACFFields(postId, pdfLink, docLink) {
+/**
+ * Updates ACF fields for a WordPress post
+ * @param {number|string} postId - The WordPress post ID
+ * @param {Object} acfFields - Object containing the ACF fields to update
+ * @returns {Promise<boolean>} Success status
+ */
+async function updatePostACFFields(postId, acfFields) {
   try {
+    console.log(`Updating ACF fields for post ID ${postId}`);
+    
+    // Handle the legacy case (pdfLink, docLink as separate parameters)
+    if (typeof acfFields === 'string' && arguments.length >= 3) {
+      const pdfLink = arguments[1];
+      const docLink = arguments[2];
+      
+      await client.updatePost(postId, {
+        acf: {
+          pdflink: pdfLink,
+          doclink: docLink
+        }
+      });
+      
+      console.log(`Legacy ACF fields 'pdflink' and 'doclink' updated successfully for post ID ${postId}.`);
+      return true;
+    }
+    
+    // Modern usage with an object containing all fields
     await client.updatePost(postId, {
-      acf: {
-        pdflink: pdfLink,
-        doclink: docLink
-      }
+      acf: acfFields
     });
 
-    console.log(`ACF fields 'pdflink' and 'doclink' updated successfully for post ID ${postId}.`);
+    console.log(`ACF fields updated successfully for post ID ${postId}.`);
     return true;
   } catch (error) {
     console.error(`Error updating ACF fields for post ID ${postId}:`, error);
@@ -79,8 +101,86 @@ async function updateNotes(postId, note) {
   }
 }
 
+/**
+ * Updates a post's metadata (custom fields/meta)
+ * @param {number|string} postId - The WordPress post ID
+ * @param {string} metaKey - The metadata key
+ * @param {any} metaValue - The metadata value
+ * @returns {Promise<boolean>} Success status
+ */
+async function updatePostMeta(postId, metaKey, metaValue) {
+  try {
+    console.log(`Updating post meta for post ID ${postId}, key: ${metaKey}`);
+    
+    // Convert the value to a string if it's an object or array
+    let processedValue = metaValue;
+    if (typeof metaValue === 'object' && metaValue !== null) {
+      processedValue = JSON.stringify(metaValue);
+    }
+    
+    // First, check if this meta key already exists
+    let existingMeta;
+    let existingMetaId;
+    
+    try {
+      const response = await client.request({
+        path: `/wp/v2/posts/${postId}/meta`,
+        method: 'GET'
+      });
+      
+      if (Array.isArray(response)) {
+        // Find if this meta key already exists
+        const existingEntry = response.find(item => item.key === metaKey);
+        if (existingEntry) {
+          existingMetaId = existingEntry.id;
+        }
+      }
+    } catch (getError) {
+      console.warn(`Could not retrieve existing meta for key ${metaKey}:`, getError.message);
+    }
+    
+    if (existingMetaId) {
+      // Update existing meta
+      await client.request({
+        path: `/wp/v2/posts/${postId}/meta/${existingMetaId}`,
+        method: 'POST',
+        data: {
+          value: processedValue
+        }
+      });
+      
+      console.log(`Updated existing meta for post ID ${postId}, key: ${metaKey}`);
+    } else {
+      // Create new meta
+      await client.request({
+        path: `/wp/v2/posts/${postId}/meta`,
+        method: 'POST',
+        data: {
+          key: metaKey,
+          value: processedValue
+        }
+      });
+      
+      console.log(`Created new meta for post ID ${postId}, key: ${metaKey}`);
+    }
+    
+    return true;
+  } catch (error) {
+    console.error(`Error updating meta for post ID ${postId}, key: ${metaKey}:`, error);
+    // If meta API fails, try updating as ACF field
+    try {
+      console.log(`Attempting to update as ACF field instead for post ID ${postId}, key: ${metaKey}`);
+      return await updateWordPressMetadata(postId, metaKey, metaValue);
+    } catch (acfError) {
+      console.error(`ACF fallback also failed for post ID ${postId}, key: ${metaKey}:`, acfError);
+      throw error;
+    }
+  }
+}
+
 module.exports = {
   updateWordPressMetadata,
   updatePostACFFields,
-  updateNotes
+  updateNotes,
+  updatePostMeta
 };
