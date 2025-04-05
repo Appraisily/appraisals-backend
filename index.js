@@ -77,17 +77,26 @@ async function startServer() {
 
     // Load routers after secrets are available
     const appraisalRouter = require('./routes/appraisal');
+    const reportRouter = require('./routes/report');
+    const visualizationRouter = require('./routes/visualization');
+    const descriptionRouter = require('./routes/description');
+    const utilityRouter = require('./routes/utility');
     const pdfRouter = require('./routes/pdf');
     const pdfStepsRouter = require('./routes/pdf-steps');
     const htmlRouter = require('./routes/html');
     const visualizationsRouter = require('./routes/visualizations');
+    const debugVisualizationsRouter = require('./routes/visualizations');
 
     // Use routers
+    app.use('/', reportRouter);
+    app.use('/', visualizationRouter);
+    app.use('/', descriptionRouter);
+    app.use('/', utilityRouter);
     app.use('/', appraisalRouter);
     app.use('/', pdfRouter);
     app.use('/api/pdf', pdfStepsRouter);
     app.use('/api/html', htmlRouter);
-    app.use('/api/visualizations', visualizationsRouter);
+    app.use('/api/visualizations', debugVisualizationsRouter);
 
     // Error handling middleware (must be after routers)
     app.use((err, req, res, next) => {

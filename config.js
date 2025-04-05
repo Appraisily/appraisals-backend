@@ -65,5 +65,19 @@ Object.defineProperties(config, {
     get() {
       return process.env.SERPER_API || null; // Return null if not available, making it optional
     }
+  },
+  // Add Valuer Agent URL
+  'VALUER_AGENT_API_URL': {
+    enumerable: true,
+    get() {
+      if (!process.env.VALUER_AGENT_API_URL) {
+        // Optionally provide a default or throw error if critical
+        console.warn('VALUER_AGENT_API_URL not found in environment variables. Using default or potentially failing.');
+        // You might want to throw an error instead if this service is mandatory:
+        // throw new Error('VALUER_AGENT_API_URL not loaded from environment');
+        return 'https://valuer-agent-856401495068.us-central1.run.app'; // Fallback or default
+      }
+      return process.env.VALUER_AGENT_API_URL;
+    }
   }
 });
