@@ -6,7 +6,16 @@ const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 // --- Initialization ---
 let genAI;
 let model;
-const MODEL_NAME = 'gemini-1.5-pro-latest'; // Using a stable, recent model
+const MODEL_NAME = 'gemini-2.5-pro-preview-03-25'; // Use the specified preview model
+
+// Define generation configuration from user example
+const generationConfig = {
+    temperature: 1,
+    topP: 0.95,
+    topK: 64,
+    maxOutputTokens: 65536, // Note: Check if this requires specific API tier/quota
+    responseMimeType: "text/plain",
+};
 
 function initializeGemini() {
     if (!GEMINI_API_KEY) {
@@ -75,7 +84,10 @@ async function populateHtmlTemplate(skeletonHtml, dataContext) {
 
     try {
         console.log(`[Gemini Service] Calling model.generateContent with model: ${MODEL_NAME}`);
-        const result = await model.generateContent(prompt);
+        const result = await model.generateContent(
+            prompt,
+            generationConfig // Pass the generation config here
+        );
         const response = result.response; // Access the response object directly
         const populatedHtml = response.text(); // Use the text() method from the SDK
 
