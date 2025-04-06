@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-// const geminiService = require('../services/geminiService'); // Remove unused geminiService
+const geminiService = require('../services/geminiService');
 
 // All specific routes moved to report.js, visualization.js, description.js, utility.js
 

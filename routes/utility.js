@@ -1,9 +1,8 @@
 const express = require('express');
 const router = express.Router();
-// const { updateTitle, updateDescription, updateIntroduction, updateNotes, /* insertShortcodes, */ fetchPostData, updatePostACFFields } = require('../services/wordpress'); // Remove specific imports
-const wordpress = require('../services/wordpress'); // Restore main require
-// const { cleanAndParseJSON } = require('../services/utils/jsonCleaner'); // Remove unused require
-// const { appraisalType } = require('../config'); // Keep removed
+const { updateTitle, updateDescription, updateIntroduction, updateNotes, /* insertShortcodes, */ fetchPostData, updatePostACFFields } = require('../services/wordpress');
+const { cleanAndParseJSON } = require('../services/utils/jsonCleaner');
+// const { appraisalType } = require('../config'); // Remove unused appraisalType
 
 // Moved from appraisal.js
 /**
@@ -13,7 +12,7 @@ const wordpress = require('../services/wordpress'); // Restore main require
 router.post('/update-wordpress', async (req, res) => {
   console.log('[Util Route] Starting WordPress update');
   
-  const { postId, acfFields /*, insertShortcodes, appraisalType */ } = req.body; // Comment out unused vars from destructuring
+  const { postId, acfFields, insertShortcodes, appraisalType } = req.body;
    // --- Input Validation --- 
   if (!postId || typeof postId !== 'string' && typeof postId !== 'number') {
      return res.status(400).json({ 
@@ -51,7 +50,7 @@ router.post('/update-wordpress', async (req, res) => {
    // --- End Input Validation ---
   
   try {
-    const { postData, title: postTitle } = await wordpress.fetchPostData(postId);
+    const { postData, title: postTitle } = await fetchPostData(postId);
     if (!postTitle) {
        return res.status(404).json({ 
           success: false, 
@@ -69,7 +68,7 @@ router.post('/update-wordpress', async (req, res) => {
       appraisal_status: acfFields.appraisal_status || 'completed' // Keep status or default to completed
     };
     
-    await wordpress.updatePostACFFields(postId, updatedFields);
+    await updatePostACFFields(postId, updatedFields);
     
     // Insert shortcodes if requested
     let contentUpdated = false;
@@ -77,7 +76,7 @@ router.post('/update-wordpress', async (req, res) => {
       console.log('[Util Route] Checking/Inserting shortcodes');
       const currentContent = postData.content?.rendered || '';
       let newContent = currentContent;
-      const appraisalType = postData.acf?.appraisal_type || req.body.appraisalType || 'RegularArt'; // Define appraisalType here
+      const appraisalType = postData.acf?.appraisal_type || req.body.appraisalType || 'RegularArt'; // Use type from post or request
       
       // Add shortcodes idempotently
       if (!newContent.includes('[pdf_download]')) {

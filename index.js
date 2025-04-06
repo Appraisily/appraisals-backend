@@ -1,9 +1,9 @@
 const express = require('express');
 const cors = require('cors');
-// const requestIp = require('request-ip'); // Remove unused requestIp
+const requestIp = require('request-ip');
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const { initializeGoogleApis } = require('./services/pdf');
-// const { initializeGeminiClient } = require('./services/gemini-visualization'); // Remove unused initializeGeminiClient
+const { initializeGeminiClient } = require('./services/gemini-visualization');
 
 const app = express();
 
@@ -118,7 +118,6 @@ async function startServer() {
     app.use(async (err, req, res, next) => {
       console.error('Unhandled error:', err);
 
-      /* // Comment out GitHub issue creation if function is undefined
       if (err) {
         try {
           await createGithubIssue(err, req);
@@ -126,7 +125,6 @@ async function startServer() {
           console.error("Failed to create GitHub issue during error handling:", githubError);
         }
       }
-      */
 
       const statusCode = err.status || 500;
       res.status(statusCode).json({

@@ -1,7 +1,8 @@
-const vision = require('@google-cloud/vision');
-// const { getSecret } = require('../config'); // Remove unused getSecret
 const fetch = require('node-fetch');
+const FormData = require('form-data');
+const { v4: uuidv4 } = require('uuid');
 const config = require('../config');
+const vision = require('@google-cloud/vision');
 const { getImageUrl } = require('./wordpress');
 const { uploadImageToWordPress, updateWordPressGallery } = require('../services/wordpress');
 

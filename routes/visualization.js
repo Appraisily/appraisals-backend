@@ -17,8 +17,8 @@ const {
 } = require('../services/utils/templateContextUtils');
 // Restore local require for githubService
 // const githubService = require('../src/services/utils/githubService'); // Remove unused githubService
-// const { updateHtmlFields } = require('../services/wordpress'); // Remove unused updateHtmlFields
-// const { generateEnhancedAnalyticsWithGemini, generateAppraisalCardWithGemini } = require('../services/gemini-visualization'); // Remove unused Gemini viz functions
+const { updateHtmlFields } = require('../services/wordpress');
+const { generateEnhancedAnalyticsWithGemini, generateAppraisalCardWithGemini } = require('../services/gemini-visualization');
 
 // Revert to standard router export
 // module.exports = function(githubService) {

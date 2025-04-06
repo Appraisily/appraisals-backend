@@ -111,6 +111,86 @@ async function updateWordPressGallery(postId, imageIds) {
   }
 }
 
+// Function moved from metadata.js
+async function updateWordPressMetadata(postId, metadataKey, metadataValue) {
+  try {
+    console.log(`[WP Update] Updating metadata for post ${postId}, field: ${metadataKey}`);
+    
+    if (!postId || !metadataKey) throw new Error('Post ID and Metadata key are required');
+    const numericPostId = parseInt(postId, 10);
+    if (isNaN(numericPostId)) throw new Error(`Invalid post ID: ${postId}`);
+    
+    let processedValue = metadataValue;
+    // Handle object stringification and potential truncation/sanitization if needed
+    if (typeof metadataValue === 'object' && metadataValue !== null) {
+      try {
+          // Basic sanitization for quotes/special chars before stringifying
+          const sanitizeObjectStrings = (obj) => {
+              if (!obj) return obj;
+              Object.keys(obj).forEach(key => {
+                  if (typeof obj[key] === 'string') {
+                      // Replace problematic characters
+                      obj[key] = obj[key]
+                          .replace(/[\u2018\u2019]/g, "'")
+                          .replace(/[\u201C\u201D]/g, '"')
+                          .replace(/\u00A0/g, ' ')
+                          .replace(/\u2022/g, '-');
+                          // Optionally strip non-ASCII if necessary: .replace(/[^\x00-\x7F]/g, '');
+                  } else if (typeof obj[key] === 'object') {
+                      sanitizeObjectStrings(obj[key]); // Recurse
+                  }
+              });
+              return obj;
+          };
+          // Deep clone before sanitizing to avoid modifying original object
+          const clonedValue = JSON.parse(JSON.stringify(metadataValue));
+          const sanitizedObject = sanitizeObjectStrings(clonedValue); 
+          processedValue = JSON.stringify(sanitizedObject);
+      } catch (e) {
+          console.error("Error sanitizing/stringifying object for WP:", e);
+          // Fallback or rethrow
+          processedValue = JSON.stringify(metadataValue); // Try basic stringify
+      }
+      
+      // Optional: Truncate very large JSON strings (e.g., > 100KB)
+      if (processedValue.length > 100000) {
+        console.warn(`[WP Update] JSON string for ${metadataKey} is large (${processedValue.length} chars), potential issues.`);
+        // Implement truncation if needed
+      }
+    } else if (typeof metadataValue === 'string' && metadataValue.length > 100000) {
+      console.warn(`[WP Update] String value for ${metadataKey} is large (${metadataValue.length} chars), truncating.`);
+      processedValue = metadataValue.substring(0, 100000) + '... [truncated]';
+    }
+
+    const requestBody = { acf: { [metadataKey]: processedValue } };
+    const apiUrl = `${config.WORDPRESS_API_URL}/appraisals/${numericPostId}`;
+    
+    console.log(`[WP Update] Calling: POST ${apiUrl} for key: ${metadataKey}`);
+
+    const response = await fetch(apiUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`[WP Update] Error (${response.status}): ${errorText}`);
+      throw new Error(`WP API Error updating ${metadataKey}: ${response.status} ${errorText}`);
+    }
+
+    const responseData = await response.json();
+    console.log(`[WP Update] Success for post ${postId}, field: ${metadataKey}`);
+    return true;
+  } catch (error) {
+    console.error(`[WP Update] Failure for ${metadataKey}:`, error);
+    throw error; // Re-throw to be handled by caller
+  }
+}
+
 // Export all functions explicitly to avoid naming conflicts
 module.exports = {
   // Client methods

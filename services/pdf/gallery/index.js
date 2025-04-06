@@ -4,12 +4,11 @@ const {
   MAX_IMAGES_PER_ROW,
   DEFAULT_IMAGE_DIMENSIONS,
   GALLERY_TITLE,
+  createGalleryTitle,
   createImageRequest,
   createSpacingRequest,
   calculateBatchSize
 } = require('./formatUtils');
-// const { google } = require('googleapis'); // Remove unused google
-// const { calculateImageDimensions: imageUtilsCalculateImageDimensions, insertImageAtPlaceholder } = require('../imageUtils'); // Remove unused imageUtils funcs
 
 async function calculateImageDimensions(url, maxWidth = 200, maxHeight = 150) {
   try {

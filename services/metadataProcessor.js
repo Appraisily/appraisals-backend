@@ -1,8 +1,8 @@
 // const fetch = require('node-fetch'); // Removed - fetch is globally available in Node 18+
-// const { GoogleGenerativeAI } = require("@google/generative-ai"); // Remove unused GoogleGenerativeAI
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 // const config = require('../config'); // Remove unused config
-// const { getSecret } = require('../config'); // Remove unused getSecret
-// const { jsonCleaner } = require('./utils/jsonCleaner'); // Remove unused jsonCleaner
+const { getSecret } = require('../config'); // Assuming getSecret is used to get API keys
+const { jsonCleaner } = require('./utils/jsonCleaner');
 const { generateContent } = require('./openai');
 const wordpress = require('./wordpress'); // Import the main WP service
 const { getPrompt, buildContextualPrompt } = require('./utils/promptUtils');
