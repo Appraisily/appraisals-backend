@@ -109,6 +109,155 @@ async function populateHtmlTemplate(skeletonHtml, dataContext) {
     }
 }
 
+/**
+ * Generates numeric scores for appraisal factors using Gemini based on provided data.
+ * 
+ * @param {object} appraisalData - The ACF data for the appraisal (e.g., description, condition, provenance).
+ * @param {object} statisticsData - Calculated statistics (e.g., market trend, comparable counts, price range).
+ * @returns {Promise<object>} - An object containing the generated scores (e.g., { condition_score: 75, rarity_score: 60, ... }).
+ * @throws {Error} If the Gemini API call fails or returns an unexpected response, or if not initialized.
+ */
+async function generateScores(appraisalData, statisticsData) {
+    if (!isGeminiInitialized || !model) {
+        throw new Error("Gemini Service is not initialized (check API key and initialization logs).");
+    }
+    if (!appraisalData || typeof appraisalData !== 'object') {
+        throw new Error("Appraisal data object is required for score generation.");
+    }
+    if (!statisticsData || typeof statisticsData !== 'object') {
+        throw new Error("Statistics data object is required for score generation.");
+    }
+
+    console.log('[Gemini Service] Generating scores via SDK...');
+
+    // --- Prepare Data for Prompt ---
+    // Select relevant fields to avoid overwhelming the model
+    const relevantAppraisalInfo = {
+        title: appraisalData.title || 'N/A',
+        description: appraisalData.description || 'N/A',
+        object_type: appraisalData.object_type || 'N/A',
+        medium: appraisalData.medium || 'N/A',
+        dimensions: appraisalData.dimensions || 'N/A',
+        period_age: appraisalData.age || 'N/A', // Assuming 'age' field exists
+        condition_description: appraisalData.condition || 'N/A', // Assuming 'condition' field is descriptive text
+        provenance_details: appraisalData.provenance || 'N/A', // Assuming 'provenance' field is descriptive text
+        artist_creator: appraisalData.artist_creator_name || 'N/A',
+        appraised_value: appraisalData.appraisal_value || 'N/A', // Use the actual value field
+    };
+
+    const relevantStatsInfo = {
+        comparable_item_count: statisticsData.count || 0,
+        average_comparable_price: statisticsData.average_price || 0,
+        price_range: statisticsData.price_range ? `${statisticsData.price_range.min} - ${statisticsData.price_range.max}` : 'N/A',
+        price_trend_percentage: statisticsData.annual_change_percent ? `${statisticsData.annual_change_percent.toFixed(1)}%` : 'N/A',
+        market_segment: statisticsData.market_segment || 'N/A',
+        coefficient_of_variation: statisticsData.coefficient_of_variation ? `${statisticsData.coefficient_of_variation.toFixed(1)}%` : 'N/A',
+        // Add other relevant stats as needed
+    };
+
+    const appraisalString = JSON.stringify(relevantAppraisalInfo, null, 2);
+    const statsString = JSON.stringify(relevantStatsInfo, null, 2);
+
+    // --- Construct Prompt ---
+    const prompt = `
+    Analyze the following Art Appraisal information and associated Market Statistics to determine scores for key valuation factors. 
+
+    **Appraisal Details:**
+    \`\`\`json
+    ${appraisalString}
+    \`\`\`
+
+    **Market Statistics (for comparable items):**
+    \`\`\`json
+    ${statsString}
+    \`\`\`
+
+    **Your Task:**
+    Based *only* on the provided information, estimate scores for the following six factors on a scale of 0 to 100, where 100 represents the highest/best possible assessment for that factor. Consider the description, materials, age, artist, provenance, condition description, and the market context (comparable prices, trends, variation). Output *only* a valid JSON object containing these six scores.
+
+    **Output Format (Strict JSON):**
+    Provide *only* a single JSON object with the following keys and integer values between 0 and 100:
+    {
+      "condition_score": <0-100>,
+      "rarity_score": <0-100>,
+      "market_demand_score": <0-100>,
+      "historical_significance_score": <0-100>,
+      "investment_potential_score": <0-100>,
+      "provenance_strength_score": <0-100>
+    }
+
+    **Example Output:**
+    {
+      "condition_score": 85,
+      "rarity_score": 70,
+      "market_demand_score": 65,
+      "historical_significance_score": 75,
+      "investment_potential_score": 60,
+      "provenance_strength_score": 90
+    }
+
+    Generate the JSON output now.
+    `;
+
+    // --- Call Gemini API ---
+    try {
+        console.log(`[Gemini Service] Calling model.generateContent for scores with model: ${MODEL_NAME}`);
+        // Use a slightly different config if needed, maybe lower temperature for consistent JSON?
+        const scoreGenerationConfig = { ...generationConfig, responseMimeType: "application/json", temperature: 0.5 }; 
+        
+        const result = await model.generateContent(
+            prompt,
+            scoreGenerationConfig
+        );
+        const response = result.response;
+        const scoresJsonText = response.text();
+
+        if (!scoresJsonText) {
+            const responseText = JSON.stringify(response, null, 2); 
+            console.error("[Gemini Service] Invalid or empty text content in score generation response:", responseText);
+            throw new Error(`Invalid or empty JSON content from Gemini API for scores. Response: ${responseText}`);
+        }
+
+        console.log("[Gemini Service] Raw scores JSON received:", scoresJsonText);
+
+        // --- Parse and Validate Response ---
+        let scores;
+        try {
+            scores = JSON.parse(scoresJsonText);
+        } catch (parseError) {
+            console.error("[Gemini Service] Failed to parse JSON response for scores:", parseError);
+            console.error("[Gemini Service] Raw non-JSON response:", scoresJsonText); // Log the raw response
+            throw new Error(`Failed to parse scores JSON from Gemini: ${parseError.message}. Raw response: ${scoresJsonText}`);
+        }
+
+        // Basic validation of the structure and values
+        const requiredKeys = [
+            'condition_score', 'rarity_score', 'market_demand_score',
+            'historical_significance_score', 'investment_potential_score', 'provenance_strength_score'
+        ];
+        const missingKeys = requiredKeys.filter(key => !(key in scores));
+        if (missingKeys.length > 0) {
+            throw new Error(`Generated scores object is missing required keys: ${missingKeys.join(', ')}`);
+        }
+
+        for (const key of requiredKeys) {
+            const value = scores[key];
+            if (typeof value !== 'number' || !Number.isInteger(value) || value < 0 || value > 100) {
+                throw new Error(`Invalid value for score '${key}': ${value}. Must be an integer between 0 and 100.`);
+            }
+        }
+
+        console.log('[Gemini Service] Scores generated and validated successfully:', scores);
+        return scores;
+
+    } catch (error) {
+        console.error('[Gemini Service] Error during score generation:', error);
+        const errorMessage = error.message || 'Unknown Gemini SDK error during score generation';
+        throw new Error(`Gemini SDK error: ${errorMessage}`);
+    }
+}
+
 module.exports = {
-    populateHtmlTemplate
+    populateHtmlTemplate,
+    generateScores
 }; 

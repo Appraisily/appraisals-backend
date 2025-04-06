@@ -1,14 +1,15 @@
 <!-- templates/skeletons/appraisal-card.html -->
-<!-- NOTE: This is a skeleton. CSS and JS need to be provided separately. -->
-<!-- Placeholders like {{VARIABLE_NAME}} will be replaced by Gemini. -->
-<!-- Data attributes like data-chart-data='{{METRICS_CHART_DATA_JSON}}' will hold data for client-side JS. -->
+<!-- Based on display_appraisal_card_template.php -->
+<!-- CSS classes and structure match the PHP template. -->
+<!-- JS for charts/tabs MUST be handled separately in WordPress via wp_enqueue_script. -->
+<!-- Placeholders {{VARIABLE_NAME}} will be replaced by Gemini. -->
 
 <div class="modern-appraisal-card" data-post-id="{{POST_ID}}">
   <header class="card-header">
     <div class="header-content">
       <div class="report-info">
         <div class="report-badge">
-          <!-- SVG Checkmark -->
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M9 12L11 14L15 10" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
         <div>
           <h1>Art Analysis Report</h1>
@@ -18,46 +19,34 @@
       <div class="value-display">
         <div class="value-content">
           <span class="value-label">APPRAISED VALUE</span>
-          <span class="value-amount">{{VALUE_FORMATTED}} USD</span>
+          <span class="value-amount">{{VALUE_FORMATTED}}</span>
         </div>
       </div>
     </div>
   </header>
-
+  
   <div class="card-body">
     <div class="dual-layout">
       <div class="artwork-showcase">
         <div class="artwork-image">
-          {{FEATURED_IMAGE_HTML}} <!-- Simple image tag or placeholder div -->
+          {{FEATURED_IMAGE_HTML}} <!-- Expects <img...> or <div>... placeholder -->
         </div>
         <div class="artwork-info">
           <h2 class="artwork-title">{{TITLE}}</h2>
           <p class="artwork-creator">{{CREATOR}}</p>
           <div class="artwork-details">
-            <div class="detail-item">
-              <span class="detail-label">Object Type</span>
-              <span class="detail-value">{{OBJECT_TYPE}}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Period/Age</span>
-              <span class="detail-value">{{AGE}}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Medium</span>
-              <span class="detail-value">{{MEDIUM}}</span>
-            </div>
-            <div class="detail-item">
-              <span class="detail-label">Condition</span>
-              <span class="detail-value">{{CONDITION}}</span>
-            </div>
+            <div class="detail-item"><span class="detail-label">Object Type</span><span class="detail-value">{{OBJECT_TYPE}}</span></div>
+            <div class="detail-item"><span class="detail-label">Period/Age</span><span class="detail-value">{{AGE}}</span></div>
+            <div class="detail-item"><span class="detail-label">Medium</span><span class="detail-value">{{MEDIUM}}</span></div>
+            <div class="detail-item"><span class="detail-label">Condition</span><span class="detail-value">{{CONDITION}}</span></div>
           </div>
         </div>
       </div>
-
-      <div class="market-position-container" data-percentile-gauge="{{PERCENTILE_NUMBER}}" data-gauge-id="{{CHART_ID_GAUGE}}">
+      
+      <div class="market-position-container">
         <h3>Market Position</h3>
         <div class="gauge-container">
-          <canvas id="{{CHART_ID_GAUGE}}" height="170"></canvas>
+          <canvas id="{{CHART_ID_GAUGE}}" height="170"></canvas> <!-- JS Target -->
           <div class="gauge-indicator">
             <span class="percentile-value">{{PERCENTILE}}</span>
             <span class="percentile-label">Percentile</span>
@@ -69,26 +58,27 @@
         </div>
       </div>
     </div>
-
+    
     <div class="metrics-grid">
       <div class="metrics-chart-container" data-chart-data-metrics="{{METRICS_CHART_DATA_JSON}}">
         <h3>Item Value Assessment</h3>
         <div class="chart-container" style="position: relative; height: 240px; max-height: 240px;">
-          <canvas id="{{CHART_ID_METRICS}}"></canvas>
+          <canvas id="{{CHART_ID_METRICS}}"></canvas> <!-- JS Target -->
         </div>
       </div>
       <div class="price-distribution-container" data-chart-data-market="{{MARKET_CHART_DATA_JSON}}">
         <h3>Market Price Distribution</h3>
         <div class="chart-container" style="position: relative; height: 240px; max-height: 240px;">
-          <canvas id="{{CHART_ID_MARKET}}"></canvas>
+          <canvas id="{{CHART_ID_MARKET}}"></canvas> <!-- JS Target -->
         </div>
         <div class="distribution-legend">
-            <!-- Static legend or generated client-side -->
+          <span class="legend-item"><span class="legend-marker market-marker"></span>Market Prices</span>
+          <span class="legend-item"><span class="legend-marker your-marker"></span>Your Item</span>
         </div>
       </div>
     </div>
   </div>
-
+  
   <div class="card-tabs">
     <div class="tabs-navigation">
       <button class="tab-button active" data-tab="summary">Summary</button>
@@ -99,7 +89,7 @@
       <div id="summary" class="tab-panel active">
         <h2 class="tab-title">Artwork Details</h2>
         <div class="artwork-details-table">
-          <table><tbody>{{DETAILS_TABLE_HTML}}</tbody></table>
+          <table><tbody>{{DETAILS_TABLE_HTML}}</tbody></table> <!-- Expects generated <tr><td>...</td></tr> -->
         </div>
       </div>
       <div id="details" class="tab-panel">
@@ -126,19 +116,20 @@
       </div>
       <div id="similar" class="tab-panel">
         <div class="similar-items">
-          <p class="no-similar-items">Similar items can be viewed on the full webpage.</p>
+          <!-- Content for similar items (e.g., gallery) should be handled by WP shortcode or client-side JS -->
+          <p class="no-similar-items">Similar items viewable on the full webpage.</p> 
         </div>
       </div>
     </div>
   </div>
-
+  
   <footer class="card-footer">
     <div class="footer-info">
       <p>Appraised by: <strong>{{APPRAISER_NAME}}</strong>, Accredited Art Appraiser</p>
     </div>
     <a href="#" class="detail-report-button">
       <span>View Detailed Report</span>
-      <!-- SVG Arrow -->
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 5L19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </a>
   </footer>
 </div> 

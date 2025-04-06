@@ -1,0 +1,35 @@
+# Environment variables
+.env
+
+# Node dependencies
+node_modules/
+dist/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Editor directories and files
+.idea
+.vscode
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.swp
+
+# Build files
+build/
+
+# Cache files
+.npm
+.eslintcache
+
+# Other
+.DS_Store
+.dockerignore
+# Ignore template examples
+templates/example_files/ 
