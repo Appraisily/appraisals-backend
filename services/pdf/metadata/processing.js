@@ -3,7 +3,7 @@ const staticMetadata = require('../../constants/staticMetadata');
 const he = require('he');
 const { cleanAndParseJSON } = require('../../utils/jsonCleaner');
 const geminiService = require('../../geminiService');
-const { formatTopAuctionResults } = require('./formattingUtils');
+const { formatTopAuctionResults } = require('../formatters');
 
 /**
  * Strips HTML tags and decodes entities from a string.
