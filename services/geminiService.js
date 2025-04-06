@@ -257,7 +257,173 @@ async function generateScores(appraisalData, statisticsData) {
     }
 }
 
+/**
+ * Generates descriptive text fields for the PDF appraisal report using Gemini.
+ * 
+ * @param {object} appraisalData - The ACF data for the appraisal (e.g., description, condition, provenance, artist).
+ * @param {object} statisticsData - Calculated statistics (e.g., market trend, comparable counts, price range).
+ * @param {object} generatedScores - The AI-generated numeric scores (0-100).
+ * @returns {Promise<object>} - An object containing the generated text fields (e.g., { valuation_method: "...", authorship: "...", ... }).
+ * @throws {Error} If the Gemini API call fails or returns an unexpected/invalid response, or if not initialized.
+ */
+async function generatePdfTextFields(appraisalData, statisticsData, generatedScores) {
+    if (!isGeminiInitialized || !model) {
+        throw new Error("Gemini Service is not initialized.");
+    }
+    // Basic validation of inputs
+    if (!appraisalData || typeof appraisalData !== 'object') {
+        throw new Error("Appraisal data object is required for PDF text generation.");
+    }
+     if (!statisticsData || typeof statisticsData !== 'object') {
+        // Allow proceeding even if stats are minimal, but log it
+        console.warn("[Gemini Service] Statistics data is missing or invalid for PDF text generation. Results may be less detailed.");
+        statisticsData = {}; // Use empty object to avoid errors later
+    }
+    if (!generatedScores || typeof generatedScores !== 'object') {
+        // Allow proceeding even if scores are missing, but log it
+        console.warn("[Gemini Service] Generated scores are missing or invalid for PDF text generation. Results may be less detailed.");
+        generatedScores = {}; // Use empty object
+    }
+
+    console.log('[Gemini Service] Generating PDF text fields via SDK...');
+
+    // --- Prepare Data for Prompt ---
+    // Select relevant fields, combine inputs for clarity
+    const context = {
+        item: {
+            title: appraisalData.title || 'N/A',
+            description: appraisalData.description || 'N/A',
+            artist_creator: appraisalData.artist_creator_name || 'N/A',
+            object_type: appraisalData.object_type || 'N/A',
+            medium: appraisalData.medium || 'N/A',
+            period_age: appraisalData.age || 'N/A',
+            dimensions: appraisalData.dimensions || 'N/A',
+            condition_description: appraisalData.condition || 'N/A',
+            provenance_details: appraisalData.provenance || 'N/A',
+            appraised_value: appraisalData.appraisal_value || 'N/A',
+        },
+        market_context: {
+            comparable_item_count: statisticsData.count || 0,
+            average_comparable_price: statisticsData.average_price || 0,
+            price_range: statisticsData.price_range ? `$${statisticsData.price_range.min} - $${statisticsData.price_range.max}` : 'N/A',
+            price_trend_percentage: statisticsData.price_trend_percentage || 'N/A',
+            market_segment: statisticsData.market_segment || 'N/A',
+        },
+        valuation_factors: {
+            condition_score: generatedScores.condition_score ?? 'N/A',
+            rarity_score: generatedScores.rarity_score ?? 'N/A',
+            market_demand_score: generatedScores.market_demand_score ?? 'N/A',
+            historical_significance_score: generatedScores.historical_significance_score ?? 'N/A',
+            investment_potential_score: generatedScores.investment_potential_score ?? 'N/A',
+            provenance_strength_score: generatedScores.provenance_strength_score ?? 'N/A',
+        }
+    };
+
+    const contextString = JSON.stringify(context, null, 2);
+
+    // --- Construct Prompt ---
+    const prompt = `
+    You are an expert art appraiser compiling a formal appraisal report. Based *only* on the provided context data below, generate concise and professional text sections for the specified fields of the report.
+
+    **Context Data:**
+    \`\`\`json
+    ${contextString}
+    \`\`\`
+
+    **Your Task:**
+    Generate text for the following fields. Ensure the language is objective, formal, and directly relates to the provided context. Use the numeric scores (0-100) to inform the qualitative descriptions where appropriate (e.g., a high condition_score means excellent condition).
+    
+    **Required Fields (Output as JSON):**
+    1.  **valuation_method:** Briefly explain the primary method used to arrive at the appraised value (e.g., market comparison approach, considering condition, rarity, market data).
+    2.  **authorship:** Comment on the attribution or creator of the work based on the provided artist/creator name. If unknown, state that.
+    3.  **condition_report:** Summarize the physical condition based on the description and score. Note any significant condition issues if mentioned.
+    4.  **provenance_summary:** Briefly summarize the known ownership history based on the details and score.
+    5.  **market_summary:** Provide a concise overview of the current market for comparable items, referencing the statistics (count, price range, trend) and market demand/investment scores.
+    6.  **conclusion:** A brief concluding paragraph summarizing the key findings of the appraisal.
+
+    **Output Format (Strict JSON):**
+    Provide *only* a single, valid JSON object containing these six keys, with string values for each:
+    {
+      "valuation_method": "<Generated text>",
+      "authorship": "<Generated text>",
+      "condition_report": "<Generated text>",
+      "provenance_summary": "<Generated text>",
+      "market_summary": "<Generated text>",
+      "conclusion": "<Generated text>"
+    }
+
+    **Example Snippet (Illustrative Only):**
+    {
+      "valuation_method": "The valuation primarily relies on the market comparison approach, analyzing recent sales of comparable works by the same artist, adjusted for factors such as condition, rarity (score: ${context.valuation_factors.rarity_score}), and current market demand (score: ${context.valuation_factors.market_demand_score}).",
+      "authorship": "The work is attributed to ${context.item.artist_creator}.",
+      ...
+    }
+
+    Generate the JSON output now.
+    `;
+
+    // --- Call Gemini API ---
+    try {
+        console.log(`[Gemini Service] Calling model.generateContent for PDF text fields with model: ${MODEL_NAME}`);
+        // Ensure JSON output, potentially slightly higher temperature for more descriptive text?
+        const textGenerationConfig = { ...generationConfig, responseMimeType: "application/json", temperature: 0.7 };
+
+        const result = await model.generateContent(
+            prompt,
+            textGenerationConfig
+        );
+        const response = result.response;
+        const generatedJsonText = response.text();
+
+        if (!generatedJsonText) {
+            const responseText = JSON.stringify(response, null, 2);
+            console.error("[Gemini Service] Invalid or empty text content in PDF text generation response:", responseText);
+            throw new Error(`Invalid or empty JSON content from Gemini API for PDF text fields. Response: ${responseText}`);
+        }
+
+        console.log("[Gemini Service] Raw PDF text JSON received:", generatedJsonText);
+
+        // --- Parse and Validate Response ---
+        let generatedTexts;
+        try {
+            generatedTexts = JSON.parse(generatedJsonText);
+        } catch (parseError) {
+            console.error("[Gemini Service] Failed to parse JSON response for PDF text fields:", parseError);
+            console.error("[Gemini Service] Raw non-JSON response:", generatedJsonText);
+            throw new Error(`Failed to parse PDF text fields JSON from Gemini: ${parseError.message}. Raw response: ${generatedJsonText}`);
+        }
+
+        // Basic validation of structure and types
+        const requiredKeys = [
+            'valuation_method', 'authorship', 'condition_report',
+            'provenance_summary', 'market_summary', 'conclusion'
+        ];
+        const missingKeys = requiredKeys.filter(key => !(key in generatedTexts));
+        if (missingKeys.length > 0) {
+            throw new Error(`Generated PDF text object is missing required keys: ${missingKeys.join(', ')}`);
+        }
+
+        for (const key of requiredKeys) {
+            if (typeof generatedTexts[key] !== 'string') {
+                // Attempt to convert non-strings, log warning
+                console.warn(`[Gemini Service] PDF text field '${key}' was not a string, attempting conversion. Value:`, generatedTexts[key]);
+                generatedTexts[key] = String(generatedTexts[key]); 
+                // Or throw: throw new Error(`Invalid type for PDF text field '${key}': Expected string.`);
+            }
+        }
+
+        console.log('[Gemini Service] PDF text fields generated and validated successfully.');
+        return generatedTexts;
+
+    } catch (error) {
+        console.error('[Gemini Service] Error during PDF text field generation:', error);
+        const errorMessage = error.message || 'Unknown Gemini SDK error during PDF text generation';
+        throw new Error(`Gemini SDK error: ${errorMessage}`);
+    }
+}
+
 module.exports = {
     populateHtmlTemplate,
-    generateScores
+    generateScores,
+    generatePdfTextFields
 }; 

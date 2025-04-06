@@ -2,128 +2,81 @@ const { validateMetadata, REQUIRED_METADATA_FIELDS } = require('./validation');
 const staticMetadata = require('../../constants/staticMetadata');
 const he = require('he');
 const { cleanAndParseJSON } = require('../../utils/jsonCleaner');
-const openai = require('../../openai');
+const geminiService = require('../../geminiService');
+const { formatTopAuctionResults } = require('./formattingUtils');
 
 /**
- * Generate an AI-enhanced statistics summary using OpenAI
- * @param {Object} statistics The statistics data object
- * @param {string} title The title or description of the item
- * @returns {Promise<string>} The generated summary text
+ * Strips HTML tags and decodes entities from a string.
+ * @param {string|null|undefined} html The input string.
+ * @returns {string} The cleaned plain text.
  */
-async function generateAIStatisticsSummary(statistics, title) {
-  try {
-    console.log('Generating AI-enhanced statistics summary');
-    
-    // Format the statistics data for the prompt
-    const statsInfo = {
-      count: statistics.count || statistics.sample_size || 0,
-      average: statistics.average_price || statistics.mean || 0,
-      median: statistics.median_price || 0,
-      min: statistics.price_min || 0,
-      max: statistics.price_max || 0,
-      percentile: statistics.percentile || '50th',
-      confidence: statistics.confidence_level || 'Moderate',
-      trend: statistics.price_trend_percentage || '+0.0%'
-    };
-    
-    // Create a prompt for the AI
-    const prompt = `
-Write a professional and insightful two-paragraph summary of the market statistics for "${title}".
-Use the following data points in your analysis:
-
-- Sample size: ${statsInfo.count} comparable items
-- Average price: $${Math.round(statsInfo.average).toLocaleString()}
-- Median price: $${Math.round(statsInfo.median).toLocaleString()}
-- Price range: $${Math.round(statsInfo.min).toLocaleString()} to $${Math.round(statsInfo.max).toLocaleString()}
-- Percentile position: ${statsInfo.percentile}
-- Price trend: ${statsInfo.trend}
-- Confidence level: ${statsInfo.confidence}
-
-The first paragraph should describe the market context and overall position of this item.
-The second paragraph should interpret what these statistics mean for the item's value and investment potential.
-Keep the tone professional, precise, and credible. Avoid speculative language.
-`;
-
-    // Generate the summary using OpenAI
-    const systemMessage = 'You are an expert art appraiser and market analyst specializing in art, antiques, and collectibles.';
-    const response = await openai.generateContent(prompt, title, {}, 'gpt-4o', systemMessage);
-    
-    // Ensure we have a response
-    if (!response || response.trim().length === 0) {
-      throw new Error('Empty response from AI service');
-    }
-    
-    console.log('Successfully generated AI statistics summary');
-    return response.trim();
-  } catch (error) {
-    console.error('Error generating AI statistics summary:', error);
-    return null;
-  }
-}
-
 function stripHtml(html) {
   // Handle non-string values
   if (html === null || html === undefined) return '';
   if (typeof html !== 'string') return String(html);
   
-  console.log('Original HTML content:', html);
+  // console.log('Original HTML content:', html); // Debugging
   
   // First decode HTML entities
   let text = he.decode(html);
-  console.log('After HTML entity decoding:', text);
+  // console.log('After HTML entity decoding:', text); // Debugging
   
-  // Remove HTML tags
-  text = text.replace(/<[^>]*>/g, '');
-  console.log('After removing HTML tags:', text);
+  // Remove HTML tags using a more robust regex
+  text = text.replace(/<[^>]*>/g, ' '); // Replace tags with space to avoid merging words
+  // console.log('After removing HTML tags:', text); // Debugging
   
-  // Replace multiple newlines/spaces with single ones
-  text = text.replace(/\s+/g, ' ');
-  console.log('After normalizing whitespace:', text);
+  // Replace multiple whitespace characters (including newlines, tabs) with a single space
+  text = text.replace(/\s+/g, ' ').trim();
+  // console.log('After normalizing whitespace:', text); // Debugging
   
-  // Add proper paragraph spacing
-  text = text.replace(/<\/p>\s*<p[^>]*>/gi, '\n\n');
-  console.log('After adding paragraph spacing:', text);
-  
-  // Trim extra whitespace
-  text = text.trim();
-  console.log('Final cleaned text:', text);
-  
+  // Note: Adding paragraph spacing might not be desired if the PDF handles paragraphs
+  // text = text.replace(/<\/p>\s*<p[^>]*>/gi, '\n\n'); 
+
   return text;
 }
 
+/**
+ * Processes ACF data and external sources to create the final metadata object for PDF generation.
+ * Includes AI generation for specific text fields.
+ * @param {object} postData The full post object from WordPress, containing ACF fields.
+ * @returns {Promise<{metadata: object, validation: {isValid: boolean, missingFields: string[], emptyFields: string[]}}>}
+ */
 async function processMetadata(postData) {
-  console.log('Processing metadata fields...');
+  console.log('[PDF Meta] Starting metadata processing...');
   
-  // Determine appraisal type and get corresponding static metadata
   const appraisalType = postData.acf?.appraisaltype?.toLowerCase() || 'regular';
-  console.log('Appraisal type:', appraisalType);
-  
   const staticContent = staticMetadata[appraisalType] || staticMetadata.regular;
-  console.log('Using static metadata for type:', appraisalType);
-
+  const acfData = postData.acf || {}; // Safe reference to ACF data
   const metadata = {};
 
-  // Process ACF fields defined as required
+  // --- 1. Process specific ACF fields (excluding AI/Static/Stats derived) ---
+  console.log('[PDF Meta] Processing direct ACF fields...');
   REQUIRED_METADATA_FIELDS.forEach(key => {
-    if (['Introduction', 'ImageAnalysisText', 'SignatureText', 'AppraiserText', 'LiabilityText', 'SellingGuideText'].includes(key)) {
-      return; // Skip static fields
+    // Skip fields populated later
+    if ([
+        'valuation_method', 'authorship', 'condition_report', 'provenance_summary',
+        'market_summary', 'conclusion', 'statistics_summary_text', 'top_auction_results',
+        'Introduction', 'ImageAnalysisText', 'SignatureText', 'AppraiserText',
+        'LiabilityText', 'SellingGuideText'
+       ].includes(key)) {
+      return;
     }
-    const rawValue = postData.acf?.[key];
+
+    const rawValue = acfData[key];
     if (key === 'justification_html') {
       metadata[key] = rawValue || ''; // Keep HTML
     } else if (key === 'value') {
-        metadata[key] = rawValue; // Store raw value
+        metadata[key] = rawValue; // Store raw value for formatting
     } else if (key === 'googlevision') {
-        metadata[key] = rawValue; // Keep raw gallery IDs for later image processing
-    } else if (key === 'top_auction_results' || key === 'statistics_summary_text') {
-        // Skip these for now, will be populated from statistics data below
-        metadata[key] = ''; 
+        metadata[key] = rawValue; // Keep raw gallery IDs
     } else {
-        metadata[key] = stripHtml(rawValue || ''); // Strip HTML for most text fields
+        metadata[key] = stripHtml(rawValue || ''); // Strip HTML for most text
     }
+    // console.log(`[PDF Meta] Processed ACF field '${key}'`); // Verbose logging
   });
 
-  // Populate static fields (strip HTML)
+  // --- 2. Populate static fields --- 
+  console.log('[PDF Meta] Populating static fields...');
   metadata.Introduction = stripHtml(staticContent.Introduction || '');
   metadata.ImageAnalysisText = stripHtml(staticContent.ImageAnalysisText || '');
   metadata.SignatureText = stripHtml(staticContent.SignatureText || '');
@@ -131,71 +84,90 @@ async function processMetadata(postData) {
   metadata.LiabilityText = stripHtml(staticContent.LiabilityText || '');
   metadata.SellingGuideText = stripHtml(staticContent.SellingGuideText || '');
 
-  // Process statistics data if available
-  let parsedStats = null;
-  if (postData.acf?.statistics) {
+  // --- 3. Process statistics data --- 
+  console.log('[PDF Meta] Parsing statistics data...');
+  let parsedStats = {}; // Default to empty object
+  if (acfData.statistics) {
     try {
-      let statsData = postData.acf.statistics;
+      let statsData = acfData.statistics;
       if (typeof statsData === 'string') {
-        parsedStats = cleanAndParseJSON(statsData);
+          try {
+            parsedStats = cleanAndParseJSON(statsData); // Use robust parser
+            console.log('[PDF Meta] Statistics string parsed successfully.');
+          } catch (parseError) {
+            console.error('[PDF Meta] Failed to parse statistics JSON string:', parseError.message);
+            // Keep parsedStats as {}
+          }
+      } else if (typeof statsData === 'object' && statsData !== null) {
+          parsedStats = statsData; // Assume it's already an object
+          console.log('[PDF Meta] Using pre-parsed statistics object.');
+      } else {
+          console.warn('[PDF Meta] Statistics data has unexpected type, skipping parse.', typeof statsData);
       }
-      console.log('Statistics data parsed successfully for PDF processing.');
     } catch (error) {
-      console.error('Error parsing statistics data for PDF:', error);
+      console.error('[PDF Meta] Error processing statistics data wrapper:', error);
+      // Keep parsedStats as {}
     }
-  }
-
-  // Populate top_auction_results (now required)
-  metadata.top_auction_results = formatTopAuctionResults(parsedStats?.comparable_sales);
-
-  // Populate statistics_summary_text (now required)
-  if (postData.acf?.statistics_summary_text) {
-    metadata.statistics_summary_text = stripHtml(postData.acf.statistics_summary_text); // Ensure existing is stripped
-    console.log('Using existing statistics summary text for PDF');
-  } else if (parsedStats) {
-      try {
-          const generatedSummary = await generateAIStatisticsSummary(parsedStats, metadata.creator + ' ' + metadata.object_type);
-          if (!generatedSummary) throw new Error('AI generation returned empty.');
-          metadata.statistics_summary_text = stripHtml(generatedSummary); // Strip HTML from generated summary
-          console.log('Generated AI statistics summary text for PDF');
-      } catch(aiError) {
-          console.log('AI summary failed, generating basic summary for PDF:', aiError.message);
-          const summary = `Based on an analysis of ${parsedStats.count || 0} comparable items...`;
-          metadata.statistics_summary_text = summary; // Basic summary is plain text
-      }
   } else {
-    metadata.statistics_summary_text = 'No statistical data available for this appraisal.';
+      console.log('[PDF Meta] No statistics data found in ACF.');
   }
-  
-  // --- Placeholder for AI Generation of other PDF fields --- 
-  // TODO: Implement logic (likely calling OpenAI/Gemini via metadataProcessor.js) 
-  //       to populate fields like valuation_method, authorship, conclusion1/2, glossary 
-  //       if they are not intended to be manual entries in WordPress.
-  // Example:
-  // if (!metadata.valuation_method) { 
-  //     metadata.valuation_method = await generateValuationMethodText(postData.acf);
-  // }
-  // --- End Placeholder ---
 
-  // Format appraisal_value
-  if (metadata.value) {
-    const numericValue = parseFloat(metadata.value);
+  // --- 4. Populate top_auction_results from stats --- 
+  console.log('[PDF Meta] Formatting top auction results...');
+  metadata.top_auction_results = formatTopAuctionResults(parsedStats?.comparable_sales);
+  // console.log(`[PDF Meta] Populated 'top_auction_results':`, metadata.top_auction_results.substring(0, 100) + '...'); // Verbose
+
+  // --- 5. Generate AI Text Fields using Gemini --- 
+  console.log('[PDF Meta] Attempting AI generation for PDF text fields...');
+  let generatedTexts = {};
+  try {
+    // Pass ACF data (contains item details AND the AI-generated scores) 
+    // and the parsed statistics
+    generatedTexts = await geminiService.generatePdfTextFields(acfData, parsedStats, acfData); 
+    console.log('[PDF Meta] Successfully received generated text fields from Gemini.');
+
+    // Populate metadata with stripped AI-generated text
+    metadata.valuation_method = stripHtml(generatedTexts.valuation_method || '');
+    metadata.authorship = stripHtml(generatedTexts.authorship || '');
+    metadata.condition_report = stripHtml(generatedTexts.condition_report || '');
+    metadata.provenance_summary = stripHtml(generatedTexts.provenance_summary || '');
+    // Use market_summary for statistics_summary_text
+    metadata.statistics_summary_text = stripHtml(generatedTexts.market_summary || 'Market data summary could not be generated.');
+    metadata.conclusion = stripHtml(generatedTexts.conclusion || '');
+    console.log('[PDF Meta] Populated metadata with AI-generated text.');
+
+  } catch (aiError) {
+    console.error('[PDF Meta] Error generating PDF text fields via Gemini:', aiError);
+    // Populate with default error messages if AI fails
+    metadata.valuation_method = '(Automated generation failed: Valuation method details unavailable)';
+    metadata.authorship = '(Automated generation failed: Authorship details unavailable)';
+    metadata.condition_report = '(Automated generation failed: Condition report unavailable)';
+    metadata.provenance_summary = '(Automated generation failed: Provenance summary unavailable)';
+    metadata.statistics_summary_text = '(Automated generation failed: Market data summary unavailable)';
+    metadata.conclusion = '(Automated generation failed: Conclusion unavailable)';
+  }
+
+  // --- 6. Format appraisal_value --- 
+  console.log('[PDF Meta] Formatting appraisal value...');
+  if (metadata.value !== null && metadata.value !== undefined && metadata.value !== '') {
+    const numericValue = parseFloat(String(metadata.value).replace(/[^0-9.-]+/g,"")); // Clean string before parsing
     metadata.appraisal_value = !isNaN(numericValue) ? 
-        numericValue.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }) : 
-        metadata.value;
+        numericValue.toLocaleString('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0, maximumFractionDigits: 0 }) :
+        String(metadata.value); // Use original string if not a number after cleaning
   } else {
     metadata.appraisal_value = 'N/A';
   }
+  // console.log(`[PDF Meta] Formatted 'appraisal_value': ${metadata.appraisal_value}`); // Verbose
 
-  console.log('Metadata processing for PDF complete.');
+  console.log('[PDF Meta] Metadata processing complete.');
 
-  // Validate final metadata object
+  // --- 7. Validate final metadata object --- 
   const validation = validateMetadata(metadata);
   if (!validation.isValid) {
-    console.warn('Missing required metadata fields:', validation.missingFields);
+    console.warn('[PDF Meta] Validation Failed! Missing required fields:', validation.missingFields);
   }
   if (validation.emptyFields.length > 0) {
-    console.warn('Empty metadata fields:', validation.emptyFields);
+    console.warn('[PDF Meta] Validation Warning: Empty fields:', validation.emptyFields);
   }
 
   return {
