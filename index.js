@@ -4,6 +4,7 @@ const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const config = require('./config');
 const { initializeGoogleApis } = require('./services/pdf');
 const { createGithubIssue } = require('./src/services/utils/githubService');
+const githubService = require('./src/services/utils/githubService'); // Import the full service object here
 
 const app = express();
 
@@ -93,29 +94,36 @@ async function startServer() {
     // Initialize Google APIs
     await initializeGoogleApis();
 
-    // Load routers after secrets are available
-    // const appraisalRouter = require('./routes/appraisal'); // Removed - no routes left
-    const reportRouter = require('./routes/report');
-    const visualizationRouter = require('./routes/visualization');
-    const descriptionRouter = require('./routes/description');
-    const utilityRouter = require('./routes/utility');
-    // Existing routers
-    const pdfRouter = require('./routes/pdf');
-    const pdfStepsRouter = require('./routes/pdf-steps');
-    const htmlRouter = require('./routes/html');
-    const debugVisualizationsRouter = require('./routes/visualizations'); // Keep old viz routes for now?
+    // Load router factory functions
+    const reportRouterFactory = require('./routes/report');
+    const visualizationRouterFactory = require('./routes/visualization'); // Factory function
+    const descriptionRouterFactory = require('./routes/description');
+    const utilityRouterFactory = require('./routes/utility');
+    const pdfRouterFactory = require('./routes/pdf'); // Factory function
+    const pdfStepsRouterFactory = require('./routes/pdf-steps');
+    const htmlRouterFactory = require('./routes/html');
+    const debugVisualizationsRouterFactory = require('./routes/visualizations'); // Assuming this might also need it
+
+    // Instantiate routers, passing dependencies
+    // Note: Modify other factories similarly if they need githubService
+    const reportRouter = reportRouterFactory; // Assuming it doesn't need githubService
+    const visualizationRouter = visualizationRouterFactory(githubService); // Pass service
+    const descriptionRouter = descriptionRouterFactory; // Assuming it doesn't need githubService
+    const utilityRouter = utilityRouterFactory; // Assuming it doesn't need githubService
+    const pdfRouter = pdfRouterFactory(githubService); // Pass service
+    const pdfStepsRouter = pdfStepsRouterFactory; // Assuming it doesn't need githubService
+    const htmlRouter = htmlRouterFactory; // Assuming it doesn't need githubService
+    const debugVisualizationsRouter = debugVisualizationsRouterFactory; // Assuming it doesn't need githubService
 
     // Use routers - Mount new routers at base path '/'
     app.use('/', reportRouter); 
-    app.use('/', visualizationRouter);
+    app.use('/', visualizationRouter); // Use instantiated router
     app.use('/', descriptionRouter);
     app.use('/', utilityRouter);
-    // app.use('/', appraisalRouter); // Removed
     // Mount existing routers
-    app.use('/', pdfRouter);
+    app.use('/', pdfRouter); // Use instantiated router
     app.use('/api/pdf', pdfStepsRouter);
     app.use('/api/html', htmlRouter);
-    // Mount the old /api/visualizations route
     app.use('/api/visualizations', debugVisualizationsRouter);
 
     // Error handling middleware (must be after routers)
