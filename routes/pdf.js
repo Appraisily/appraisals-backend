@@ -1,6 +1,7 @@
 const express = require('express');
 const { v4: uuidv4 } = require('uuid');
 const he = require('he');
+const { google } = require('googleapis');
 const wordpress = require('../services/wordpress');
 const { processMetadata } = require('../services/pdf/metadata/processing');
 const { 
