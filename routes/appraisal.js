@@ -1,9 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const wordpress = require('../services/wordpress');
-const { processMainImageWithGoogleVision } = require('../services/vision');
-const { processAllMetadata, processJustificationMetadata } = require('../services/metadata');
-const { getClientIp } = require('request-ip');
+const geminiService = require('../services/geminiService');
 
 // All specific routes moved to report.js, visualization.js, description.js, utility.js
 

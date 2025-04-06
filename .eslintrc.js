@@ -16,7 +16,7 @@ module.exports = {
     ],
     rules: {
         'import/no-unresolved': [2, { commonjs: true, amd: false }], // Ensure requires are resolvable
-        // Add any other project-specific rules here
+        'no-unused-vars': ['error', { 'args': 'none' }] // Ignore unused function arguments
     },
     settings: {
         'import/resolver': {

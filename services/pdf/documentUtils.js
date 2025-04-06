@@ -1,4 +1,4 @@
-const { google } = require('googleapis');
+// const { google } = require('googleapis'); // Remove unused google
 const { getTemplateIdByType } = require('./utils/templateUtils');
 
 async function getTemplateId(serviceType) {

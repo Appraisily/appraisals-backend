@@ -17,7 +17,7 @@ const {
   uploadPDFToDrive
 } = require('../services/pdf');
 // Restore local require for githubService
-const githubService = require('../src/services/utils/githubService'); 
+// const githubService = require('../src/services/utils/githubService'); // Remove unused githubService
 
 // Revert to standard router export
 // module.exports = function(githubService) {

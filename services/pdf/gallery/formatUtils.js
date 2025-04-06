@@ -35,7 +35,7 @@ function createGalleryTitle(startIndex, endIndex) {
   }];
 }
 
-function createImageRequest(index, imageUrl, dimensions, columnIndex = 0) {
+function createImageRequest(index, imageUrl, dimensions) {
   return {
     insertInlineImage: {
       location: { index },

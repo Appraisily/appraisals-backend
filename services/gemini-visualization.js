@@ -69,15 +69,6 @@ async function generateEnhancedAnalyticsWithGemini(statisticsData, options = {})
     // Get the generative model
     const model = geminiClient.getGenerativeModel({ model: "gemini-1.5-pro" });
     
-    // Extract options
-    const opts = {
-      showRadar: options.showRadar !== false,
-      showHistory: options.showHistory !== false,
-      showStats: options.showStats !== false,
-      title: options.title || 'Enhanced Market Analytics',
-      ...options
-    };
-    
     // Generate unique chart IDs
     const chartIds = {
       radar: 'radar-chart-' + generateUniqueId(),

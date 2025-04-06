@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const wordpress = require('../services/wordpress');
+const { updateTitle, updateDescription, updateIntroduction, updateNotes, /* insertShortcodes, */ fetchPostData, updatePostACFFields } = require('../services/wordpress');
+const { cleanAndParseJSON } = require('../services/utils/jsonCleaner');
+// const { appraisalType } = require('../config'); // Remove unused appraisalType
 
 // Moved from appraisal.js
 /**
@@ -48,7 +50,7 @@ router.post('/update-wordpress', async (req, res) => {
    // --- End Input Validation ---
   
   try {
-    const { postData, title: postTitle } = await wordpress.fetchPostData(postId);
+    const { postData, title: postTitle } = await fetchPostData(postId);
     if (!postTitle) {
        return res.status(404).json({ 
           success: false, 
@@ -66,7 +68,7 @@ router.post('/update-wordpress', async (req, res) => {
       appraisal_status: acfFields.appraisal_status || 'completed' // Keep status or default to completed
     };
     
-    await wordpress.updatePostACFFields(postId, updatedFields);
+    await updatePostACFFields(postId, updatedFields);
     
     // Insert shortcodes if requested
     let contentUpdated = false;
@@ -120,6 +122,10 @@ router.post('/update-wordpress', async (req, res) => {
       error_details: process.env.NODE_ENV !== 'production' ? error.message : undefined
     });
   }
+});
+
+router.post('/clean-json', (req, res) => {
+  // ... existing code ...
 });
 
 module.exports = router; 

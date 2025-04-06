@@ -3,7 +3,7 @@ const router = express.Router();
 const wordpress = require('../services/wordpress');
 const templates = require('../templates');
 const { jsonCleaner } = require('../services/utils/jsonCleaner');
-const geminiService = require('../services/geminiService');
+// const geminiService = require('../services/geminiService'); // Remove unused geminiService
 const { prepareDataContextForEnhancedAnalytics, prepareDataContextForAppraisalCard } = require('../services/utils/templateContextUtils');
 
 // Define isObject function directly

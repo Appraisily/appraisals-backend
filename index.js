@@ -1,10 +1,9 @@
 const express = require('express');
 const cors = require('cors');
+const requestIp = require('request-ip');
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
-const config = require('./config');
 const { initializeGoogleApis } = require('./services/pdf');
-const { createGithubIssue } = require('./src/services/utils/githubService');
-const githubService = require('./src/services/utils/githubService'); // Import the full service object here
+const { initializeGeminiClient } = require('./services/gemini-visualization');
 
 const app = express();
 
