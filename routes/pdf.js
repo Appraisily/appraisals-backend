@@ -16,7 +16,7 @@ const {
   exportToPDF,
   uploadPDFToDrive
 } = require('../services/pdf');
-const githubService = require('../services/utils/githubService');
+const githubService = require('../src/services/utils/githubService');
 
 router.post('/generate-pdf', async (req, res) => {
   const { postId, session_ID } = req.body;

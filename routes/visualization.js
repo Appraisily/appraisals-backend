@@ -15,7 +15,7 @@ const {
     prepareDataContextForEnhancedAnalytics, 
     prepareDataContextForAppraisalCard 
 } = require('../services/utils/templateContextUtils');
-const githubService = require('../services/utils/githubService'); // Import the GitHub service
+const githubService = require('../src/services/utils/githubService'); // Import the GitHub service
 
 // Refactored /generate-visualizations route
 router.post('/generate-visualizations', async (req, res) => {
