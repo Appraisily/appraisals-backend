@@ -74,32 +74,61 @@ function generateDetailsTableHtml(appraisal) {
     return html || '<tr><td colspan="2">No details available.</td></tr>';
 }
 
+// Canonical Statistics Object Structure (Expected Input for Context Prep)
+/**
+ * interface Statistics {
+ *   value: number;                  // Target appraisal value
+ *   count: number;                  // Number of comparable sales used
+ *   total_count?: number;           // Total comparable sales found before filtering
+ *   average_price?: number;
+ *   median_price?: number;
+ *   price_min?: number;
+ *   price_max?: number;
+ *   standard_deviation?: number;
+ *   coefficient_of_variation?: number;
+ *   percentile?: string;             // e.g., "75th"
+ *   price_trend_percentage?: string; // e.g., "+5.2%"
+ *   confidence_level?: string;       // e.g., "High", "Medium", "Low"
+ *   target_marker_position?: number; // 0-100 percentage
+ *   histogram?: Array<{ min: number; max: number; count: number; height: number; contains_target: boolean }>;
+ *   comparable_sales?: Array<{ title: string; house: string; date: string; price: number; diff?: string; is_current?: boolean }>;
+ *   price_history?: Array<{ year: string; price: number; index?: number }>; // Optional
+ *   // Scores (Optional - Default to 0 if missing in stats object)
+ *   historical_significance?: number;
+ *   investment_potential?: number;
+ *   provenance_strength?: number;
+ *   // Note: condition_score, rarity, market_demand are read directly from appraisal object below
+ * }
+ */
+
 // --- Data Context Preparation Functions ---
 
 /**
  * Prepares the data context object for the enhanced-analytics skeleton.
- * @param {object} stats - The sanitized statistics object.
- * @param {object} appraisal - The appraisal data object.
+ * @param {Statistics} stats - The sanitized statistics object.
+ * @param {object} appraisal - The appraisal data object (should include ACF fields).
  * @param {string} postId - The WordPress post ID.
  * @returns {object} - A flat object mapping placeholders to values.
  */
 function prepareDataContextForEnhancedAnalytics(stats, appraisal, postId) {
-    stats = stats || {}; // Ensure stats object exists
-    appraisal = appraisal || {}; // Ensure appraisal object exists
+    stats = stats || {};
+    appraisal = appraisal || {};
     const value = parseFloat(stats.value || appraisal.value || 0);
     const percentileNum = parseInt(String(stats.percentile || '0').replace(/\D/g, '')) || 0;
     const priceTrend = stats.price_trend_percentage || '+0.0%';
     const isTrendPositive = priceTrend.includes('+');
 
-    // Prepare data needed for charts (example structure)
+    // Prepare data needed for charts
     const radarData = {
         labels: ['Condition', 'Rarity', 'Market Demand', 'Hist. Significance', 'Invest. Potential', 'Provenance'],
         datasets: [{
             label: 'Item Metrics',
             data: [
-                stats.condition_score || 0,
-                stats.rarity_score || 0,
-                stats.market_demand_score || 0,
+                // Use scores directly from appraisal ACF if available, else default to 0
+                parseFloat(appraisal.condition_score || 0),
+                parseFloat(appraisal.rarity || 0),
+                parseFloat(appraisal.market_demand || 0),
+                // Use scores from stats (valuer-agent) if available, else default to 0
                 stats.historical_significance || 0,
                 stats.investment_potential || 0,
                 stats.provenance_strength || 0
@@ -107,12 +136,11 @@ function prepareDataContextForEnhancedAnalytics(stats, appraisal, postId) {
             // Styling options...
         }]
     };
-    // Price history needs more data structure from stats if available
     const historyData = {
+        // Use stats.price_history if available
         labels: stats.price_history?.map(p => p.year) || [],
         datasets: [
             { label: 'Comparable Items', data: stats.price_history?.map(p => p.price) || [] },
-            // Add index dataset if available
         ]
     };
 
@@ -121,12 +149,15 @@ function prepareDataContextForEnhancedAnalytics(stats, appraisal, postId) {
         SHOW_RADAR: true, 
         SHOW_HISTORY: true,
         SHOW_STATS: true,
-        CONDITION_SCORE: stats.condition_score || 0,
-        RARITY_SCORE: stats.rarity_score || 0,
-        MARKET_DEMAND_SCORE: stats.market_demand_score || 0,
+        // Use ACF scores directly
+        CONDITION_SCORE: parseFloat(appraisal.condition_score || 0),
+        RARITY_SCORE: parseFloat(appraisal.rarity || 0),
+        MARKET_DEMAND_SCORE: parseFloat(appraisal.market_demand || 0),
+        // Use stats scores (from valuer-agent) or default
         HISTORICAL_SIGNIFICANCE: stats.historical_significance || 0, 
         INVESTMENT_POTENTIAL: stats.investment_potential || 0,
         PROVENANCE_STRENGTH: stats.provenance_strength || 0,
+        // ... (rest of the fields remain mostly the same, using defaults from stats object) ...
         AVG_PRICE_FORMATTED: `$${numberWithCommas(stats.average_price)}`,
         MEDIAN_PRICE_FORMATTED: `$${numberWithCommas(stats.median_price)}`,
         PRICE_TREND: priceTrend,
@@ -155,11 +186,9 @@ function prepareDataContextForEnhancedAnalytics(stats, appraisal, postId) {
         HISTOGRAM_DATA_JSON: escapeHtml(JSON.stringify(stats.histogram || [])),
         SALES_DATA_JSON: escapeHtml(JSON.stringify(stats.comparable_sales || [])),
         CONFIDENCE_DOTS_HTML: generateConfidenceDotsHtml(stats.confidence_level),
-        // Let Gemini handle potentially complex HTML generation based on data
         HISTOGRAM_BARS_HTML: '<!-- Placeholder: Gemini/Client JS to generate -->',
         HISTOGRAM_AXIS_HTML: '<!-- Placeholder: Gemini/Client JS to generate -->',
         SALES_TABLE_ROWS_HTML: '<!-- Placeholder: Gemini/Client JS to generate -->',
-        // Use Post ID for unique chart IDs
         CHART_ID_RADAR: `radar-chart-${postId}`,
         CHART_ID_PRICE: `price-chart-${postId}`,
     };
@@ -167,34 +196,32 @@ function prepareDataContextForEnhancedAnalytics(stats, appraisal, postId) {
 
 /**
  * Prepares the data context object for the appraisal-card skeleton.
- * @param {object} stats - The sanitized statistics object.
- * @param {object} appraisal - The appraisal data object (requires postId).
+ * @param {Statistics} stats - The sanitized statistics object.
+ * @param {object} appraisal - The appraisal data object (requires postId, condition_score, rarity, market_demand).
  * @returns {object} - A flat object mapping placeholders to values.
  */
 function prepareDataContextForAppraisalCard(stats, appraisal) {
     stats = stats || {};
     appraisal = appraisal || {};
-    const postId = appraisal.postId; // Ensure postId is passed in appraisal object
+    const postId = appraisal.postId;
     if (!postId) console.warn("Post ID missing in appraisal data for context prep.");
-
     const value = parseFloat(stats.value || appraisal.value || 0);
     const priceTrend = stats.price_trend_percentage || '+0.0%';
     const isTrendPositive = priceTrend.includes('+');
 
-     // Prepare data needed for charts (example structure)
     const metricsData = {
         labels: ['Condition', 'Rarity', 'Market Demand'],
         datasets: [{
             label: 'Assessment',
             data: [
-                stats.condition_score || 0,
-                stats.rarity_score || 0,
-                stats.market_demand_score || 0
+                // Use scores directly from appraisal ACF
+                parseFloat(appraisal.condition_score || 0),
+                parseFloat(appraisal.rarity || 0),
+                parseFloat(appraisal.market_demand || 0)
             ],
-             // Styling options...
         }]
     };
-    const marketData = { /* Data for price distribution chart */ };
+    const marketData = { /* Data for price distribution chart - Needs data from stats */ };
 
     return {
         POST_ID: postId,
@@ -206,14 +233,15 @@ function prepareDataContextForAppraisalCard(stats, appraisal) {
         OBJECT_TYPE: escapeHtml(appraisal.object_type || 'N/A'),
         AGE: escapeHtml(appraisal.estimated_age || 'N/A'),
         MEDIUM: escapeHtml(appraisal.medium || 'N/A'),
-        CONDITION: escapeHtml(appraisal.condition_summary || 'N/A'),
+        CONDITION: escapeHtml(appraisal.condition_summary || 'N/A'), // Use condition_summary here?
         PERCENTILE: stats.percentile || 'N/A',
         PERCENTILE_NUMBER: parseInt(String(stats.percentile || '0').replace(/\D/g, '')) || 0,
         PRICE_TREND: priceTrend,
         TREND_CLASS: isTrendPositive ? 'positive' : 'negative',
-        MARKET_DEMAND_SCORE: stats.market_demand_score || 0,
-        RARITY_SCORE: stats.rarity_score || 0,
-        CONDITION_SCORE: stats.condition_score || 0,
+        // Use ACF scores directly
+        MARKET_DEMAND_SCORE: parseFloat(appraisal.market_demand || 0),
+        RARITY_SCORE: parseFloat(appraisal.rarity || 0),
+        CONDITION_SCORE: parseFloat(appraisal.condition_score || 0),
         APPRAISER_NAME: escapeHtml(appraisal.appraiser_name || 'Andrés Gómez'),
         ANALYSIS_TEXT: escapeHtml(generateAnalysisText(stats)),
         DETAILS_TABLE_HTML: generateDetailsTableHtml(appraisal),

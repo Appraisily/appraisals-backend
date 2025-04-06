@@ -3,10 +3,13 @@ const REQUIRED_METADATA_FIELDS = [
   'signature1', 'signature2', 'style', 'valuation_method',
   'conclusion1', 'conclusion2', 'authorship', 'table', 'justification_html',
   'glossary', 'value',
-  // Static metadata fields
+  // PDF Content Fields (cont.)
+  'top_auction_results', 'statistics_summary_text',
+  // Optional/Legacy Fields to check
+  'googlevision', // For {{gallery}} placeholder
+  // Static placeholders (handled separately but listed for validation check)
   'Introduction', 'ImageAnalysisText', 'SignatureText',
-  'ValuationText', 'AppraiserText', 'LiabilityText',
-  'SellingGuideText'
+  'AppraiserText', 'LiabilityText', 'SellingGuideText'
 ];
 
 function validateMetadata(metadata) {
