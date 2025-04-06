@@ -1,5 +1,5 @@
 const vision = require('@google-cloud/vision');
-const { getSecret } = require('../config');
+// const { getSecret } = require('../config'); // Remove unused getSecret
 const fetch = require('node-fetch');
 const config = require('../config');
 const { getImageUrl } = require('./wordpress');

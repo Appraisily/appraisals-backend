@@ -106,13 +106,13 @@ ${JSON.stringify(data, null, 2)}
 
 For histogram bars, generate proper HTML from the histogram data. For each histogram bucket, create:
 \`<div class="modern-bar-wrap">
-  <div class="modern-bar ${bucket.contains_target ? \'highlighted\' : \'\'}" style="height: ${bucket.height}%;"> // eslint-disable-line no-undef
+  <div class="modern-bar ${bucket.contains_target ? 'highlighted' : ''}" style="height: ${bucket.height}%;"> // eslint-disable-line no-undef
   </div>
   <div class="bar-tooltip">Price range and count info</div>
 </div>\`
 
 For the sales table, generate rows from comparable_sales data. Each row should follow:
-\`<tr class="${sale.is_current ? \'highlight-row\' : \'\'}"> // eslint-disable-line no-undef
+\`<tr class="${sale.is_current ? 'highlight-row' : ''}"> // eslint-disable-line no-undef
   <td>${sale.title}</td> // eslint-disable-line no-undef
   <td>${sale.house}</td> // eslint-disable-line no-undef
   <td>${sale.date}</td> // eslint-disable-line no-undef

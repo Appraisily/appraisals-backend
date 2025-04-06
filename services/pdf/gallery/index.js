@@ -9,8 +9,8 @@ const {
   createSpacingRequest,
   calculateBatchSize
 } = require('./formatUtils');
-const { google } = require('googleapis');
-const { calculateImageDimensions: imageUtilsCalculateImageDimensions, insertImageAtPlaceholder } = require('../imageUtils');
+// const { google } = require('googleapis'); // Remove unused google
+// const { calculateImageDimensions: imageUtilsCalculateImageDimensions, insertImageAtPlaceholder } = require('../imageUtils'); // Remove unused imageUtils funcs
 
 async function calculateImageDimensions(url, maxWidth = 200, maxHeight = 150) {
   try {

@@ -1,6 +1,6 @@
 const fetch = require('node-fetch');
 // const { generateContent } = require('./openai'); // Remove unused generateContent
-const { getSecret } = require('../config');
+// const { getSecret } = require('../config'); // Remove unused getSecret
 
 // Function to generate a search query (max 5 words) using OpenAI
 async function generateSearchQuery(title) {
