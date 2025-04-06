@@ -15,7 +15,7 @@ const {
     prepareDataContextForEnhancedAnalytics, 
     prepareDataContextForAppraisalCard 
 } = require('../services/utils/templateContextUtils');
-const { createGithubIssue } = require('../src/services/utils/githubService'); // Use destructuring import
+const githubService = require('../src/services/utils/githubService'); // Revert to non-destructured import
 
 // Refactored /generate-visualizations route
 router.post('/generate-visualizations', async (req, res) => {
@@ -131,14 +131,17 @@ router.post('/generate-visualizations', async (req, res) => {
   } catch (error) {
     // Consistent error handling
     console.error(`[Viz Route] /generate-visualizations error for post ${postId}: ${error.message}`);
-    createGithubIssue(error, req); // Use destructured function directly
+    try { await githubService.createGithubIssue(error, req); } catch(e){ console.error("Error calling createGithubIssue:", e); } // Add await and basic catch
     const statusCode = error.message?.includes('Post not found') ? 404 : 500;
     const userMessage = statusCode === 404 ? 'Post not found' : 'Error generating visualizations.';
-    res.status(statusCode).json({ 
-      success: false, 
-      message: userMessage,
-      error_details: process.env.NODE_ENV !== 'production' ? error.message : undefined
-    });
+    // Ensure response is sent only once
+    if (!res.headersSent) { 
+        res.status(statusCode).json({ 
+            success: false, 
+            message: userMessage,
+            error_details: process.env.NODE_ENV !== 'production' ? error.message : undefined
+        });
+    }
   }
 });
 
@@ -282,14 +285,17 @@ router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
   } catch (error) {
      // Consistent error handling (as added previously)
     console.error(`[Viz Route] /regenerate error for post ${postId}: ${error.message}`);
-    createGithubIssue(error, req); // Use destructured function directly
+    try { await githubService.createGithubIssue(error, req); } catch(e){ console.error("Error calling createGithubIssue:", e); } // Add await and basic catch
     const statusCode = error.message?.includes('Post not found') ? 404 : 500;
     const userMessage = statusCode === 404 ? 'Post not found' : 'Error regenerating statistics/visualizations';
-    res.status(statusCode).json({
-      success: false, 
-      message: userMessage, 
-      error_details: process.env.NODE_ENV !== 'production' ? error.message : undefined
-    });
+    // Ensure response is sent only once
+    if (!res.headersSent) {
+        res.status(statusCode).json({
+            success: false, 
+            message: userMessage, 
+            error_details: process.env.NODE_ENV !== 'production' ? error.message : undefined
+        });
+    }
   }
 });
 

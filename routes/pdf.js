@@ -16,7 +16,7 @@ const {
   exportToPDF,
   uploadPDFToDrive
 } = require('../services/pdf');
-const { createGithubIssue } = require('../src/services/utils/githubService');
+const githubService = require('../src/services/utils/githubService');
 
 router.post('/generate-pdf', async (req, res) => {
   const { postId, session_ID } = req.body;
@@ -166,7 +166,7 @@ router.post('/generate-pdf', async (req, res) => {
 
   } catch (error) {
     console.error('Error generating PDF:', error);
-    createGithubIssue(error, req);
+    try { await githubService.createGithubIssue(error, req); } catch(e){ console.error("Error calling createGithubIssue:", e); }
     
     // Try to record the error in WordPress
     try {
@@ -196,10 +196,13 @@ router.post('/generate-pdf', async (req, res) => {
       }
     }
     
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error generating PDF'
-    });
+    // Ensure response is sent only once
+    if (!res.headersSent) {
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Error generating PDF'
+        });
+    }
   }
 });
 

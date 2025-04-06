@@ -1,31 +1,55 @@
-const fetch = require('node-fetch');
-const config = require('../config'); // Assuming Gemini API key/endpoint might be in config
+const { GoogleGenerativeAI } = require('@google/generative-ai');
 
-// Placeholder for actual Gemini API Key loading - adjust as needed
-const GEMINI_API_KEY = process.env.GEMINI_API_KEY; // Or load from config/secrets manager
-const GEMINI_API_ENDPOINT = process.env.GEMINI_API_ENDPOINT || "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent"; // Example endpoint
+// Load API Key from environment
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+
+// --- Initialization ---
+let genAI;
+let model;
+const MODEL_NAME = 'gemini-1.5-pro-latest'; // Using a stable, recent model
+
+function initializeGemini() {
+    if (!GEMINI_API_KEY) {
+        console.error('[Gemini Service] GEMINI_API_KEY environment variable is not set. Service disabled.');
+        return false;
+    }
+    try {
+        genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
+        model = genAI.getGenerativeModel({ model: MODEL_NAME });
+        console.log(`[Gemini Service] Initialized with model: ${MODEL_NAME}`);
+        return true;
+    } catch (error) {
+        console.error('[Gemini Service] Failed to initialize GoogleGenerativeAI:', error);
+        return false;
+    }
+}
+
+const isGeminiInitialized = initializeGemini();
 
 /**
- * Populates an HTML skeleton template with data using the Gemini API.
+ * Populates an HTML skeleton template with data using the Gemini API via SDK.
  * 
- * @param {string} skeletonHtml - The HTML template content with {{PLACEHOLDERS}}.\n * @param {object} dataContext - A flat key-value object containing data for placeholders.\n * @returns {Promise<string>} - The populated HTML string.\n * @throws {Error} If the Gemini API call fails or returns an unexpected response.\n */
+ * @param {string} skeletonHtml - The HTML template content with {{PLACEHOLDERS}}.
+ * @param {object} dataContext - A flat key-value object containing data for placeholders.
+ * @returns {Promise<string>} - The populated HTML string.
+ * @throws {Error} If the Gemini API call fails or returns an unexpected response, or if not initialized.
+ */
 async function populateHtmlTemplate(skeletonHtml, dataContext) {
-  if (!GEMINI_API_KEY) {
-      throw new Error("Gemini API Key not configured.");
-  }
-  if (!skeletonHtml) {
-      throw new Error("Skeleton HTML content is required.");
-  }
-  if (!dataContext || typeof dataContext !== 'object') {
-      throw new Error("Data context object is required.");
-  }
+    if (!isGeminiInitialized || !model) {
+        throw new Error("Gemini Service is not initialized (check API key and initialization logs).");
+    }
+    if (!skeletonHtml) {
+        throw new Error("Skeleton HTML content is required.");
+    }
+    if (!dataContext || typeof dataContext !== 'object') {
+        throw new Error("Data context object is required.");
+    }
 
-  console.log('[Gemini Service] Populating HTML template...');
+    console.log('[Gemini Service] Populating HTML template via SDK...');
 
-  // Flatten the data context and prepare for the prompt
-  const dataContextString = JSON.stringify(dataContext, null, 2);
+    const dataContextString = JSON.stringify(dataContext, null, 2);
 
-  const prompt = `
+    const prompt = `
     Given the following HTML skeleton template and JSON data object:
 
     HTML Skeleton:
@@ -49,57 +73,30 @@ async function populateHtmlTemplate(skeletonHtml, dataContext) {
     Populate the template now.
     `;
 
-  try {
-    // Construct the Gemini API request payload
-    // Reference: https://ai.google.dev/api/rest/v1beta/models/generateContent
-    const requestPayload = {
-      contents: [{
-        parts: [{ text: prompt }]
-      }],
-      // Optional: Configure generation parameters (temperature, safety settings, etc.)
-      // generationConfig: {
-      //   temperature: 0.5,
-      //   maxOutputTokens: 8192, // Adjust based on expected output size
-      // },
-      // safetySettings: [...],
-    };
+    try {
+        console.log(`[Gemini Service] Calling model.generateContent with model: ${MODEL_NAME}`);
+        const result = await model.generateContent(prompt);
+        const response = result.response; // Access the response object directly
+        const populatedHtml = response.text(); // Use the text() method from the SDK
 
-    console.log(`[Gemini Service] Calling Gemini API: ${GEMINI_API_ENDPOINT}`);
-    const response = await fetch(`${GEMINI_API_ENDPOINT}?key=${GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestPayload)
-    });
+        if (!populatedHtml) {
+            const responseText = JSON.stringify(response, null, 2); // Log the full response if text is missing
+            console.error("[Gemini Service] Invalid or empty text content in response:", responseText);
+            throw new Error(`Invalid or empty text content from Gemini API. Response: ${responseText}`);
+        }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`[Gemini Service] API Error (${response.status}): ${errorText}`);
-      throw new Error(`Gemini API error (${response.status}): ${errorText}`);
+        console.log('[Gemini Service] HTML template populated successfully via SDK.');
+        // Basic cleanup: Remove potential leading/trailing code fences or whitespace
+        return populatedHtml.replace(/^\\s*```html\\s*|\\s*```\\s*$/g, '').trim();
+
+    } catch (error) {
+        console.error('[Gemini Service] Error during SDK template population:', error);
+        // Extract more details if available from the SDK error
+        const errorMessage = error.message || 'Unknown Gemini SDK error';
+        throw new Error(`Gemini SDK error: ${errorMessage}`); // Re-throw for the route handler to catch
     }
-
-    const responseData = await response.json();
-
-    // Extract the generated text - adjust path based on actual Gemini API response structure
-    // Example assumes responseData.candidates[0].content.parts[0].text
-    const populatedHtml = responseData?.candidates?.[0]?.content?.parts?.[0]?.text;
-
-    if (!populatedHtml) {
-      console.error("[Gemini Service] Invalid or empty response structure:", JSON.stringify(responseData, null, 2));
-      throw new Error('Invalid or empty response from Gemini API');
-    }
-
-    console.log('[Gemini Service] HTML template populated successfully.');
-    // Basic cleanup: Remove potential leading/trailing code fences or whitespace
-    return populatedHtml.replace(/^\\s*```html\\s*|\\s*```\\s*$/g, '').trim();
-
-  } catch (error) {
-    console.error('[Gemini Service] Error during template population:', error);
-    throw error; // Re-throw for the route handler to catch
-  }
 }
 
 module.exports = {
-  populateHtmlTemplate
+    populateHtmlTemplate
 }; 
