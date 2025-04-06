@@ -49,4 +49,7 @@ This file lists the ACF (Advanced Custom Fields) used by the `appraisals-backend
 | 43| appraisal_card_html  | `appraisal_card_html`     | Text Area   | HTML content for the appraisal card visualization.                    |
 | 44| valuer_agent_data    | `valuer_agent_data`       | Text Area   | Raw JSON string response from the `valuer-agent` service.             |
 | 45| top_auction_results  | `top_auction_results`     | Text Area   | Text/JSON containing top comparable auction results for PDF.          |
-| 46| statistics_summary_text| `statistics_summary_text` | Text Area   | Descriptive text summarizing statistics for PDF.                      | 
+| 46| statistics_summary_text| `statistics_summary_text` | Text Area   | Descriptive text summarizing statistics for PDF.                      |
+| 47| enhanced_description | `enhanced_description`    | Text Area   | AI-enhanced description of the item.                                |
+| 48| last_updated         | `last_updated`            | Text        | ISO timestamp of the last backend update.                           |
+| 49| appraisal_status     | `appraisal_status`        | Text        | Status of the appraisal process (e.g., 'pending', 'completed').       | 

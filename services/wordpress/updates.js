@@ -110,71 +110,14 @@ async function updateNotes(postId, note) {
  */
 async function updatePostMeta(postId, metaKey, metaValue) {
   try {
-    console.log(`Updating post meta for post ID ${postId}, key: ${metaKey}`);
-    
-    // Convert the value to a string if it's an object or array
-    let processedValue = metaValue;
-    if (typeof metaValue === 'object' && metaValue !== null) {
-      processedValue = JSON.stringify(metaValue);
-    }
-    
-    // First, check if this meta key already exists
-    let existingMeta;
-    let existingMetaId;
-    
-    try {
-      const response = await client.request({
-        path: `/wp/v2/posts/${postId}/meta`,
-        method: 'GET'
-      });
-      
-      if (Array.isArray(response)) {
-        // Find if this meta key already exists
-        const existingEntry = response.find(item => item.key === metaKey);
-        if (existingEntry) {
-          existingMetaId = existingEntry.id;
-        }
-      }
-    } catch (getError) {
-      console.warn(`Could not retrieve existing meta for key ${metaKey}:`, getError.message);
-    }
-    
-    if (existingMetaId) {
-      // Update existing meta
-      await client.request({
-        path: `/wp/v2/posts/${postId}/meta/${existingMetaId}`,
-        method: 'POST',
-        data: {
-          value: processedValue
-        }
-      });
-      
-      console.log(`Updated existing meta for post ID ${postId}, key: ${metaKey}`);
-    } else {
-      // Create new meta
-      await client.request({
-        path: `/wp/v2/posts/${postId}/meta`,
-        method: 'POST',
-        data: {
-          key: metaKey,
-          value: processedValue
-        }
-      });
-      
-      console.log(`Created new meta for post ID ${postId}, key: ${metaKey}`);
-    }
-    
-    return true;
+    console.log(`Updating post meta (via ACF) for post ID ${postId}, key: ${metaKey}`);
+    // Directly use the working ACF update function
+    return await updateWordPressMetadata(postId, metaKey, metaValue);
   } catch (error) {
-    console.error(`Error updating meta for post ID ${postId}, key: ${metaKey}:`, error);
-    // If meta API fails, try updating as ACF field
-    try {
-      console.log(`Attempting to update as ACF field instead for post ID ${postId}, key: ${metaKey}`);
-      return await updateWordPressMetadata(postId, metaKey, metaValue);
-    } catch (acfError) {
-      console.error(`ACF fallback also failed for post ID ${postId}, key: ${metaKey}:`, acfError);
-      throw error;
-    }
+    // Log the error, but the specific error from updateWordPressMetadata will be logged within that function
+    console.error(`Error occurred in updatePostMeta while calling updateWordPressMetadata for post ID ${postId}, key: ${metaKey}:`, error.message);
+    // Re-throw the error to indicate failure
+    throw error; 
   }
 }
 

@@ -479,7 +479,8 @@ async function processJustificationMetadata(postId, postTitle, value, skipMetada
 
     try {
       console.log('[Processor] Storing raw valuer agent data');
-      await updateWordPressMetadata(postId, 'valuer_agent_data', valuerResponse); // Store object
+      // Stringify the raw valuerResponse object before saving
+      await updateWordPressMetadata(postId, 'valuer_agent_data', JSON.stringify(valuerResponse)); 
     } catch (rawDataError) {
       console.error('[Processor] Error storing raw valuer agent data:', rawDataError);
     }
@@ -580,9 +581,10 @@ async function processJustificationMetadata(postId, postTitle, value, skipMetada
           });
           return obj;
       };
-      const sanitizedStats = sanitizeObjectStrings(JSON.parse(JSON.stringify(statsForStorage))); // Deep clone and sanitize
+      const sanitizedStats = sanitizeObjectStrings(JSON.parse(JSON.stringify(statsForStorage)));
 
-      await updateWordPressMetadata(postId, 'statistics', sanitizedStats);
+      // Stringify the sanitized statistics object before saving
+      await updateWordPressMetadata(postId, 'statistics', JSON.stringify(sanitizedStats)); 
       console.log('[Processor] Statistics data stored');
 
       // Trigger HTML generation with the fresh stats
@@ -606,8 +608,9 @@ async function processJustificationMetadata(postId, postTitle, value, skipMetada
   } catch (error) {
     console.error(`[Processor] Critical error during justification process for post ${postId}:`, error);
     try {
-      // Pass error object directly to be stringified by updateWordPressMetadata
-      await updateWordPressMetadata(postId, 'justification_error', { message: error.message, stack: error.stack, timestamp: new Date().toISOString() });
+      // Ensure error object is stringified before saving
+      const errorDataString = JSON.stringify({ message: error.message, stack: error.stack, timestamp: new Date().toISOString() });
+      await updateWordPressMetadata(postId, 'justification_error', errorDataString); 
     } catch (errorStoreError) {
       console.error('[Processor] Error storing justification error:', errorStoreError);
     }
