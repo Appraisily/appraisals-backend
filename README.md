@@ -197,51 +197,71 @@ Deployment typically involves building a Docker container and deploying it to a 
 
 ## API Endpoints
 
-All endpoints expect `Content-Type: application/json` for POST requests.
+The following endpoints are available on the service:
 
-**Report Generation:**
+### Core Appraisal Processing
 
--   `POST /complete-appraisal-report`
-    -   **Body:** `{ "postId": "<ID>" }`
-    -   **Description:** Triggers the full metadata generation process (Vision, OpenAI metadata, Justification, Statistics, Gemini HTML). Checks for `justificationOnly` flag is handled internally but prefer specific routes.
-    -   **Note:** Also handles `justificationOnly: true` by calling `processJustificationMetadata` directly.
+*   `POST /complete-appraisal-report`
+    *   **Body:** `{ "postId": "<ID>", "justificationOnly": <boolean> (optional) }`
+    *   **Description:** Triggers the full metadata generation process (Vision, OpenAI metadata, Justification, Statistics, Gemini HTML) for the specified WordPress post ID. If `justificationOnly` is true, only processes the justification metadata.
 
-**Visualizations:**
+### Visualization Generation
 
--   `POST /generate-visualizations`
-    -   **Body:** `{ "postId": "<ID>" }`
-    -   **Description:** Generates HTML visualizations (`enhanced_analytics_html`, `appraisal_card_html`) using existing statistics data stored in WordPress and the Gemini templating service. Skips if HTML already exists.
--   `POST /regenerate-statistics-and-visualizations`
-    -   **Body:** `{ "postId": "<ID>" }`
-    -   **Description:** Fetches fresh statistics from the Valuer Agent, saves them, and then generates/updates HTML visualizations using the Gemini templating service.
+*   `POST /generate-visualizations`
+    *   **Body:** `{ "postId": "<ID>" }`
+    *   **Description:** Generates HTML visualizations (`enhanced_analytics_html`, `appraisal_card_html`) using *existing* statistics data stored in WordPress and the Gemini templating service. Skips if HTML fields already contain content.
+*   `POST /regenerate-statistics-and-visualizations`
+    *   **Body:** `{ "postId": "<ID>" }`
+    *   **Description:** Fetches *fresh* statistics from the Valuer Agent, saves them to the `statistics` ACF field (as a JSON string), and then generates/updates HTML visualizations (`enhanced_analytics_html`, `appraisal_card_html`) using the Gemini templating service.
 
-**Description:**
+### Content Enhancement
 
--   `POST /enhance-description`
-    -   **Body:** `{ "postId": "<ID>", "updateContent": <boolean> (optional) }`
-    -   **Description:** Uses OpenAI to enhance the description based on the post title and optionally updates the main WordPress post content.
+*   `POST /enhance-description`
+    *   **Body:** `{ "postId": "<ID>", "updateContent": <boolean> (optional) }`
+    *   **Description:** Uses OpenAI to enhance the description based on the post title. Saves result to `enhanced_description` ACF field. If `updateContent` is true, attempts to update the main WordPress post content.
 
-**Utility:**
+### Utility
 
--   `POST /update-wordpress`
-    -   **Body:** `{ "postId": "<ID>", "acfFields": <object> (optional), "insertShortcodes": <boolean> (optional), "appraisalType": <string> (optional) }`
-    -   **Description:** Applies updates to specified ACF fields and optionally ensures standard shortcodes are present in the post content.
+*   `POST /update-wordpress`
+    *   **Body:** `{ "postId": "<ID>", "acfFields": <object> (optional), "insertShortcodes": <boolean> (optional), "appraisalType": <string> (optional) }`
+    *   **Description:** Applies updates to specified ACF fields and optionally ensures standard shortcodes (e.g., `[pdf_download]`, `[AppraisalTemplates]`) are present in the post content.
 
-**PDF Generation:**
+### PDF Generation
 
--   `POST /generate-pdf` (See `./routes/pdf.js`)
--   `POST /api/pdf/generate-pdf-steps` (See `./routes/pdf-steps.js`)
--   `GET /api/pdf/steps` (See `./routes/pdf-steps.js`)
+*   `POST /generate-pdf`
+    *   **Body:** `{ "postId": "<ID>", "session_ID": <string> (optional) }`
+    *   **Description:** Generates a complete PDF report based on a Google Docs template, saves it to Google Drive, and updates the `pdflink` and `doclink` ACF fields in WordPress.
+*   `POST /api/pdf/generate-pdf-steps`
+    *   **Body:** `{ "postId": "<ID>", "session_ID": <string> (optional), "startStep": <string> (optional), "options": <object> (optional) }`
+    *   **Description:** Executes the PDF generation process step-by-step, potentially starting from a specified step. Returns detailed logs.
+*   `GET /api/pdf/steps`
+    *   **Description:** Returns a list of available steps for the step-by-step PDF generation.
 
-**Health Check:**
+### HTML Generation (Standalone)
 
--   `GET /health`
+*   `POST /api/html/generate`
+    *   **Body:** `{ "visualizationType": "<type>", "statistics": <object>, "appraisal": <object> (optional), "options": <object> (optional) }`
+    *   **Description:** Generates HTML for a specified visualization type (`enhanced-analytics` or `appraisal-card`) based on provided data. Does *not* interact with WordPress.
+*   `POST /api/html/process-statistics`
+    *   **Body:** `{ "statistics": <object>, "appraisal": <object> (optional) }`
+    *   **Description:** Takes statistics data and adds generated HTML for visualizations (`enhanced_analytics_html`, `appraisal_card_html`) directly to the returned object. Does *not* interact with WordPress.
 
-**Error Responses:**
+### Debugging & Health
 
--   `400 Bad Request`: Returned for missing/invalid required parameters. Body includes `success: false`, `message`, `usage`, `error_details`.
--   `404 Not Found`: Returned if the specified `postId` cannot be found in WordPress. Body includes `success: false`, `message`, `error_details`.
--   `500 Internal Server Error`: Returned for other server-side errors. Body includes `success: false`, `message`, and `error_details` (only if `NODE_ENV !== 'production'`).
+*   `POST /api/visualizations/debug`
+    *   **Body:** `{ "postId": "<ID>" (optional), "statisticsData": <object|string> (optional), "appraisalData": <object> (optional), "skipSaving": <boolean> (optional) }`
+    *   **Description:** Debug endpoint to generate visualization HTML based on provided data or data fetched from a `postId`, optionally skipping the save-to-WordPress step.
+*   `POST /api/visualizations/fix-statistics`
+    *   **Body:** `{ "postId": "<ID>" (optional), "statisticsData": <string> (optional) }`
+    *   **Description:** Attempts to clean and parse potentially malformed JSON strings from the `statistics` field.
+*   `GET /health`
+    *   **Description:** Standard health check endpoint.
+
+### Error Responses
+
+*   `400 Bad Request`: Returned for missing/invalid required parameters. Body includes `success: false`, `message`, `usage`, `error_details`.
+*   `404 Not Found`: Returned if the specified `postId` cannot be found in WordPress. Body includes `success: false`, `message`, `error_details`.
+*   `500 Internal Server Error`: Returned for other server-side errors. Body includes `success: false`, `message`, and `error_details` (only if `NODE_ENV !== 'production'`).
 
 ## Development
 
