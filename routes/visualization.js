@@ -171,13 +171,35 @@ router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
     try {
         console.log('[Viz Route] Calling valuer-agent for enhanced statistics');
         const valuerAgentUrl = `${config.VALUER_AGENT_API_URL}/api/enhanced-statistics`;
-        const response = await fetch(valuerAgentUrl, { /* ... fetch options ... */ });
-        if (!response.ok) throw new Error(await response.text());
+        // Restore correct fetch options for POST request
+        const response = await fetch(valuerAgentUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            text: postTitle, 
+            value: targetValue,
+            limit: 20, // Example limit
+            minPrice: Math.floor(targetValue * 0.6),
+            maxPrice: Math.ceil(targetValue * 1.6)
+          })
+        });
+        if (!response.ok) {
+           // Try to get more detail from the error response
+           let errorBody = await response.text(); 
+           try { errorBody = JSON.parse(errorBody); } catch(e) { /* Keep as text */ }
+           console.error('[Viz Route] Valuer agent responded with error:', { status: response.status, body: errorBody });
+           // Throw a more specific error including status if possible
+           throw new Error(`Valuer agent error (${response.status}): ${typeof errorBody === 'object' ? errorBody.message || JSON.stringify(errorBody) : errorBody}`);
+        }
         statsResponse = await response.json();
-        if (!statsResponse.success || !statsResponse.statistics) throw new Error('Invalid statistics response');
+        if (!statsResponse.success || !statsResponse.statistics) {
+            console.error('[Viz Route] Invalid success/statistics structure from valuer-agent:', statsResponse);
+            throw new Error('Invalid statistics response structure from valuer agent');
+        }
     } catch (agentError) {
-        console.error('[Viz Route] Error fetching from valuer-agent:', agentError);
-        throw new Error(`Error regenerating statistics from valuer agent: ${agentError.message}`);
+        console.error('[Viz Route] Error calling/processing valuer-agent:', agentError);
+        // Ensure the error message passed up is informative
+        throw new Error(`Error calling valuer agent: ${agentError.message}`);
     }
     
     console.log('[Viz Route] Statistics received, validating and sanitizing...');
