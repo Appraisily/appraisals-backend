@@ -15,7 +15,7 @@ const {
     prepareDataContextForEnhancedAnalytics, 
     prepareDataContextForAppraisalCard 
 } = require('../services/utils/templateContextUtils');
-const githubService = require('../src/services/utils/githubService'); // Import the GitHub service
+const { createGithubIssue } = require('../src/services/utils/githubService'); // Use destructuring import
 
 // Refactored /generate-visualizations route
 router.post('/generate-visualizations', async (req, res) => {
@@ -131,7 +131,7 @@ router.post('/generate-visualizations', async (req, res) => {
   } catch (error) {
     // Consistent error handling
     console.error(`[Viz Route] /generate-visualizations error for post ${postId}: ${error.message}`);
-    githubService.createGithubIssue(error, req);
+    createGithubIssue(error, req); // Use destructured function directly
     const statusCode = error.message?.includes('Post not found') ? 404 : 500;
     const userMessage = statusCode === 404 ? 'Post not found' : 'Error generating visualizations.';
     res.status(statusCode).json({ 
@@ -282,7 +282,7 @@ router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
   } catch (error) {
      // Consistent error handling (as added previously)
     console.error(`[Viz Route] /regenerate error for post ${postId}: ${error.message}`);
-    githubService.createGithubIssue(error, req);
+    createGithubIssue(error, req); // Use destructured function directly
     const statusCode = error.message?.includes('Post not found') ? 404 : 500;
     const userMessage = statusCode === 404 ? 'Post not found' : 'Error regenerating statistics/visualizations';
     res.status(statusCode).json({

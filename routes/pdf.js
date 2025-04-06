@@ -16,7 +16,7 @@ const {
   exportToPDF,
   uploadPDFToDrive
 } = require('../services/pdf');
-const githubService = require('../src/services/utils/githubService');
+const { createGithubIssue } = require('../src/services/utils/githubService');
 
 router.post('/generate-pdf', async (req, res) => {
   const { postId, session_ID } = req.body;
@@ -166,7 +166,7 @@ router.post('/generate-pdf', async (req, res) => {
 
   } catch (error) {
     console.error('Error generating PDF:', error);
-    githubService.createGithubIssue(error, req);
+    createGithubIssue(error, req);
     
     // Try to record the error in WordPress
     try {
