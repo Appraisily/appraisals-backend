@@ -216,7 +216,7 @@ router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
     } catch(e) { console.warn("Could not load metadataProcessor for validation."); }
     
     const validatedStats = validateStatisticsData(statsResponse.statistics);
-    const sanitizedStats = jsonCleaner.cleanObject(validatedStats); // Use cleaner utility
+    const sanitizedStats = validatedStats; // Use the validated stats directly
 
     // Step 3: Prepare Data Contexts using imported functions
     console.log('[Viz Route] Preparing data contexts for templates');
