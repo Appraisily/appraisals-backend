@@ -3,6 +3,7 @@ const cors = require('cors');
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const config = require('./config');
 const { initializeGoogleApis } = require('./services/pdf');
+const { createGithubIssue } = require('./services/utils/githubService');
 
 const app = express();
 
@@ -117,11 +118,21 @@ async function startServer() {
     app.use('/api/visualizations', debugVisualizationsRouter);
 
     // Error handling middleware (must be after routers)
-    app.use((err, req, res, next) => {
+    app.use(async (err, req, res, next) => {
       console.error('Unhandled error:', err);
-      res.status(500).json({
+
+      if (err) {
+        try {
+          await createGithubIssue(err, req);
+        } catch (githubError) {
+          console.error("Failed to create GitHub issue during error handling:", githubError);
+        }
+      }
+
+      const statusCode = err.status || 500;
+      res.status(statusCode).json({
         success: false,
-        message: 'Internal server error',
+        message: err.message || 'Internal server error',
         error: process.env.NODE_ENV === 'production' ? undefined : err.message
       });
     });
