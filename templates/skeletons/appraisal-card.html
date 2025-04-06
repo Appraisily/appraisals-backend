@@ -32,8 +32,8 @@
     border-radius: var(--radius);
     box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
     overflow: hidden; /* Ensure children respect border radius */
-    max-width: 700px; /* Adjust max-width as needed */
-    margin: 1rem auto; /* Center card */
+    width: 100%; /* Ensure it takes full width of its container */
+    margin-bottom: 1.5rem; /* Add some bottom margin */
     font-family: var(--font-sans);
 }
 
@@ -166,9 +166,14 @@
     object-fit: cover;
 }
 .appraisal-card .artwork-info .artwork-title {
-    font-size: 1.25rem;
+    font-size: 1.15rem; /* Reduced size */
     font-weight: 600;
     margin: 0 0 0.25rem 0;
+    /* Added for truncation */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: block; /* Ensure it behaves like a block for overflow */
 }
 .appraisal-card .artwork-info .artwork-creator {
     font-size: 0.9rem;
@@ -331,7 +336,7 @@
 }
 
 .appraisal-card .tabs-content {
-    padding: 1.5rem;
+    padding: 1.75rem 1.5rem; /* Slightly increased padding */
 }
 .appraisal-card .tab-panel {
     display: none; /* Hidden by default */
@@ -345,7 +350,9 @@
 .appraisal-card .tab-panel .tab-title {
     font-size: 1.1rem;
     font-weight: 600;
-    margin: 0 0 1rem 0;
+    margin: 0 0 1.25rem 0; /* Increased bottom margin */
+    padding-bottom: 0.75rem; /* Add padding below text */
+    border-bottom: 1px solid var(--border); /* Add subtle border */
 }
 
 /* Summary Tab */
@@ -354,20 +361,42 @@
     border-collapse: collapse;
     font-size: 0.85rem;
 }
-.appraisal-card .artwork-details-table td {
-    padding: 0.5rem 0;
+.appraisal-card .artwork-details-table tr {
+    /* Use flex for layout */
+    display: flex;
+    justify-content: space-between;
+    padding: 0.6rem 0; /* Adjusted vertical padding slightly */
     border-bottom: 1px dashed var(--border);
 }
-.appraisal-card .artwork-details-table tr:last-child td {
+.appraisal-card .artwork-details-table tr:last-child {
     border-bottom: none;
 }
-.appraisal-card .artwork-details-table td:first-child {
+
+.appraisal-card .artwork-details-table td {
+    padding: 0; /* Remove default padding */
+    border-bottom: none; /* Remove default border */
+    vertical-align: top; /* Align text to top */
+}
+
+.appraisal-card .artwork-details-table td:first-child { /* Label */
     color: var(--muted-foreground);
     padding-right: 1rem;
+    white-space: nowrap; /* Keep label on one line */
+    flex-shrink: 0; /* Prevent label shrinking */
+    font-weight: 500; /* Make label slightly bolder */
 }
-.appraisal-card .artwork-details-table td:last-child {
+.appraisal-card .artwork-details-table td:last-child { /* Value */
     font-weight: 500;
     text-align: right;
+    flex-grow: 1; /* Allow value to take remaining space */
+    /* Allow value text to wrap */
+    white-space: normal;
+}
+
+/* Specifically handle the Title row if needed */
+.appraisal-card .artwork-details-table tr.title-row td:last-child {
+    /* Override truncation if needed for this view, or apply different style */
+    /* white-space: normal; */ 
 }
 
 /* Details Tab */
@@ -379,39 +408,44 @@
 }
 .appraisal-card .metrics-details {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-    gap: 1rem;
+    /* Adjust columns for potentially 6 items */
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); 
+    gap: 1.5rem; /* Consistent gap */
+}
+.appraisal-card .metric-detail-item {
+    /* Add some structure */
+    display: flex;
+    flex-direction: column;
 }
 .appraisal-card .metric-detail-item h4 {
     font-size: 0.85rem;
     font-weight: 600;
     margin: 0 0 0.5rem 0;
+    color: var(--card-foreground); /* Ensure readable color */
 }
 .appraisal-card .metric-bar-container {
     background-color: var(--muted);
     border-radius: var(--radius);
-    height: 18px; /* Bar height */
+    height: 8px; /* Slimmer bars */
     overflow: hidden;
     position: relative;
+    margin-bottom: 0.5rem; /* Space between bar and text */
 }
 .appraisal-card .metric-bar {
     background-color: var(--primary);
     height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: flex-end; /* Position value inside */
-    padding-right: 5px;
+    /* Removed inner text span display logic */
     transition: width 0.5s ease-in-out;
 }
 .appraisal-card .metric-value {
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--primary-foreground); /* Text on bar */
+   display: none; /* Hide the text value inside the bar */
 }
 .appraisal-card .metric-detail-item p {
     font-size: 0.75rem;
     color: var(--muted-foreground);
-    margin: 0.5rem 0 0 0;
+    margin: 0; /* Remove extra margin */
+    line-height: 1.4; /* Adjust line height */
+    flex-grow: 1; /* Allow text to take space if needed */
 }
 
 /* Similar Tab */
@@ -617,10 +651,22 @@
               <div class="metric-bar-container"><div class="metric-bar" style="width: {{CONDITION_SCORE}}%;"><span class="metric-value">{{CONDITION_SCORE}}%</span></div></div>
               <p>Physical state assessment</p>
             </div>
-             <!-- Add other scores if available -->
-             <div class="metric-detail-item"><h4>Historical Significance</h4><div class="metric-bar-container"><div class="metric-bar" style="width: {{HISTORICAL_SIGNIFICANCE}}%;"><span class="metric-value">{{HISTORICAL_SIGNIFICANCE}}%</span></div></div><p>Cultural/historical relevance</p></div>
-             <div class="metric-detail-item"><h4>Provenance</h4><div class="metric-bar-container"><div class="metric-bar" style="width: {{PROVENANCE_STRENGTH}}%;"><span class="metric-value">{{PROVENANCE_STRENGTH}}%</span></div></div><p>Ownership history quality</p></div>
-             <div class="metric-detail-item"><h4>Investment Potential</h4><div class="metric-bar-container"><div class="metric-bar" style="width: {{INVESTMENT_POTENTIAL}}%;"><span class="metric-value">{{INVESTMENT_POTENTIAL}}%</span></div></div><p>Future value growth outlook</p></div>
+             <!-- Fixed structure for other scores -->
+             <div class="metric-detail-item">
+                 <h4>Historical Significance</h4>
+                 <div class="metric-bar-container"><div class="metric-bar" style="width: {{HISTORICAL_SIGNIFICANCE}}%;"><span class="metric-value">{{HISTORICAL_SIGNIFICANCE}}%</span></div></div>
+                 <p>Cultural/historical relevance</p>
+             </div>
+             <div class="metric-detail-item">
+                 <h4>Provenance</h4>
+                 <div class="metric-bar-container"><div class="metric-bar" style="width: {{PROVENANCE_STRENGTH}}%;"><span class="metric-value">{{PROVENANCE_STRENGTH}}%</span></div></div>
+                 <p>Ownership history quality</p>
+             </div>
+             <div class="metric-detail-item">
+                 <h4>Investment Potential</h4>
+                 <div class="metric-bar-container"><div class="metric-bar" style="width: {{INVESTMENT_POTENTIAL}}%;"><span class="metric-value">{{INVESTMENT_POTENTIAL}}%</span></div></div>
+                 <p>Future value growth outlook</p>
+             </div>
           </div>
         </div>
       </div>
