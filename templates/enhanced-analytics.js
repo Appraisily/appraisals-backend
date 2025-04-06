@@ -120,7 +120,7 @@ exports.generateEnhancedAnalytics = function(stats, options = {}) {
   let sales_html = '';
   
   // If no sales data, create example data
-  const comparable_sales = stats.comparable_sales || [
+  let comparable_sales = stats.comparable_sales || [
     {title: 'Similar Item #1', house: 'Christie\'s', date: 'May 12, 2024', price: 4800, diff: '+6.7%'},
     {title: 'Your Item', house: '-', date: 'Current', price: raw_value, diff: '-', is_current: true},
     {title: 'Similar Item #2', house: 'Sotheby\'s', date: 'Apr 3, 2024', price: 4200, diff: '-6.7%'},

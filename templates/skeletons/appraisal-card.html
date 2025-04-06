@@ -4,7 +4,513 @@
 <!-- JS for charts/tabs MUST be handled separately in WordPress via wp_enqueue_script. -->
 <!-- Placeholders {{VARIABLE_NAME}} will be replaced by Gemini. -->
 
-<div class="modern-appraisal-card" data-post-id="{{POST_ID}}">
+<style>
+/* --- Shadcn/UI Inspired Styles for Appraisal Card --- */
+.appraisal-card {
+	--background: #ffffff; /* White background */
+	--foreground: #09090b; /* Dark text */
+	--card: #ffffff; /* Card background */
+	--card-foreground: #09090b; /* Card text */
+	--primary: #1a1a1a; /* Primary accent (dark gray) */
+	--primary-foreground: #fafafa; /* Text on primary */
+	--secondary: #f4f4f5; /* Light gray background */
+	--secondary-foreground: #1a1a1a;
+	--muted: #f4f4f5;
+	--muted-foreground: #71717a; /* Muted text (gray) */
+	--accent: #f4f4f5;
+	--accent-foreground: #1a1a1a;
+	--destructive: #ef4444; /* Red for negative/alerts */
+	--destructive-foreground: #fafafa;
+	--border: #e4e4e7; /* Light border */
+	--ring: #a1a1aa; /* Focus ring */
+	--radius: 0.5rem; /* Default border radius */
+    --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+
+    background-color: var(--card);
+    color: var(--card-foreground);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+    overflow: hidden; /* Ensure children respect border radius */
+    max-width: 700px; /* Adjust max-width as needed */
+    margin: 1rem auto; /* Center card */
+    font-family: var(--font-sans);
+}
+
+/* --- General Helper Classes (Scoped) --- */
+.appraisal-card .text-muted-foreground { color: var(--muted-foreground); }
+.appraisal-card .text-primary { color: var(--primary); }
+.appraisal-card .text-destructive { color: var(--destructive); }
+.appraisal-card .font-semibold { font-weight: 600; }
+.appraisal-card .font-bold { font-weight: 700; }
+.appraisal-card .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+.appraisal-card .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+.appraisal-card .text-xs { font-size: 0.75rem; line-height: 1rem; }
+.appraisal-card .p-4 { padding: 1rem; }
+.appraisal-card .p-6 { padding: 1.5rem; }
+.appraisal-card .pt-2 { padding-top: 0.5rem; }
+.appraisal-card .pb-2 { padding-bottom: 0.5rem; }
+.appraisal-card .mb-4 { margin-bottom: 1rem; }
+.appraisal-card .mb-6 { margin-bottom: 1.5rem; }
+.appraisal-card .mt-4 { margin-top: 1rem; }
+.appraisal-card .mt-2 { margin-top: 0.5rem; }
+
+/* --- Card Sections --- */
+.appraisal-card .card-header {
+    background-color: var(--secondary); /* Light gray header */
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid var(--border);
+    /* Specific styles from original template */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Retaining original header structure styling */
+.appraisal-card .header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+}
+.appraisal-card .report-info {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+.appraisal-card .report-badge {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.appraisal-card .report-badge svg {
+    width: 20px;
+    height: 20px;
+}
+.appraisal-card .report-info h1 {
+    margin: 0;
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--card-foreground);
+}
+.appraisal-card .report-date {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--muted-foreground);
+}
+.appraisal-card .value-display {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius);
+    text-align: right;
+}
+.appraisal-card .value-content .value-label {
+    display: block;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    opacity: 0.8;
+}
+.appraisal-card .value-content .value-amount {
+    display: block;
+    font-size: 1.3rem;
+    font-weight: 700;
+}
+
+
+.appraisal-card .card-body {
+    padding: 1.5rem;
+    /* Using flex for layout from original */
+    display: flex; /* Changed from grid */
+    flex-direction: column; /* Default stack */
+    gap: 2rem;
+}
+
+/* Apply original dual layout */
+.appraisal-card .dual-layout {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap; /* Allow wrapping */
+}
+.appraisal-card .artwork-showcase {
+    flex: 1 1 300px; /* Grow, shrink, base width */
+    /* Styling from original */
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+.appraisal-card .market-position-container {
+    flex: 1 1 250px; /* Grow, shrink, base width */
+    background-color: var(--secondary);
+    padding: 1rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
+
+.appraisal-card .artwork-image {
+    text-align: center;
+}
+.appraisal-card .artwork-image img {
+    display: inline-block; /* Center if needed */
+    max-width: 100%;
+    max-height: 300px; /* Limit image height */
+    height: auto;
+    border-radius: calc(var(--radius) - 2px); /* Slightly smaller radius */
+    border: 1px solid var(--border);
+    object-fit: cover;
+}
+.appraisal-card .artwork-info .artwork-title {
+    font-size: 1.25rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+}
+.appraisal-card .artwork-info .artwork-creator {
+    font-size: 0.9rem;
+    color: var(--muted-foreground);
+    margin: 0 0 1rem 0;
+}
+.appraisal-card .artwork-details {
+    font-size: 0.85rem;
+}
+.appraisal-card .artwork-details .detail-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.3rem 0;
+    border-bottom: 1px dashed var(--border);
+}
+.appraisal-card .artwork-details .detail-item:last-child {
+    border-bottom: none;
+}
+.appraisal-card .artwork-details .detail-label {
+    color: var(--muted-foreground);
+}
+.appraisal-card .artwork-details .detail-value {
+    font-weight: 500;
+    text-align: right;
+}
+
+/* Market Position (Gauge) */
+.appraisal-card .market-position-container h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+    text-align: center;
+}
+.appraisal-card .gauge-container {
+    position: relative;
+    text-align: center;
+    margin-bottom: 1rem;
+}
+.appraisal-card .gauge-container canvas { /* Target canvas directly */
+    max-width: 100%;
+    height: auto !important; /* Override inline style if needed */
+    max-height: 170px;
+}
+.appraisal-card .gauge-indicator {
+    position: absolute;
+    top: 65%; /* Adjust vertical position */
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+.appraisal-card .percentile-value {
+    display: block;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+.appraisal-card .percentile-label {
+    display: block;
+    font-size: 0.7rem;
+    color: var(--muted-foreground);
+    text-transform: uppercase;
+}
+.appraisal-card .position-trend {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.85rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+}
+.appraisal-card .trend-label {
+    color: var(--muted-foreground);
+}
+.appraisal-card .trend-value {
+    font-weight: 600;
+}
+.appraisal-card .trend-value.positive { color: #16a34a; } /* Green */
+.appraisal-card .trend-value.negative { color: var(--destructive); } /* Red */
+.appraisal-card .trend-value.neutral { color: var(--muted-foreground); } /* Gray */
+
+/* Metrics Grid (Bar/Radar Charts) */
+.appraisal-card .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1rem; /* Add spacing */
+}
+.appraisal-card .metrics-chart-container,
+.appraisal-card .price-distribution-container {
+    background-color: var(--secondary);
+    padding: 1rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+}
+.appraisal-card .metrics-chart-container h3,
+.appraisal-card .price-distribution-container h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+}
+.appraisal-card .chart-container {
+    position: relative;
+    height: 240px;
+    max-height: 240px;
+}
+.appraisal-card .chart-container canvas {
+     max-width: 100%;
+     height: auto !important;
+}
+
+.appraisal-card .distribution-legend {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    font-size: 0.8rem;
+    margin-top: 1rem;
+    color: var(--muted-foreground);
+}
+.appraisal-card .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+.appraisal-card .legend-marker {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+}
+.appraisal-card .market-marker { background-color: #3b82f6; } /* Blue */
+.appraisal-card .your-marker { background-color: #ef4444; } /* Red */
+
+/* Card Tabs */
+.appraisal-card .card-tabs {
+    margin-top: 1.5rem;
+    border-top: 1px solid var(--border);
+}
+.appraisal-card .tabs-navigation {
+    display: flex;
+    border-bottom: 1px solid var(--border);
+    background-color: var(--secondary);
+}
+.appraisal-card .tab-button {
+    padding: 0.75rem 1.25rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border: none;
+    background-color: transparent;
+    color: var(--muted-foreground);
+    cursor: pointer;
+    position: relative;
+    transition: color 0.2s ease;
+    border-bottom: 2px solid transparent; /* For active state */
+}
+.appraisal-card .tab-button:hover {
+    color: var(--primary);
+}
+.appraisal-card .tab-button.active {
+    color: var(--primary);
+    border-bottom-color: var(--primary);
+}
+
+.appraisal-card .tabs-content {
+    padding: 1.5rem;
+}
+.appraisal-card .tab-panel {
+    display: none; /* Hidden by default */
+}
+.appraisal-card .tab-panel.active {
+    display: block; /* Show active panel */
+    animation: fadeIn 0.3s ease;
+}
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+.appraisal-card .tab-panel .tab-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin: 0 0 1rem 0;
+}
+
+/* Summary Tab */
+.appraisal-card .artwork-details-table table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.85rem;
+}
+.appraisal-card .artwork-details-table td {
+    padding: 0.5rem 0;
+    border-bottom: 1px dashed var(--border);
+}
+.appraisal-card .artwork-details-table tr:last-child td {
+    border-bottom: none;
+}
+.appraisal-card .artwork-details-table td:first-child {
+    color: var(--muted-foreground);
+    padding-right: 1rem;
+}
+.appraisal-card .artwork-details-table td:last-child {
+    font-weight: 500;
+    text-align: right;
+}
+
+/* Details Tab */
+.appraisal-card .market-analysis .analysis-text {
+    font-size: 0.9rem;
+    color: var(--card-foreground);
+    margin-bottom: 1.5rem;
+    line-height: 1.6;
+}
+.appraisal-card .metrics-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+}
+.appraisal-card .metric-detail-item h4 {
+    font-size: 0.85rem;
+    font-weight: 600;
+    margin: 0 0 0.5rem 0;
+}
+.appraisal-card .metric-bar-container {
+    background-color: var(--muted);
+    border-radius: var(--radius);
+    height: 18px; /* Bar height */
+    overflow: hidden;
+    position: relative;
+}
+.appraisal-card .metric-bar {
+    background-color: var(--primary);
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end; /* Position value inside */
+    padding-right: 5px;
+    transition: width 0.5s ease-in-out;
+}
+.appraisal-card .metric-value {
+    font-size: 0.7rem;
+    font-weight: 600;
+    color: var(--primary-foreground); /* Text on bar */
+}
+.appraisal-card .metric-detail-item p {
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+    margin: 0.5rem 0 0 0;
+}
+
+/* Similar Tab */
+.appraisal-card .similar-items .no-similar-items {
+    font-size: 0.9rem;
+    color: var(--muted-foreground);
+    text-align: center;
+    padding: 2rem 0;
+}
+
+/* Card Footer */
+.appraisal-card .card-footer {
+    background-color: var(--secondary);
+    padding: 1rem 1.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.8rem;
+    color: var(--muted-foreground);
+}
+.appraisal-card .footer-info p {
+    margin: 0;
+}
+.appraisal-card .footer-info strong {
+    color: var(--card-foreground);
+    font-weight: 600;
+}
+.appraisal-card .detail-report-button {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    padding: 0.5rem 1rem;
+    border-radius: calc(var(--radius) / 2);
+    text-decoration: none;
+    font-size: 0.8rem;
+    font-weight: 500;
+    transition: background-color 0.2s ease;
+}
+.appraisal-card .detail-report-button:hover {
+    background-color: #333; /* Darken primary */
+}
+.appraisal-card .detail-report-button svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 640px) {
+    .appraisal-card .card-header {
+        padding: 0.75rem 1rem;
+    }
+    .appraisal-card .header-content {
+       flex-direction: column;
+       align-items: flex-start;
+       gap: 0.75rem;
+    }
+    .appraisal-card .value-display {
+        align-self: flex-end; /* Move value to the right */
+    }
+    .appraisal-card .card-body {
+        padding: 1rem;
+    }
+    .appraisal-card .dual-layout {
+       flex-direction: column;
+    }
+     .appraisal-card .metrics-grid {
+        grid-template-columns: 1fr; /* Stack charts */
+    }
+    .appraisal-card .tab-button {
+        padding: 0.6rem 1rem;
+        font-size: 0.85rem;
+    }
+    .appraisal-card .tabs-content {
+        padding: 1rem;
+    }
+    .appraisal-card .card-footer {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+        padding: 0.75rem 1rem;
+    }
+     .appraisal-card .detail-report-button {
+        align-self: flex-end;
+     }
+}
+
+</style>
+
+<!-- templates/skeletons/appraisal-card.html -->
+<!-- Based on display_appraisal_card_template.php -->
+<!-- CSS classes and structure match the PHP template. -->
+<!-- JS for charts/tabs MUST be handled separately in WordPress via wp_enqueue_script. -->
+<!-- Placeholders {{VARIABLE_NAME}} will be replaced by Gemini. -->
+<!-- Styles are embedded above -->
+
+<div class="modern-appraisal-card appraisal-card" data-post-id="{{POST_ID}}"> <!-- Added appraisal-card class for styles -->
   <header class="card-header">
     <div class="header-content">
       <div class="report-info">
@@ -111,6 +617,10 @@
               <div class="metric-bar-container"><div class="metric-bar" style="width: {{CONDITION_SCORE}}%;"><span class="metric-value">{{CONDITION_SCORE}}%</span></div></div>
               <p>Physical state assessment</p>
             </div>
+             <!-- Add other scores if available -->
+             <div class="metric-detail-item"><h4>Historical Significance</h4><div class="metric-bar-container"><div class="metric-bar" style="width: {{HISTORICAL_SIGNIFICANCE}}%;"><span class="metric-value">{{HISTORICAL_SIGNIFICANCE}}%</span></div></div><p>Cultural/historical relevance</p></div>
+             <div class="metric-detail-item"><h4>Provenance</h4><div class="metric-bar-container"><div class="metric-bar" style="width: {{PROVENANCE_STRENGTH}}%;"><span class="metric-value">{{PROVENANCE_STRENGTH}}%</span></div></div><p>Ownership history quality</p></div>
+             <div class="metric-detail-item"><h4>Investment Potential</h4><div class="metric-bar-container"><div class="metric-bar" style="width: {{INVESTMENT_POTENTIAL}}%;"><span class="metric-value">{{INVESTMENT_POTENTIAL}}%</span></div></div><p>Future value growth outlook</p></div>
           </div>
         </div>
       </div>
@@ -127,9 +637,39 @@
     <div class="footer-info">
       <p>Appraised by: <strong>{{APPRAISER_NAME}}</strong>, Accredited Art Appraiser</p>
     </div>
-    <a href="#" class="detail-report-button">
+    <a href="{{FULL_REPORT_URL | default: '#'}}" class="detail-report-button">
       <span>View Detailed Report</span>
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><path d="M5 12H19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M12 5L19 12L12 19" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </a>
   </footer>
 </div> 
+
+<script>
+// Basic Tab switching logic (can be moved to a separate JS file later)
+document.addEventListener('DOMContentLoaded', function() {
+    const card = document.querySelector('.appraisal-card[data-post-id="{{POST_ID}}"]'); // Scope to this specific card
+    if (!card) return;
+
+    const tabButtons = card.querySelectorAll('.tabs-navigation .tab-button');
+    const tabPanels = card.querySelectorAll('.tabs-content .tab-panel');
+
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const tabId = this.getAttribute('data-tab');
+
+            // Update button active state
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+
+            // Update panel active state
+            tabPanels.forEach(panel => {
+                if (panel.getAttribute('id') === tabId) {
+                    panel.classList.add('active');
+                } else {
+                    panel.classList.remove('active');
+                }
+            });
+        });
+    });
+});
+</script> 

@@ -4,28 +4,857 @@
 <!-- JS for charts MUST be handled separately in WordPress via wp_enqueue_script. -->
 <!-- Placeholders {{VARIABLE_NAME}} will be replaced by Gemini. -->
 
+<style>
+/* --- Shadcn/UI Inspired Styles for Enhanced Analytics --- */
+.enhanced-analytics-container {
+	--background: #ffffff; /* White background */
+	--foreground: #09090b; /* Dark text */
+	--card: #ffffff; /* Card background */
+	--card-foreground: #09090b; /* Card text */
+	--primary: #1a1a1a; /* Primary accent (dark gray) */
+	--primary-foreground: #fafafa; /* Text on primary */
+	--secondary: #f4f4f5; /* Light gray background */
+	--secondary-foreground: #1a1a1a;
+	--muted: #f4f4f5;
+	--muted-foreground: #71717a; /* Muted text (gray) */
+	--accent: #f4f4f5;
+	--accent-foreground: #1a1a1a;
+	--destructive: #ef4444; /* Red for negative/alerts */
+	--destructive-foreground: #fafafa;
+	--border: #e4e4e7; /* Light border */
+	--ring: #a1a1aa; /* Focus ring */
+	--radius: 0.5rem; /* Default border radius */
+    --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    --chart-primary: #3b82f6; /* Blue for charts */
+    --chart-secondary: #a855f7; /* Purple for charts */
+    --chart-tertiary: #22c55e; /* Green for charts */
+    --chart-muted: #d1d5db; /* Gray for charts */
+
+    background-color: var(--background);
+    color: var(--foreground);
+    padding: 1.5rem;
+    max-width: 1200px; /* Adjust max-width */
+    margin: 1rem auto; /* Center */
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: var(--font-sans);
+}
+
+/* --- General Helper Classes (Scoped) --- */
+.enhanced-analytics-container .text-muted-foreground { color: var(--muted-foreground); }
+.enhanced-analytics-container .text-primary { color: var(--primary); }
+.enhanced-analytics-container .text-destructive { color: var(--destructive); }
+.enhanced-analytics-container .font-semibold { font-weight: 600; }
+.enhanced-analytics-container .font-bold { font-weight: 700; }
+.enhanced-analytics-container .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+.enhanced-analytics-container .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+.enhanced-analytics-container .text-xs { font-size: 0.75rem; line-height: 1rem; }
+.enhanced-analytics-container .mb-4 { margin-bottom: 1rem; }
+.enhanced-analytics-container .mb-6 { margin-bottom: 1.5rem; }
+.enhanced-analytics-container .mt-4 { margin-top: 1rem; }
+.enhanced-analytics-container .mt-2 { margin-top: 0.5rem; }
+
+/* --- Section Styles --- */
+.enhanced-analytics-container .analytics-section {
+    margin-bottom: 2.5rem;
+}
+.enhanced-analytics-container .analytics-section:last-child {
+    margin-bottom: 0;
+}
+
+.enhanced-analytics-container .section-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.enhanced-analytics-container .section-header h2,
+.enhanced-analytics-container .section-header h3 {
+    font-size: 1.5rem; /* 24px */
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+    color: var(--foreground);
+}
+.enhanced-analytics-container .section-header p.section-description {
+    color: var(--muted-foreground);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+/* --- Card Styles --- */
+.enhanced-analytics-container .chart-card,
+.enhanced-analytics-container .metric-card,
+.enhanced-analytics-container .data-table-card,
+.enhanced-analytics-container .highlight-card,
+.enhanced-analytics-container .position-highlight-card {
+    background-color: var(--card);
+    color: var(--card-foreground);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+    padding: 1.5rem;
+}
+
+.enhanced-analytics-container .chart-card-header,
+.enhanced-analytics-container .metric-header,
+.enhanced-analytics-container .highlight-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.enhanced-analytics-container .chart-card-header h4,
+.enhanced-analytics-container .metric-header h4,
+.enhanced-analytics-container .highlight-header {
+    font-size: 1.1rem; /* 18px */
+    font-weight: 600;
+    margin: 0;
+    color: var(--card-foreground);
+}
+
+/* Remove bottom border/padding for headers inside metric cards */
+.enhanced-analytics-container .metric-card .metric-header {
+    padding-bottom: 0;
+    border-bottom: none;
+    margin-bottom: 0.75rem; /* Adjust spacing */
+}
+
+
+.enhanced-analytics-container .chart-content {
+    /* Container for chart canvas or other content */
+}
+
+/* --- Radar Chart Section --- */
+.enhanced-analytics-container .radar-chart-section .chart-card {
+    padding: 0; /* Remove padding if wrapper handles it */
+    overflow: hidden; /* Ensure canvas fits */
+}
+.enhanced-analytics-container .radar-wrapper {
+    position: relative;
+    padding: 1.5rem;
+    display: flex; /* Use flex to center? */
+    justify-content: center;
+    align-items: center;
+}
+.enhanced-analytics-container .radar-wrapper canvas {
+    max-width: 100%;
+    max-height: 400px; /* Limit height */
+    height: auto !important;
+}
+.enhanced-analytics-container .radar-metrics-legend {
+    background-color: var(--secondary);
+    padding: 0.75rem 1.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    font-size: 0.8rem;
+}
+.enhanced-analytics-container .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.enhanced-analytics-container .legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    display: inline-block;
+}
+
+/* --- Metrics Grid (used for radar scores) --- */
+.enhanced-analytics-container .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); /* Responsive columns */
+    gap: 1rem;
+    margin-top: 1.5rem; /* Spacing after radar chart */
+}
+
+.enhanced-analytics-container .metric-card {
+    padding: 1rem; /* Smaller padding for individual metrics */
+    text-align: center;
+}
+
+.enhanced-analytics-container .metric-card .metric-value {
+    font-size: 1.75rem; /* 28px */
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 0.25rem;
+    line-height: 1.2;
+}
+
+.enhanced-analytics-container .metric-card .metric-footer {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+}
+
+.enhanced-analytics-container .metric-card .metric-description {
+    font-size: 0.75rem; /* 12px */
+    color: var(--muted-foreground);
+    line-height: 1.3;
+}
+
+
+/* --- Price History Section --- */
+.enhanced-analytics-container .price-history-section .chart-card-header {
+    position: relative; /* For badge positioning */
+}
+
+.enhanced-analytics-container .price-trend-badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--radius);
+    position: absolute; /* Use absolute if needed */
+    top: 1rem;
+    right: 1rem;
+    /* Or keep inline: */
+    /* margin-left: auto; */ 
+}
+.enhanced-analytics-container .price-trend-badge.positive {
+    background-color: #dcfce7; /* Light green */
+    color: #15803d; /* Dark green */
+}
+.enhanced-analytics-container .price-trend-badge.negative {
+    background-color: #fee2e2; /* Light red */
+    color: #b91c1c; /* Dark red */
+}
+.enhanced-analytics-container .price-trend-badge.neutral {
+    background-color: var(--secondary);
+    color: var(--muted-foreground);
+}
+
+.enhanced-analytics-container .price-chart-wrapper canvas {
+    max-width: 100%;
+    height: auto !important;
+    max-height: 300px;
+}
+
+.enhanced-analytics-container .price-chart-legend {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    font-size: 0.8rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.enhanced-analytics-container .price-highlights {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.enhanced-analytics-container .highlight-card {
+    padding: 1rem;
+    text-align: center;
+}
+
+.enhanced-analytics-container .highlight-card .highlight-header {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--muted-foreground);
+    margin-bottom: 0.5rem;
+    padding-bottom: 0;
+    border-bottom: none;
+    justify-content: center;
+}
+
+.enhanced-analytics-container .highlight-card .highlight-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--foreground);
+}
+.enhanced-analytics-container .highlight-card .highlight-value.positive { color: #16a34a; }
+.enhanced-analytics-container .highlight-card .highlight-value.negative { color: var(--destructive); }
+.enhanced-analytics-container .highlight-card .highlight-value.neutral { color: var(--muted-foreground); }
+
+.enhanced-analytics-container .highlight-card .prediction-year {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--muted-foreground);
+    margin-left: 0.25rem;
+}
+
+
+/* --- Market Statistics Section --- */
+.enhanced-analytics-container .statistics-summary {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--foreground);
+}
+.enhanced-analytics-container .statistics-summary p {
+    margin: 0 0 0.75rem 0;
+}
+.enhanced-analytics-container .statistics-summary strong {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+/* Market Position Gauge - Adapting from original if needed */
+.enhanced-analytics-container .market-position-container {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.enhanced-analytics-container .market-gauge-wrapper {
+    flex: 1 1 300px; /* Allow gauge to take space */
+    display: flex; /* Center content */
+    justify-content: center;
+    padding: 1rem 0; /* Add some padding */
+}
+
+.enhanced-analytics-container .gauge-container { /* Container within wrapper */
+    position: relative;
+    width: 220px; /* Fixed width for gauge */
+    text-align: center;
+}
+
+/* Basic Gauge CSS - Replace with JS lib drawing if possible */
+.enhanced-analytics-container .gauge {
+    width: 100%;
+    padding-top: 50%; /* Creates 2:1 aspect ratio for semi-circle */
+    background-color: var(--muted);
+    border-radius: 110px 110px 0 0;
+    position: relative;
+    overflow: hidden;
+}
+.enhanced-analytics-container .gauge-fill {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--chart-primary); /* Gauge color */
+    transform-origin: center top;
+    transform: rotate(calc(1.8deg * var(--percentage, 0))); /* 180deg / 100% */
+    transition: transform 0.6s ease-out;
+}
+.enhanced-analytics-container .gauge-center {
+    position: absolute;
+    top: calc(100% - 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 10px;
+    background-color: var(--card);
+    border-radius: 10px 10px 0 0;
+    z-index: 1;
+}
+.enhanced-analytics-container .gauge-needle {
+    position: absolute;
+    top: 10%;
+    left: calc(50% - 1px);
+    width: 2px;
+    height: 90%;
+    background-color: var(--foreground);
+    transform-origin: bottom center;
+    transform: rotate(calc(-90deg + var(--rotation, 0))); /* Center at 0% */
+    transition: transform 0.6s ease-out;
+    z-index: 2;
+}
+
+.enhanced-analytics-container .gauge-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--muted-foreground);
+    padding: 0 5px; /* Slight inset */
+    margin-top: 0.5rem;
+}
+
+.enhanced-analytics-container .gauge-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-top: 0.75rem;
+}
+.enhanced-analytics-container .gauge-description {
+    font-size: 0.8rem;
+    color: var(--muted-foreground);
+    margin-top: 0.25rem;
+}
+
+/* Position Highlights */
+.enhanced-analytics-container .market-position-highlights {
+    flex: 1 1 350px; /* Allow highlights to take space */
+    display: grid;
+    grid-template-columns: 1fr; /* Stack by default */
+    gap: 1rem;
+}
+
+@media (min-width: 768px) { /* Maybe 2 columns on medium screens */
+    .enhanced-analytics-container .market-position-highlights {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (min-width: 1024px) { /* Or 3 columns on large screens */
+     .enhanced-analytics-container .market-position-highlights {
+         grid-template-columns: repeat(3, 1fr);
+     }
+}
+
+.enhanced-analytics-container .position-highlight-card {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.enhanced-analytics-container .position-highlight-card .highlight-icon {
+    margin-bottom: 0.75rem;
+    color: var(--primary);
+    background-color: var(--secondary);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.enhanced-analytics-container .position-highlight-card .highlight-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.enhanced-analytics-container .position-highlight-card h5 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+}
+
+.enhanced-analytics-container .position-highlight-card .highlight-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+.enhanced-analytics-container .position-highlight-card .highlight-value.positive { color: #16a34a; }
+.enhanced-analytics-container .position-highlight-card .highlight-value.negative { color: var(--destructive); }
+.enhanced-analytics-container .position-highlight-card .highlight-value.neutral { color: var(--muted-foreground); }
+
+.enhanced-analytics-container .position-highlight-card p {
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+    margin: 0;
+    line-height: 1.3;
+}
+
+
+/* --- Item Metrics / Price Distribution Section --- */
+.enhanced-analytics-container .market-analysis-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    align-items: start; /* Align items to top */
+}
+
+/* Histogram/Distribution Chart */
+.enhanced-analytics-container .distribution-card .modern-chart-container {
+    position: relative;
+    padding: 1rem 0.5rem 0.5rem 0.5rem; /* Padding for axis */
+    min-height: 200px; /* Ensure height */
+    background-color: var(--secondary);
+    border-radius: calc(var(--radius) - 4px);
+}
+.enhanced-analytics-container .modern-chart-bars {
+    display: flex;
+    align-items: flex-end;
+    height: 150px; /* Height of bars area */
+    border-bottom: 1px solid var(--border);
+}
+.enhanced-analytics-container .modern-chart-bars .bar {
+    flex-grow: 1;
+    background-color: var(--chart-muted);
+    margin: 0 1px;
+    transition: background-color 0.2s ease;
+}
+.enhanced-analytics-container .modern-chart-bars .bar:hover {
+    background-color: var(--chart-primary);
+}
+
+.enhanced-analytics-container .chart-axis {
+    font-size: 0.7rem;
+    color: var(--muted-foreground);
+    display: flex;
+    justify-content: space-between;
+    padding-top: 0.25rem;
+}
+
+.enhanced-analytics-container .your-value-marker {
+    position: absolute;
+    bottom: 20px; /* Position above axis */
+    top: 20px; /* Limit height */
+    width: 2px;
+    transform: translateX(-50%);
+    z-index: 1;
+}
+.enhanced-analytics-container .marker-line {
+    width: 100%;
+    height: 100%;
+    background-color: var(--destructive); /* Red marker */
+}
+.enhanced-analytics-container .marker-label {
+    position: absolute;
+    top: -20px; /* Label above marker */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--destructive);
+    color: var(--destructive-foreground);
+    padding: 0.1rem 0.4rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    border-radius: var(--radius);
+    white-space: nowrap;
+}
+
+/* Stats Metrics Grid */
+.enhanced-analytics-container .stats-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.enhanced-analytics-container .stats-metrics-grid .metric-card {
+    padding: 1rem;
+}
+
+.enhanced-analytics-container .metric-values {
+    margin: 1rem 0;
+    font-size: 0.9rem;
+}
+.enhanced-analytics-container .metric-value-row {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.25rem 0;
+}
+.enhanced-analytics-container .metric-label {
+    color: var(--muted-foreground);
+}
+.enhanced-analytics-container .metric-value {
+    font-weight: 500;
+}
+
+.enhanced-analytics-container .metric-footer .badge {
+    display: inline-block;
+    background-color: var(--secondary);
+    color: var(--muted-foreground);
+    padding: 0.2rem 0.6rem;
+    font-size: 0.75rem;
+    border-radius: var(--radius);
+    margin-right: 0.5rem;
+}
+.enhanced-analytics-container .metric-footer .badge.secondary {
+     background-color: var(--accent);
+     color: var(--accent-foreground);
+}
+
+/* Price Range Bar */
+.enhanced-analytics-container .price-range-display {
+    margin: 1rem 0;
+}
+.enhanced-analytics-container .price-range-value {
+    font-size: 0.9rem;
+    color: var(--muted-foreground);
+    text-align: center;
+    margin-bottom: 0.5rem;
+}
+.enhanced-analytics-container .price-range-bar {
+    height: 8px;
+    background: linear-gradient(to right, var(--chart-tertiary), var(--chart-primary), var(--destructive)); /* Example gradient */
+    border-radius: var(--radius);
+    position: relative;
+}
+.enhanced-analytics-container .price-range-bar::after { /* Target marker */
+    content: '';
+    position: absolute;
+    top: -4px;
+    bottom: -4px;
+    left: var(--target-position, 50%);
+    width: 3px;
+    background-color: var(--foreground);
+    border-radius: 2px;
+    transform: translateX(-50%);
+}
+
+/* Investment Potential */
+.enhanced-analytics-container .investment-rating-display {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 1rem 0;
+}
+.enhanced-analytics-container .investment-rating {
+    text-align: center;
+}
+.enhanced-analytics-container .rating-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--primary);
+}
+.enhanced-analytics-container .rating-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+}
+.enhanced-analytics-container .investment-scale {
+    flex-grow: 1;
+    height: 10px;
+    background-color: var(--muted);
+    border-radius: var(--radius);
+    overflow: hidden;
+}
+.enhanced-analytics-container .scale-bar {
+    height: 100%;
+    background-color: var(--chart-primary);
+    width: var(--fill-width, 0%);
+    transition: width 0.5s ease-in-out;
+}
+
+/* Confidence Level */
+.enhanced-analytics-container .confidence-display {
+    display: flex;
+    flex-direction: column; /* Stack dots and text */
+    align-items: center;
+    margin: 1rem 0;
+}
+.enhanced-analytics-container .confidence-indicator {
+    display: flex;
+    gap: 4px; /* Space between dots */
+    margin-bottom: 0.5rem;
+}
+.enhanced-analytics-container .confidence-indicator span {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--muted); /* Default empty */
+}
+/* Fill dots based on class */
+.enhanced-analytics-container .confidence-indicator.low span:nth-child(-n+1),
+.enhanced-analytics-container .confidence-indicator.medium span:nth-child(-n+2),
+.enhanced-analytics-container .confidence-indicator.high span:nth-child(-n+3) {
+    background-color: var(--chart-primary);
+}
+.enhanced-analytics-container .confidence-value {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* --- Data Table --- */
+.enhanced-analytics-container .advanced-data-table-card .chart-card-header {
+    flex-wrap: wrap; /* Allow controls to wrap */
+    gap: 1rem;
+}
+
+.enhanced-analytics-container .data-table-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-left: auto; /* Push to right */
+}
+
+.enhanced-analytics-container .search-filter input {
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+}
+
+.enhanced-analytics-container .filter-controls button {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background-color: var(--card);
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+.enhanced-analytics-container .filter-controls button:hover {
+    background-color: var(--accent);
+}
+.enhanced-analytics-container .filter-controls button.active {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    border-color: var(--primary);
+}
+
+.enhanced-analytics-container .sales-table-container {
+    overflow-x: auto; /* Horizontal scroll on small screens */
+    margin-top: 1rem;
+}
+
+.enhanced-analytics-container .sales-table {
+    width: 100%;
+    min-width: 600px; /* Prevent excessive squishing */
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.enhanced-analytics-container .sales-table th,
+.enhanced-analytics-container .sales-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap; /* Prevent text wrapping */
+}
+
+.enhanced-analytics-container .sales-table th {
+    background-color: var(--secondary);
+    color: var(--muted-foreground);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.enhanced-analytics-container .sales-table th .sort-icon {
+    opacity: 0.5;
+    margin-left: 4px;
+    display: inline-block;
+}
+.enhanced-analytics-container .sales-table th.sorted-asc .sort-icon,
+.enhanced-analytics-container .sales-table th.sorted-desc .sort-icon {
+    opacity: 1;
+}
+/* Add specific up/down icon styles if needed */
+
+.enhanced-analytics-container .sales-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.enhanced-analytics-container .sales-table tbody tr:hover {
+    background-color: var(--accent);
+}
+
+.enhanced-analytics-container .sales-table td .diff-positive { color: #16a34a; }
+.enhanced-analytics-container .sales-table td .diff-negative { color: var(--destructive); }
+
+/* Table Footer Pagination */
+.enhanced-analytics-container .table-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding-top: 1rem;
+    margin-top: 1rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.85rem;
+}
+
+.enhanced-analytics-container .pagination-info {
+    margin: 0 1rem;
+    color: var(--muted-foreground);
+}
+
+.enhanced-analytics-container .pagination-btn {
+    padding: 0.3rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background-color: var(--card);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.enhanced-analytics-container .pagination-btn:hover {
+    background-color: var(--accent);
+}
+.enhanced-analytics-container .pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 768px) {
+    .enhanced-analytics-container {
+        padding: 1rem;
+    }
+    .enhanced-analytics-container .chart-card,
+    .enhanced-analytics-container .metric-card,
+    .enhanced-analytics-container .data-table-card {
+        padding: 1rem;
+    }
+     .enhanced-analytics-container .market-position-container {
+        flex-direction: column;
+        align-items: center; /* Center gauge when stacked */
+    }
+    .enhanced-analytics-container .market-gauge-wrapper {
+        width: 100%;
+    }
+    .enhanced-analytics-container .market-position-highlights {
+         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Adjust grid for smaller cards */
+    }
+    .enhanced-analytics-container .stats-metrics-grid {
+        grid-template-columns: 1fr; /* Stack stat metrics */
+    }
+}
+
+@media (max-width: 640px) {
+    .enhanced-analytics-container .section-header h2,
+    .enhanced-analytics-container .section-header h3 {
+        font-size: 1.3rem;
+    }
+    .enhanced-analytics-container .metrics-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); /* Smaller metric cards */
+    }
+    .enhanced-analytics-container .data-table-controls {
+        flex-direction: column;
+        align-items: stretch;
+        margin-left: 0;
+        width: 100%;
+    }
+    .enhanced-analytics-container .filter-controls {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+    }
+    .enhanced-analytics-container .table-footer {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+</style>
+
+<!-- templates/skeletons/enhanced-analytics.html -->
+<!-- Based on display_enhanced_analytics_template.php -->
+<!-- CSS classes and structure match the PHP template. -->
+<!-- JS for charts MUST be handled separately in WordPress via wp_enqueue_script. -->
+<!-- Placeholders {{VARIABLE_NAME}} will be replaced by Gemini. -->
+<!-- Styles are embedded above -->
+
 <div class="enhanced-analytics-container">
   <div class="section-header">
     <h2 class="section-title">{{TITLE}}</h2>
+    <!-- Optional: Add subtitle or description -->
+    <p class="section-description text-muted-foreground">Detailed Analysis Report for {{TITLE}}</p>
   </div>
-  
+
   <div class="analytics-section radar-chart-section" {{SHOW_RADAR ? '' : 'style="display:none;"'}}>
     <div class="section-header">
       <h3>Item Metrics Analysis</h3>
-      <p class="section-description">Multi-dimensional analysis of key value factors</p>
+      <p class="section-description text-muted-foreground">Multi-dimensional analysis of key value factors</p>
     </div>
     <div class="chart-card">
-      <div class="chart-card-header"><h4>Value Metrics Radar</h4></div>
+      <!-- Removed header from here, using section header above -->
       <div class="chart-content">
         <div class="radar-wrapper" data-chart-data-radar="{{RADAR_CHART_DATA_JSON}}">
           <canvas id="{{CHART_ID_RADAR}}" width="400" height="400"></canvas> <!-- JS Target -->
         </div>
         <div class="radar-metrics-legend">
           <div class="legend-item"><span class="legend-color" style="background-color: rgba(54, 162, 235, 0.6);"></span><span class="legend-label">Item Metrics</span></div>
+          <!-- Add more legends if needed -->
         </div>
       </div>
     </div>
     <div class="metrics-grid">
+      <!-- Updated metric cards to use new structure -->
       <div class="metric-card"><div class="metric-header"><h4>Condition</h4></div><div class="metric-value">{{CONDITION_SCORE}}%</div><div class="metric-footer"><div class="metric-description">Physical state assessment</div></div></div>
       <div class="metric-card"><div class="metric-header"><h4>Rarity</h4></div><div class="metric-value">{{RARITY_SCORE}}%</div><div class="metric-footer"><div class="metric-description">Availability in the market</div></div></div>
       <div class="metric-card"><div class="metric-header"><h4>Market Demand</h4></div><div class="metric-value">{{MARKET_DEMAND_SCORE}}%</div><div class="metric-footer"><div class="metric-description">Current collector interest</div></div></div>
@@ -38,7 +867,7 @@
   <div class="analytics-section price-history-section" {{SHOW_HISTORY ? '' : 'style="display:none;"'}}>
     <div class="section-header">
       <h3>Price History Analysis</h3>
-      <p class="section-description">Historical price trends for comparable items</p>
+      <p class="section-description text-muted-foreground">Historical price trends for comparable items</p>
     </div>
     <div class="chart-card">
       <div class="chart-card-header">
@@ -58,98 +887,287 @@
       </div>
     </div>
     <div class="price-highlights">
+      <!-- Updated highlight cards -->
       <div class="highlight-card"><div class="highlight-header">Current Value</div><div class="highlight-value">{{VALUE_FORMATTED}}</div></div>
       <div class="highlight-card"><div class="highlight-header">5-Year Change</div><div class="highlight-value {{TREND_CLASS}}">{{PRICE_TREND}}</div></div>
-      <div class="highlight-card"><div class="highlight-header">Market Prediction</div><div class="highlight-value">{{PREDICTED_VALUE_FORMATTED}} <span class="prediction-year">({{NEXT_YEAR}})</span></div></div>
+      <div class="highlight-card"><div class="highlight-header">Market Prediction</div><div class="highlight-value">{{PREDICTED_VALUE_FORMATTED}} <span class="prediction-year text-muted-foreground">({{NEXT_YEAR}})</span></div></div>
     </div>
   </div>
 
   <div class="analytics-section statistics-section" {{SHOW_STATS ? '' : 'style="display:none;"'}}>
     <div class="section-header">
       <h3>Market Statistics Analysis</h3>
-      <p class="section-description">Comprehensive statistical analysis of market data</p>
+      <p class="section-description text-muted-foreground">Comprehensive statistical analysis of market data</p>
     </div>
+    
     <div class="chart-card">
       <div class="chart-card-header"><h4>Statistical Summary</h4></div>
-      <div class="chart-content"><div class="statistics-summary">
-          <p>Market analysis reveals {{TOTAL_COUNT}} comparable items with an average value of {{AVG_PRICE_FORMATTED}}.</p>
-          <p>Your item's value of {{VALUE_FORMATTED}} places it in the {{PERCENTILE}} percentile, with a {{PRICE_TREND}} average annual growth rate.</p>
-          <p>Market confidence: <strong>{{CONFIDENCE_LEVEL}}</strong></p>
-      </div></div>
-    </div>
-    <div class="chart-card">
-      <div class="chart-card-header"><h4>Market Position Analysis</h4></div>
       <div class="chart-content">
-        <div class="market-position-container">
-          <div class="market-gauge-wrapper">
-            <div class="gauge-container">
-              <div class="gauge"><div class="gauge-fill" style="--percentage: {{PERCENTILE_NUMBER}};"></div><div class="gauge-center"></div><div class="gauge-needle" style="--rotation: {{PERCENTILE_ROTATION}}deg;"></div></div>
-              <div class="gauge-labels"><span class="gauge-label low">Low</span><span class="gauge-label medium">Medium</span><span class="gauge-label high">High</span><span class="gauge-label premium">Premium</span></div>
-              <div class="gauge-value">{{PERCENTILE}} Percentile</div>
-              <div class="gauge-description">Your item is in the {{APPRECIATION_STATUS}} market segment</div>
+          <div class="statistics-summary">
+            <p>Market analysis reveals <strong>{{TOTAL_COUNT}}</strong> comparable items with an average value of <strong>{{AVG_PRICE_FORMATTED}}</strong>.</p>
+            <p>Your item's value of <strong>{{VALUE_FORMATTED}}</strong> places it in the <strong>{{PERCENTILE}} percentile</strong>, with a <strong>{{PRICE_TREND}}</strong> average annual growth rate.</p>
+            <p>Market confidence level: <strong class="font-semibold">{{CONFIDENCE_LEVEL}}</strong></p>
+          </div>
+      </div>
+    </div>
+
+    <div class="chart-card">
+        <div class="chart-card-header"><h4>Market Position Analysis</h4></div>
+        <div class="chart-content">
+          <div class="market-position-container">
+            <div class="market-gauge-wrapper">
+              <div class="gauge-container"> <!-- Gauge structure remains -->
+                <div class="gauge"><div class="gauge-fill" style="--percentage: {{PERCENTILE_NUMBER}};"></div><div class="gauge-center"></div><div class="gauge-needle" style="--rotation: {{PERCENTILE_ROTATION}}deg;"></div></div>
+                <div class="gauge-labels"><span class="gauge-label low">Low</span><span class="gauge-label medium">Medium</span><span class="gauge-label high">High</span><span class="gauge-label premium">Premium</span></div>
+                <div class="gauge-value">{{PERCENTILE}} Percentile</div>
+                <div class="gauge-description text-muted-foreground">Your item is in the {{APPRECIATION_STATUS}} market segment</div>
+              </div>
+            </div>
+            <div class="market-position-highlights">
+              <!-- Updated position highlight cards -->
+              <div class="position-highlight-card"><div class="highlight-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h5>Market Timing</h5><div class="highlight-value {{TREND_CLASS}}">{{MARKET_TIMING}}</div><p>Based on current market conditions</p></div>
+              <div class="position-highlight-card"><div class="highlight-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M18 8C18 6.4087 17.3679 4.88258 16.2426 3.75736C15.1174 2.63214 13.5913 2 12 2C10.4087 2 8.88258 2.63214 7.75736 3.75736C6.63214 4.88258 6 6.4087 6 8C6 15 3 17 3 17H21C21 17 18 15 18 8Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.73 21C13.5542 21.3031 13.3019 21.5547 12.9982 21.7295C12.6946 21.9044 12.3504 21.9965 12 21.9965C11.6496 21.9965 11.3054 21.9044 11.0018 21.7295C10.6982 21.5547 10.4458 21.3031 10.27 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h5>Market Demand</h5><div class="highlight-value">{{MARKET_DEMAND_SCORE}}%</div><p>Current collector interest level</p></div>
+              <div class="position-highlight-card"><div class="highlight-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M20.59 13.41L13.42 20.58C13.2343 20.766 13.0137 20.9135 12.7709 21.0141C12.5281 21.1148 12.2678 21.1666 12.005 21.1666C11.7422 21.1666 11.4819 21.1148 11.2391 21.0141C10.9963 20.9135 10.7757 20.766 10.59 20.58L2 12V2H12L20.59 10.59C20.9625 10.9647 21.1716 11.4716 21.1716 12C21.1716 12.5284 20.9625 13.0353 20.59 13.41Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 7H7.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h5>Rarity Impact</h5><div class="highlight-value">{{RARITY_SCORE}}%</div><p>Effect of item scarcity on value</p></div>
             </div>
           </div>
-          <div class="market-position-highlights">
-            <div class="position-highlight-card"><div class="highlight-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M12 22C17.5228 22 22 17.5228 22 12C22 6.47715 17.5228 2 12 2C6.47715 2 2 6.47715 2 12C2 17.5228 6.47715 22 12 22Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M12 6V12L16 14" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h5>Market Timing</h5><div class="highlight-value {{TREND_CLASS}}">{{MARKET_TIMING}}</div><p>Based on current market conditions</p></div>
-            <div class="position-highlight-card"><div class="highlight-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M18 8C18 6.4087 17.3679 4.88258 16.2426 3.75736C15.1174 2.63214 13.5913 2 12 2C10.4087 2 8.88258 2.63214 7.75736 3.75736C6.63214 4.88258 6 6.4087 6 8C6 15 3 17 3 17H21C21 17 18 15 18 8Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.73 21C13.5542 21.3031 13.3019 21.5547 12.9982 21.7295C12.6946 21.9044 12.3504 21.9965 12 21.9965C11.6496 21.9965 11.3054 21.9044 11.0018 21.7295C10.6982 21.5547 10.4458 21.3031 10.27 21" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h5>Market Demand</h5><div class="highlight-value">{{MARKET_DEMAND_SCORE}}%</div><p>Current collector interest level</p></div>
-            <div class="position-highlight-card"><div class="highlight-icon"><svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M20.59 13.41L13.42 20.58C13.2343 20.766 13.0137 20.9135 12.7709 21.0141C12.5281 21.1148 12.2678 21.1666 12.005 21.1666C11.7422 21.1666 11.4819 21.1148 11.2391 21.0141C10.9963 20.9135 10.7757 20.766 10.59 20.58L2 12V2H12L20.59 10.59C20.9625 10.9647 21.1716 11.4716 21.1716 12C21.1716 12.5284 20.9625 13.0353 20.59 13.41Z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 7H7.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><h5>Rarity Impact</h5><div class="highlight-value">{{RARITY_SCORE}}%</div><p>Effect of item scarcity on value</p></div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <div class="section-header item-metrics-header">
-      <h3>Item Metrics Analysis</h3> <!-- Re-using header, maybe change text? -->
-      <p class="section-description">Multi-dimensional analysis of key value factors</p>
-    </div>
-
-    <div class="market-analysis-grid">
-      <div class="chart-card distribution-card">
-        <div class="chart-card-header"><h4>Price Distribution</h4></div>
-        <div class="chart-content">
-          <div class="modern-chart-container" data-histogram-data="{{HISTOGRAM_DATA_JSON}}">
-            <div class="modern-chart-bars">{{HISTOGRAM_BARS_HTML}}</div>
-            <div class="chart-axis">{{HISTOGRAM_AXIS_HTML}}</div>
-            <div class="your-value-marker" style="left: calc({{TARGET_POSITION}}% - 1px);"><div class="marker-line"></div><div class="marker-label">{{VALUE_FORMATTED}}</div></div>
-          </div>
         </div>
       </div>
 
-      <div class="metrics-grid stats-metrics-grid">
-        <div class="metric-card shadcn-card">
-          <div class="metric-header"><h4>Market Averages</h4><span class="trend-badge {{TREND_CLASS}}">{{PRICE_TREND}} annual</span></div>
-          <div class="metric-values"><div class="metric-value-row"><span class="metric-label">Mean</span><span class="metric-value">{{AVG_PRICE_FORMATTED}}</span></div><div class="metric-value-row"><span class="metric-label">Median</span><span class="metric-value">{{MEDIAN_PRICE_FORMATTED}}</span></div></div>
-          <div class="metric-footer"><div class="metric-description">Based on {{COUNT}} comparable items</div></div>
+    <!-- Separating Item Metrics/Distribution from the broader statistics section -->
+    <div class="analytics-section item-metrics-distribution-section">
+        <div class="section-header">
+            <h3>Item Metrics & Market Distribution</h3>
+            <p class="section-description text-muted-foreground">Detailed metrics and comparison against market distribution.</p>
         </div>
-        <div class="metric-card shadcn-card">
-           <div class="metric-header"><h4>Price Range & Variation</h4></div>
-           <div class="price-range-display"><div class="price-range-value">{{PRICE_MIN_FORMATTED}} - {{PRICE_MAX_FORMATTED}}</div><div class="price-range-bar" data-target-position="{{TARGET_POSITION}}"></div></div>
-           <div class="metric-footer"><div class="badge">CV: {{COEFFICIENT_VARIATION}}%</div><div class="badge secondary">SD: {{STD_DEV_FORMATTED}}</div></div>
-         </div>
-         <div class="metric-card shadcn-card highlighted">
-            <div class="metric-header"><h4>Investment Potential</h4></div>
-            <div class="investment-rating-display"><div class="investment-rating"><span class="rating-value">{{INVESTMENT_POTENTIAL}}%</span><span class="rating-label">Potential</span></div><div class="investment-scale"><div class="scale-bar" style="--fill-width: {{INVESTMENT_POTENTIAL}}%"></div></div></div>
-            <div class="metric-footer"><div class="metric-description">Based on market trends and item characteristics</div></div>
-         </div>
-         <div class="metric-card shadcn-card">
-           <div class="metric-header"><h4>Market Confidence</h4></div>
-           <div class="confidence-display" data-confidence-level="{{CONFIDENCE_LEVEL_NUMERIC}}">
-             <div class="confidence-indicator {{CONFIDENCE_LEVEL_CLASS}}">{{CONFIDENCE_DOTS_HTML}}</div><div class="confidence-value">{{CONFIDENCE_LEVEL}}</div>
-           </div>
-           <div class="metric-footer"><div class="metric-description">Based on sample size and data consistency</div></div>
-         </div>
-      </div>
-      
-      <div class="chart-card advanced-data-table-card" data-sales-data="{{SALES_DATA_JSON}}">
-        <div class="chart-card-header"><h4>Comprehensive Market Data</h4><div class="data-table-controls"><div class="search-filter"><input type="text" id="searchResults" placeholder="Search items..." class="search-input"></div><div class="filter-controls"><button class="filter-btn active" data-filter="all">All Results</button></div></div></div>
-        <div class="sales-table-container">
-          <table class="sales-table advanced-table">
-            <thead><tr><th class="sortable" data-sort="title">Item <span class="sort-icon">↕</span></th><th class="sortable" data-sort="house">Auction House <span class="sort-icon">↕</span></th><th class="sortable" data-sort="date">Date <span class="sort-icon">↕</span></th><th class="sortable" data-sort="price">Price <span class="sort-icon">↕</span></th><th class="sortable" data-sort="diff">Difference <span class="sort-icon">↕</span></th></tr></thead>
-            <tbody>{{SALES_TABLE_ROWS_HTML}}</tbody>
-          </table>
+
+        <div class="market-analysis-grid">
+            <div class="chart-card distribution-card">
+                <div class="chart-card-header"><h4>Price Distribution</h4></div>
+                <div class="chart-content">
+                <div class="modern-chart-container" data-histogram-data="{{HISTOGRAM_DATA_JSON}}">
+                    <div class="modern-chart-bars">{{HISTOGRAM_BARS_HTML}}</div>
+                    <div class="chart-axis">{{HISTOGRAM_AXIS_HTML}}</div>
+                    <div class="your-value-marker" style="left: calc({{TARGET_POSITION}}% - 1px);"><div class="marker-line"></div><div class="marker-label">{{VALUE_FORMATTED}}</div></div>
+                </div>
+                </div>
+            </div>
+
+            <div class="stats-metrics-grid">
+                 <!-- Updated Metric Cards for Shadcn style -->
+                 <div class="metric-card">
+                     <div class="metric-header"><h4>Market Averages</h4><span class="price-trend-badge {{TREND_CLASS}}">{{PRICE_TREND}} annual</span></div>
+                     <div class="metric-values">
+                         <div class="metric-value-row"><span class="metric-label">Mean</span><span class="metric-value font-semibold">{{AVG_PRICE_FORMATTED}}</span></div>
+                         <div class="metric-value-row"><span class="metric-label">Median</span><span class="metric-value font-semibold">{{MEDIAN_PRICE_FORMATTED}}</span></div>
+                     </div>
+                     <div class="metric-footer"><div class="metric-description text-xs">Based on {{COUNT}} comparable items</div></div>
+                 </div>
+                 <div class="metric-card">
+                     <div class="metric-header"><h4>Price Range & Variation</h4></div>
+                     <div class="price-range-display">
+                         <div class="price-range-value text-sm">{{PRICE_MIN_FORMATTED}} - {{PRICE_MAX_FORMATTED}}</div>
+                         <div class="price-range-bar" style="--target-position: {{TARGET_POSITION}}%"></div> <!-- Use CSS var -->
+                     </div>
+                     <div class="metric-footer"><span class="badge">CV: {{COEFFICIENT_VARIATION}}%</span><span class="badge secondary">SD: {{STD_DEV_FORMATTED}}</span></div>
+                 </div>
+                 <div class="metric-card highlighted">
+                     <div class="metric-header"><h4>Investment Potential</h4></div>
+                     <div class="investment-rating-display">
+                         <div class="investment-rating"><span class="rating-value">{{INVESTMENT_POTENTIAL}}%</span><span class="rating-label text-muted-foreground">Potential</span></div>
+                         <div class="investment-scale"><div class="scale-bar" style="--fill-width: {{INVESTMENT_POTENTIAL}}%"></div></div>
+                     </div>
+                     <div class="metric-footer"><div class="metric-description text-xs">Based on market trends and item characteristics</div></div>
+                 </div>
+                 <div class="metric-card">
+                     <div class="metric-header"><h4>Market Confidence</h4></div>
+                     <div class="confidence-display">
+                         <div class="confidence-indicator {{CONFIDENCE_LEVEL_CLASS}}">{{CONFIDENCE_DOTS_HTML}}</div>
+                         <div class="confidence-value">{{CONFIDENCE_LEVEL}}</div>
+                     </div>
+                     <div class="metric-footer"><div class="metric-description text-xs">Based on sample size and data consistency</div></div>
+                 </div>
+             </div>
         </div>
-        <div class="table-footer"><div class="table-pagination"><button class="pagination-btn">Previous</button><span class="pagination-info">Showing 1-5 of {{COUNT}}</span><button class="pagination-btn">Next</button></div></div>
-      </div>
     </div>
-  </div>
-</div> 
+
+    <!-- Data Table Section -->
+    <div class="analytics-section data-table-section">
+         <div class="advanced-data-table-card data-table-card" data-sales-data="{{SALES_DATA_JSON}}">
+             <div class="chart-card-header">
+                 <h4>Comprehensive Market Data</h4>
+                 <div class="data-table-controls">
+                     <div class="search-filter">
+                         <input type="text" id="searchResults-{{POST_ID}}" placeholder="Search items..." class="search-input">
+                     </div>
+                     <!-- Add filter buttons if needed -->
+                     <!-- <div class="filter-controls"><button class="filter-btn active" data-filter="all">All Results</button></div> -->
+                 </div>
+             </div>
+             <div class="sales-table-container">
+                 <table class="sales-table advanced-table" id="salesTable-{{POST_ID}}">
+                 <thead><tr><th class="sortable" data-sort="title">Item <span class="sort-icon">↕</span></th><th class="sortable" data-sort="house">Auction House <span class="sort-icon">↕</span></th><th class="sortable" data-sort="date">Date <span class="sort-icon">↕</span></th><th class="sortable" data-sort="price">Price <span class="sort-icon">↕</span></th><th class="sortable" data-sort="diff">Difference <span class="sort-icon">↕</span></th></tr></thead>
+                 <tbody>{{SALES_TABLE_ROWS_HTML}}</tbody>
+                 </table>
+             </div>
+             <div class="table-footer">
+                 <div class="table-pagination" id="pagination-{{POST_ID}}">
+                     <button class="pagination-btn" data-page="prev">Previous</button>
+                     <span class="pagination-info">Showing <span class="page-start">1</span>-<span class="page-end">5</span> of <span class="total-items">{{COUNT}}</span></span>
+                     <button class="pagination-btn" data-page="next">Next</button>
+                 </div>
+             </div>
+         </div>
+    </div>
+
+</div>
+
+<!-- NOTE: Ensure table sorting/pagination/filtering JavaScript is loaded separately in WordPress -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Simple Table Pagination & Sort Example (Scope to specific table)
+    const container = document.querySelector('.enhanced-analytics-container'); // Adjust if needed
+    if (!container) return;
+
+    const postId = '{{POST_ID}}'; // Get post ID for unique elements
+    const tableId = `salesTable-${postId}`;
+    const paginationId = `pagination-${postId}`;
+    const searchId = `searchResults-${postId}`;
+
+    const table = document.getElementById(tableId);
+    const paginationControls = document.getElementById(paginationId);
+    const searchInput = document.getElementById(searchId);
+    if (!table || !paginationControls || !searchInput) return;
+
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr'));
+    const rowsPerPage = 5; // Configurable
+    let currentPage = 1;
+    let filteredRows = rows;
+    let sortColumn = null;
+    let sortDirection = 'asc'; // 'asc' or 'desc'
+
+    function displayTablePage() {
+        tbody.innerHTML = ''; // Clear table
+        const start = (currentPage - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+        const paginatedRows = filteredRows.slice(start, end);
+        paginatedRows.forEach(row => tbody.appendChild(row));
+
+        // Update pagination info
+        const pageStartSpan = paginationControls.querySelector('.page-start');
+        const pageEndSpan = paginationControls.querySelector('.page-end');
+        const totalItemsSpan = paginationControls.querySelector('.total-items');
+        pageStartSpan.textContent = filteredRows.length > 0 ? start + 1 : 0;
+        pageEndSpan.textContent = Math.min(end, filteredRows.length);
+        totalItemsSpan.textContent = filteredRows.length;
+
+        // Update button states
+        paginationControls.querySelector('[data-page="prev"]').disabled = currentPage === 1;
+        paginationControls.querySelector('[data-page="next"]').disabled = end >= filteredRows.length;
+    }
+
+    function filterTable() {
+        const searchTerm = searchInput.value.toLowerCase();
+        filteredRows = rows.filter(row => {
+            // Search across all cells in the row
+            return Array.from(row.cells).some(cell => cell.textContent.toLowerCase().includes(searchTerm));
+        });
+        currentPage = 1; // Reset to first page after filtering
+        sortTable(); // Re-sort filtered results
+        // displayTablePage() will be called by sortTable
+    }
+
+    function sortTable() {
+        if (!sortColumn) {
+            displayTablePage(); // No sorting, just display
+            return;
+        }
+
+        const columnIndex = Array.from(table.querySelectorAll('thead th')).findIndex(th => th.dataset.sort === sortColumn);
+        if (columnIndex === -1) {
+            displayTablePage();
+            return;
+        }
+
+        filteredRows.sort((a, b) => {
+            const cellA = a.cells[columnIndex].textContent.trim();
+            const cellB = b.cells[columnIndex].textContent.trim();
+
+            let comparison = 0;
+
+            // Attempt numeric sort for price/diff, fallback to string
+            if (sortColumn === 'price' || sortColumn === 'diff') {
+                const numA = parseFloat(cellA.replace(/[^\d.-]/g, '')); // Clean currency/percentage
+                const numB = parseFloat(cellB.replace(/[^\d.-]/g, ''));
+                if (!isNaN(numA) && !isNaN(numB)) {
+                    comparison = numA - numB;
+                } else {
+                    comparison = cellA.localeCompare(cellB); // Fallback
+                }
+            } else if (sortColumn === 'date') {
+                 try {
+                    // Attempt to parse dates (requires consistent format)
+                    const dateA = new Date(cellA);
+                    const dateB = new Date(cellB);
+                    if (!isNaN(dateA) && !isNaN(dateB)) {
+                         comparison = dateA - dateB;
+                    } else {
+                         comparison = cellA.localeCompare(cellB); // Fallback
+                    }
+                 } catch (e) {
+                     comparison = cellA.localeCompare(cellB); // Fallback on error
+                 }
+            } else {
+                comparison = cellA.localeCompare(cellB); // Default string sort
+            }
+
+            return sortDirection === 'asc' ? comparison : -comparison;
+        });
+        
+        // Update header sort indicators
+        table.querySelectorAll('thead th').forEach(th => {
+            th.classList.remove('sorted-asc', 'sorted-desc');
+            if (th.dataset.sort === sortColumn) {
+                th.classList.add(sortDirection === 'asc' ? 'sorted-asc' : 'sorted-desc');
+            }
+        });
+
+        displayTablePage();
+    }
+
+    // Event Listeners
+    paginationControls.addEventListener('click', (e) => {
+        if (e.target.matches('[data-page="prev"]') && currentPage > 1) {
+            currentPage--;
+            displayTablePage();
+        } else if (e.target.matches('[data-page="next"]')) {
+            const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                displayTablePage();
+            }
+        }
+    });
+
+    searchInput.addEventListener('input', filterTable);
+
+    table.querySelectorAll('thead th.sortable').forEach(header => {
+        header.addEventListener('click', () => {
+            const newSortColumn = header.dataset.sort;
+            if (sortColumn === newSortColumn) {
+                // Toggle direction
+                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            } else {
+                // New column, default to ascending
+                sortColumn = newSortColumn;
+                sortDirection = 'asc';
+            }
+            currentPage = 1; // Reset to first page on sort
+            sortTable();
+        });
+    });
+
+    // Initial display
+    sortTable(); // Apply initial sort/display
+});
+</script> 

@@ -4,7 +4,6 @@ const {
   MAX_IMAGES_PER_ROW,
   DEFAULT_IMAGE_DIMENSIONS,
   GALLERY_TITLE,
-  createGalleryTitle,
   createImageRequest,
   createSpacingRequest,
   calculateBatchSize

@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 // const { updateTitle, updateDescription, updateIntroduction, updateNotes, /* insertShortcodes, */ fetchPostData, updatePostACFFields } = require('../services/wordpress'); // Remove specific imports
 const wordpress = require('../services/wordpress'); // Restore main require
-const { cleanAndParseJSON } = require('../services/utils/jsonCleaner'); // Keep this one
+// const { cleanAndParseJSON } = require('../services/utils/jsonCleaner'); // Remove unused require
 // const { appraisalType } = require('../config'); // Keep removed
 
 // Moved from appraisal.js
@@ -77,7 +77,7 @@ router.post('/update-wordpress', async (req, res) => {
       console.log('[Util Route] Checking/Inserting shortcodes');
       const currentContent = postData.content?.rendered || '';
       let newContent = currentContent;
-      // const appraisalType = postData.acf?.appraisal_type || req.body.appraisalType || 'RegularArt'; // Remove unused local var assignment
+      const appraisalType = postData.acf?.appraisal_type || req.body.appraisalType || 'RegularArt'; // Define appraisalType here
       
       // Add shortcodes idempotently
       if (!newContent.includes('[pdf_download]')) {
