@@ -3,7 +3,7 @@ const cors = require('cors');
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const config = require('./config');
 const { initializeGoogleApis } = require('./services/pdf');
-const { createGithubIssue } = require('./services/utils/githubService');
+const { createGithubIssue } = require('./src/services/utils/githubService');
 
 const app = express();
 
