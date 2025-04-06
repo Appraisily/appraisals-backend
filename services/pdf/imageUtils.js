@@ -55,7 +55,7 @@ async function insertImageAtPlaceholder(docs, documentId, placeholder, imageUrl)
               let content = elem.textRun.content;
               let position = 0;
               
-              while (true) {
+              while (true) { // eslint-disable-line no-constant-condition -- Loop breaks internally
                 const index = content.indexOf(placeholderFull, position);
                 if (index === -1) break;
                 

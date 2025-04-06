@@ -171,7 +171,7 @@ router.post('/fix-statistics', async (req, res) => {
         .replace(/[\u201C\u201D]/g, '"') // Replace smart double quotes
         .replace(/\u00A0/g, ' ')         // Replace non-breaking spaces
         .replace(/\u2022/g, '-')         // Replace bullet points
-        .replace(/[\x00-\x1F\x7F]/g, ''); // Remove control characters
+        .replace(/[\x00-\x1F\x7F]/g, ''); // eslint-disable-line no-control-regex -- Allow matching control characters
       
       fixSteps.push({
         step: 'Basic character replacement',

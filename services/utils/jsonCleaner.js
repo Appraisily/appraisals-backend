@@ -48,7 +48,7 @@ function cleanAndParseJSON(data, doNotParse = false) {
         .replace(/[\u201C\u201D]/g, '"') // Replace smart double quotes
         .replace(/\u00A0/g, ' ')         // Replace non-breaking spaces
         .replace(/\u2022/g, '-')         // Replace bullet points
-        .replace(/[\x00-\x1F\x7F]/g, ''); // Remove control characters
+        .replace(/[\x00-\x1F\x7F]/g, ''); // eslint-disable-line no-control-regex -- Allow matching control characters
         
       // Fix common JSON syntax issues
       cleanedData = cleanedData
@@ -69,7 +69,7 @@ function cleanAndParseJSON(data, doNotParse = false) {
       // Remove any [ERROR] sections which might be embedded in the JSON
       if (cleanedData.includes('[ERROR]')) {
         console.log('Found [ERROR] sections in JSON, attempting to remove');
-        cleanedData = cleanedData.replace(/\[ERROR\][^\[]*(\[\/ERROR\]|$)/g, '""');
+        cleanedData = cleanedData.replace(/\[ERROR\][^[]*(\[\/ERROR\]|$)/g, '""');
       }
       
       // Fix incomplete objects or arrays

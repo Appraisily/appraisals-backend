@@ -24,5 +24,23 @@ module.exports = {
                 extensions: ['.js'] // Define the extensions to resolve
             }
         }
-    }
+    },
+    // Add overrides for browser-specific files
+    overrides: [
+        {
+            files: [
+                'templates/**/*.js', // All JS files in templates directory
+                'html_entity_decoder.js' // Specific file
+            ],
+            env: {
+                browser: true, // Use browser environment for these files
+                node: false // Disable Node.js environment
+            },
+            rules: {
+                'no-undef': 'off', // Turn off no-undef for browser globals (like document)
+                'import/no-unresolved': 'off', // Turn off import resolver for browser scripts
+                'no-unused-vars': ['warn', { 'args': 'none' }] // Warn about unused vars, ignore args
+            }
+        }
+    ]
 }; 
