@@ -10,21 +10,56 @@ const wordpress = require('../services/wordpress');
 router.post('/update-wordpress', async (req, res) => {
   console.log('[Util Route] Starting WordPress update');
   
-  const { postId } = req.body;
-  if (!postId) {
-    return res.status(400).json({ success: false, message: 'postId is required.' });
+  const { postId, acfFields, insertShortcodes, appraisalType } = req.body;
+   // --- Input Validation --- 
+  if (!postId || typeof postId !== 'string' && typeof postId !== 'number') {
+     return res.status(400).json({ 
+      success: false, 
+      message: 'Malformed request. Missing or invalid required parameter: postId.', 
+      usage: {
+          method: 'POST',
+          endpoint: '/update-wordpress',
+          required_body_params: {
+            postId: "string | number"
+          },
+          optional_body_params: {
+            acfFields: "object",
+            insertShortcodes: "boolean",
+            appraisalType: "string (used if insertShortcodes is true and type not in post ACF)"
+          },
+          example: { 
+            postId: "123", 
+            acfFields: { "notes": "Updated note." }, 
+            insertShortcodes: true,
+            appraisalType: "RegularArt"
+           }
+      },
+      error_details: "postId (string or number) is required."
+    });
   }
+  // Add validation for acfFields if it should be an object?
+  if (acfFields && typeof acfFields !== 'object') {
+      return res.status(400).json({ 
+          success: false, 
+          message: 'Malformed request. Invalid type for optional parameter: acfFields.',
+          error_details: "Optional parameter 'acfFields' must be an object if provided."
+       });
+  }
+   // --- End Input Validation ---
   
   try {
     const { postData, title: postTitle } = await wordpress.fetchPostData(postId);
     if (!postTitle) {
-      return res.status(404).json({ success: false, message: 'Post not found or title is missing' });
+       return res.status(404).json({ 
+          success: false, 
+          message: 'Post not found or title is missing',
+          error_details: `Post with ID ${postId} could not be found or lacks a title.`
+       });
     }
     
     console.log(`[Util Route] Updating WordPress post: "${postTitle}"`);
     
     // Update ACF fields from request body
-    const acfFields = req.body.acfFields || {};
     const updatedFields = {
       ...acfFields,
       last_updated: new Date().toISOString(),
@@ -73,9 +108,16 @@ router.post('/update-wordpress', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[Util Route] Error updating WordPress:', error);
-    return res.status(500).json({
-      success: false, message: 'Error updating WordPress', error: error.message
+    console.error(`[Util Route] Error updating WordPress for post ${postId}:`, error);
+    const statusCode = error.message?.includes('Post not found') ? 404 : 500;
+     const userMessage = statusCode === 404 
+        ? 'Post not found or title is missing' 
+        : 'Error updating WordPress';
+        
+    res.status(statusCode).json({
+      success: false, 
+      message: userMessage, 
+      error_details: process.env.NODE_ENV !== 'production' ? error.message : undefined
     });
   }
 });

@@ -11,15 +11,34 @@ const { generateContent } = require('../services/openai'); // Requires openai se
 router.post('/enhance-description', async (req, res) => {
   console.log('[Desc Route] Starting description enhancement');
   
-  const { postId } = req.body;
-  if (!postId) {
-    return res.status(400).json({ success: false, message: 'postId is required.' });
+  const { postId, updateContent } = req.body;
+  if (!postId || typeof postId !== 'string' && typeof postId !== 'number') {
+    return res.status(400).json({ 
+      success: false, 
+      message: 'Malformed request. Missing or invalid required parameter: postId.', 
+      usage: {
+          method: 'POST',
+          endpoint: '/enhance-description',
+          required_body_params: {
+            postId: "string | number"
+          },
+          optional_body_params: {
+            updateContent: "boolean (defaults to false)"
+          },
+          example: { postId: "123", updateContent: false }
+      },
+      error_details: "postId (string or number) is required."
+    });
   }
   
   try {
     const { postData, title: postTitle } = await wordpress.fetchPostData(postId);
     if (!postTitle) {
-      return res.status(404).json({ success: false, message: 'Post not found or title is missing' });
+      return res.status(404).json({ 
+        success: false, 
+        message: 'Post not found or title is missing',
+        error_details: `Post with ID ${postId} could not be found or lacks a title.`
+      });
     }
     
     console.log(`[Desc Route] Enhancing description for: "${postTitle}"`);
@@ -49,7 +68,7 @@ router.post('/enhance-description', async (req, res) => {
     
     // Optionally update main post content
     let contentUpdated = false;
-    if (req.body.updateContent === true) {
+    if (updateContent === true) {
       console.log('[Desc Route] Updating main post content with enhanced description');
       // Assuming wordpress.client exists and has updatePost method
       // Might need adjustment based on actual wordpress service structure
@@ -82,11 +101,16 @@ router.post('/enhance-description', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('[Desc Route] Error enhancing description:', error);
-    return res.status(500).json({
+    console.error(`[Desc Route] Error enhancing description for post ${postId}:`, error);
+    const statusCode = error.message?.includes('Post not found') ? 404 : 500;
+    const userMessage = statusCode === 404 
+        ? 'Post not found or title is missing' 
+        : 'Error enhancing description';
+
+    res.status(statusCode).json({
       success: false,
-      message: 'Error enhancing description',
-      error: error.message
+      message: userMessage,
+      error_details: process.env.NODE_ENV !== 'production' ? error.message : undefined
     });
   }
 });

@@ -92,26 +92,28 @@ async function startServer() {
     await initializeGoogleApis();
 
     // Load routers after secrets are available
-    const appraisalRouter = require('./routes/appraisal');
+    // const appraisalRouter = require('./routes/appraisal'); // Removed - no routes left
     const reportRouter = require('./routes/report');
     const visualizationRouter = require('./routes/visualization');
     const descriptionRouter = require('./routes/description');
     const utilityRouter = require('./routes/utility');
+    // Existing routers
     const pdfRouter = require('./routes/pdf');
     const pdfStepsRouter = require('./routes/pdf-steps');
     const htmlRouter = require('./routes/html');
-    const visualizationsRouter = require('./routes/visualizations');
-    const debugVisualizationsRouter = require('./routes/visualizations');
+    const debugVisualizationsRouter = require('./routes/visualizations'); // Keep old viz routes for now?
 
-    // Use routers
-    app.use('/', reportRouter);
+    // Use routers - Mount new routers at base path '/'
+    app.use('/', reportRouter); 
     app.use('/', visualizationRouter);
     app.use('/', descriptionRouter);
     app.use('/', utilityRouter);
-    app.use('/', appraisalRouter);
+    // app.use('/', appraisalRouter); // Removed
+    // Mount existing routers
     app.use('/', pdfRouter);
     app.use('/api/pdf', pdfStepsRouter);
     app.use('/api/html', htmlRouter);
+    // Mount the old /api/visualizations route
     app.use('/api/visualizations', debugVisualizationsRouter);
 
     // Error handling middleware (must be after routers)

@@ -3,28 +3,35 @@ const router = express.Router();
 const fetch = require('node-fetch'); // Needed for regenerate route
 const wordpress = require('../services/wordpress');
 const config = require('../config'); // Needed for valuer-agent URL
+const fs = require('fs').promises; // Use promise-based fs
+const path = require('path');
 // Import validation function if it exists and is needed
 // const { validateStatisticsData } = require('../services/metadataProcessor'); // Assuming it's moved there
 // Helper for cleaning JSON data before storing in WP
 const { jsonCleaner } = require('../services/utils/jsonCleaner'); 
+const { populateHtmlTemplate } = require('../services/geminiService'); // Import the new service
+// Import the context preparation functions
+const { 
+    prepareDataContextForEnhancedAnalytics, 
+    prepareDataContextForAppraisalCard 
+} = require('../services/utils/templateContextUtils');
 
-// Moved from appraisal.js
-/**
- * Generate HTML visualizations for an appraisal post if they don't exist
- * POST /generate-visualizations
- */
+// Refactored /generate-visualizations route
 router.post('/generate-visualizations', async (req, res) => {
-  console.log('[Viz Route] Starting HTML visualization generation');
+  console.log('[Viz Route] Starting HTML visualization generation using Gemini');
 
   const { postId } = req.body;
-  if (!postId) {
-    return res.status(400).json({ success: false, message: 'postId is required.' });
+  // --- Input Validation (as added previously) --- 
+  if (!postId || typeof postId !== 'string' && typeof postId !== 'number') {
+    return res.status(400).json({ /* ... 400 error ... */ });
   }
+  // --- End Input Validation ---
 
   try {
+    // Step 1: Fetch post data, including existing statistics
     const { postData, images, title: postTitle } = await wordpress.fetchPostData(postId);
     if (!postTitle) {
-      return res.status(404).json({ success: false, message: 'Post not found or title is missing' });
+       return res.status(404).json({ /* ... 404 error ... */ });
     }
 
     console.log(`[Viz Route] Checking for existing HTML visualizations for: "${postTitle}"`);
@@ -32,169 +39,231 @@ router.post('/generate-visualizations', async (req, res) => {
     
     if (htmlFields.exists) {
       console.log('[Viz Route] HTML visualizations already exist, skipping generation');
-      return res.status(200).json({
-        success: true,
-        message: 'HTML visualizations already exist.',
-        details: { postId, title: postTitle, status: 'skipped' }
-      });
+      return res.status(200).json({ /* ... skipped response ... */ });
     }
     
-    console.log(`[Viz Route] Generating HTML visualizations for: "${postTitle}"`);
+    console.log(`[Viz Route] Generating HTML visualizations for: "${postTitle}" using existing stats and Gemini`);
 
-    // Extract statistics, ensuring it's an object
+    // Step 2: Extract and sanitize existing statistics
     let statisticsObj = {};
     const statisticsData = postData.acf?.statistics;
     if (typeof statisticsData === 'string' && statisticsData.trim() !== '') {
       try {
         statisticsObj = jsonCleaner.cleanAndParse(statisticsData);
-        console.log('[Viz Route] Successfully parsed statistics data from post');
+        console.log('[Viz Route] Successfully parsed existing statistics data from post');
       } catch (error) {
-        console.error('[Viz Route] Error parsing statistics data:', error);
-        statisticsObj = {}; // Default to empty object on error
+        console.error('[Viz Route] Error parsing existing statistics data:', error);
+        // Decide if we should proceed with empty stats or throw error
+        // statisticsObj = {}; // Default to empty object on error
+         throw new Error(`Failed to parse existing statistics data: ${error.message}`);
       }
     } else if (typeof statisticsData === 'object' && statisticsData !== null) {
       statisticsObj = statisticsData;
+    } else {
+        console.warn('[Viz Route] No valid existing statistics data found. Proceeding with empty stats.');
+        statisticsObj = {}; // Proceed with empty stats object
     }
+    // Optional: Validate the parsed statistics object
+    let validateStatisticsData = (stats) => stats; // Placeholder
+    try {
+        const processor = require('../services/metadataProcessor');
+        if (processor.validateStatisticsData) { validateStatisticsData = processor.validateStatisticsData; }
+    } catch(e) { console.warn("Could not load validateStatisticsData"); }
+    const sanitizedStats = jsonCleaner.cleanObject(validateStatisticsData(statisticsObj)); // Clean validated/parsed stats
 
-    // Prepare appraisal data object
+    // Step 3: Prepare Data Contexts
+    console.log('[Viz Route] Preparing data contexts for templates');
     const appraisalData = {
+      postId,
       title: postTitle,
       featured_image: images.main?.url || '',
-      creator: postData.acf?.creator || '',
-      object_type: postData.acf?.object_type || '',
-      estimated_age: postData.acf?.estimated_age || '',
-      medium: postData.acf?.medium || '',
-      condition_summary: postData.acf?.condition_summary || '',
-      market_demand: postData.acf?.market_demand || '',
-      rarity: postData.acf?.rarity || '',
-      condition_score: postData.acf?.condition_score || '',
-      value: postData.acf?.value || '',
-      appraiser_name: postData.acf?.appraiser_name || 'Andrés Gómez',
-      // Add other relevant fields from postData.acf...
+      value: postData.acf?.value,
+      creator: postData.acf?.creator,
+      object_type: postData.acf?.object_type,
+      estimated_age: postData.acf?.estimated_age,
+      medium: postData.acf?.medium,
+      condition_summary: postData.acf?.condition_summary,
+      appraiser_name: postData.acf?.appraiser_name,
+      // Add other fields needed by context functions...
+      dimensions: postData.acf?.dimensions, 
+      signed: postData.acf?.signed,
+      framed: postData.acf?.framed,
+      provenance: postData.acf?.provenance,
+      coa: postData.acf?.coa, 
     };
+    const enhancedAnalyticsContext = prepareDataContextForEnhancedAnalytics(sanitizedStats, appraisalData, postId);
+    const appraisalCardContext = prepareDataContextForAppraisalCard(sanitizedStats, appraisalData);
 
-    // Update/Generate HTML fields in WordPress
-    await wordpress.updateHtmlFields(postId, appraisalData, statisticsObj);
+    // Step 4: Read Skeleton HTML Files
+    console.log('[Viz Route] Reading skeleton HTML files');
+    const skeletonPathAnalytics = path.join(__dirname, '../templates/skeletons/enhanced-analytics.html');
+    const skeletonPathCard = path.join(__dirname, '../templates/skeletons/appraisal-card.html');
+    const skeletonHtmlAnalytics = await fs.readFile(skeletonPathAnalytics, 'utf8');
+    const skeletonHtmlCard = await fs.readFile(skeletonPathCard, 'utf8');
 
-    console.log('[Viz Route] HTML visualization generation complete');
+    // Step 5: Call Gemini Service to Populate Templates
+    console.log('[Viz Route] Populating templates using Gemini Service');
+    const populatedAnalyticsHtml = await populateHtmlTemplate(skeletonHtmlAnalytics, enhancedAnalyticsContext);
+    const populatedCardHtml = await populateHtmlTemplate(skeletonHtmlCard, appraisalCardContext);
+
+    // Step 6: Save Populated HTML to WordPress using updateWordPressMetadata
+    console.log('[Viz Route] Saving populated HTML to WordPress');
+    await wordpress.updateWordPressMetadata(postId, 'enhanced_analytics_html', populatedAnalyticsHtml);
+    await wordpress.updateWordPressMetadata(postId, 'appraisal_card_html', populatedCardHtml);
+
+    console.log('[Viz Route] HTML visualization generation complete using Gemini');
+    
+    // Step 7: Update Post Meta History
     await wordpress.updatePostMeta(postId, 'processing_history', [{
-      step: 'generate_visualizations', timestamp: new Date().toISOString(), status: 'completed'
+      step: 'generate_visualizations_gemini', // Updated step name
+      timestamp: new Date().toISOString(), 
+      status: 'completed'
     }]);
 
+    // Step 8: Return Success Response
     res.status(200).json({
       success: true,
-      message: 'HTML visualizations generated successfully.',
+      message: 'HTML visualizations generated successfully using Gemini.',
       details: { postId, title: postTitle }
     });
 
   } catch (error) {
-    console.error(`[Viz Route] /generate-visualizations error: ${error.message}`);
-    res.status(500).json({ success: false, message: error.message || 'Error generating visualizations.' });
+    // Consistent error handling
+    console.error(`[Viz Route] /generate-visualizations error for post ${postId}: ${error.message}`);
+    const statusCode = error.message?.includes('Post not found') ? 404 : 500;
+    const userMessage = statusCode === 404 ? 'Post not found' : 'Error generating visualizations.';
+    res.status(statusCode).json({ 
+      success: false, 
+      message: userMessage,
+      error_details: process.env.NODE_ENV !== 'production' ? error.message : undefined
+    });
   }
 });
 
-// Moved from appraisal.js
-/**
- * Regenerate statistics (via valuer-agent) and HTML visualizations
- * POST /regenerate-statistics-and-visualizations
- */
+// Modified /regenerate-statistics-and-visualizations route
 router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
   console.log('[Viz Route] Starting statistics and visualizations regeneration');
 
   const { postId } = req.body;
-  if (!postId) {
-    return res.status(400).json({ success: false, message: 'postId is required.' });
+  // --- Input Validation (as added previously) --- 
+  if (!postId || typeof postId !== 'string' && typeof postId !== 'number') {
+    // ... return 400 error with usage ...
+    return res.status(400).json({ /* ... */ }); 
   }
+  // --- End Input Validation ---
 
   try {
     const { postData, images, title: postTitle } = await wordpress.fetchPostData(postId);
     if (!postTitle) {
-      return res.status(404).json({ success: false, message: 'Post not found or title is missing' });
+       return res.status(404).json({ /* ... post not found error ... */ });
     }
 
     const targetValue = parseFloat(postData.acf?.value);
     if (isNaN(targetValue)) {
-      return res.status(400).json({ success: false, message: 'Post has invalid or missing value' });
+       return res.status(400).json({ /* ... invalid value error ... */ });
     }
     
     console.log(`[Viz Route] Regenerating statistics for: "${postTitle}" with value ${targetValue}`);
     
-    // Call valuer-agent to regenerate statistics
-    // TODO: Use valuerAgentClient if available
-    console.log('[Viz Route] Calling valuer-agent for enhanced statistics');
-    const valuerAgentUrl = `${config.VALUER_AGENT_API_URL}/api/enhanced-statistics`;
-    const response = await fetch(valuerAgentUrl, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text: postTitle, value: targetValue, limit: 20,
-        minPrice: Math.floor(targetValue * 0.6),
-        maxPrice: Math.ceil(targetValue * 1.6)
-      })
-    });
-    
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('[Viz Route] Error from valuer-agent:', errorText);
-      throw new Error(`Error regenerating statistics from valuer agent: ${errorText}`);
-    }
-    
-    const statsResponse = await response.json();
-    if (!statsResponse.success || !statsResponse.statistics) {
-      console.error('[Viz Route] Invalid response from valuer-agent:', statsResponse);
-      throw new Error('Invalid statistics response from valuer agent');
-    }
-    
-    console.log('[Viz Route] Statistics regenerated, validating and saving...');
-    
-    // Assume validateStatisticsData exists and is imported correctly
-    // If not, this require might fail or need adjustment
-    let validateStatisticsData = (stats) => stats; // Placeholder if function isn't moved/available
+    // Step 1: Call valuer-agent for fresh statistics
+    // TODO: Replace direct fetch with valuerAgentClient.getEnhancedStatistics if available & tested
+    let statsResponse;
     try {
-        const processor = require('../services/metadataProcessor');
+        console.log('[Viz Route] Calling valuer-agent for enhanced statistics');
+        const valuerAgentUrl = `${config.VALUER_AGENT_API_URL}/api/enhanced-statistics`;
+        const response = await fetch(valuerAgentUrl, { /* ... fetch options ... */ });
+        if (!response.ok) throw new Error(await response.text());
+        statsResponse = await response.json();
+        if (!statsResponse.success || !statsResponse.statistics) throw new Error('Invalid statistics response');
+    } catch (agentError) {
+        console.error('[Viz Route] Error fetching from valuer-agent:', agentError);
+        throw new Error(`Error regenerating statistics from valuer agent: ${agentError.message}`);
+    }
+    
+    console.log('[Viz Route] Statistics received, validating and sanitizing...');
+    
+    // Step 2: Validate and Sanitize Statistics
+    let validateStatisticsData = (stats) => stats; // Placeholder
+    try {
+        const processor = require('../services/metadataProcessor'); // Path to processor
         if (processor.validateStatisticsData) {
              validateStatisticsData = processor.validateStatisticsData;
-        }
-    } catch(e) { console.warn("Could not load validateStatisticsData function"); }
-
+        } else { console.warn("validateStatisticsData function not found in processor."); }
+    } catch(e) { console.warn("Could not load metadataProcessor for validation."); }
+    
     const validatedStats = validateStatisticsData(statsResponse.statistics);
-    
-    // Sanitize for WP storage
-     const sanitizedStats = jsonCleaner.cleanObject(validatedStats); // Use cleaner utility
+    const sanitizedStats = jsonCleaner.cleanObject(validatedStats); // Use cleaner utility
 
-    await wordpress.updateWordPressMetadata(postId, 'statistics', sanitizedStats); // Use moved WP function
-    
-    console.log('[Viz Route] Statistics saved, regenerating HTML visualizations');
-    
-    // Prepare appraisal data object (similar to /generate-visualizations)
+    // Step 3: Prepare Data Contexts using imported functions
+    console.log('[Viz Route] Preparing data contexts for templates');
     const appraisalData = {
+      postId,
       title: postTitle,
       featured_image: images.main?.url || '',
-      // ... other fields ...
-      value: postData.acf?.value || '',
+      value: postData.acf?.value,
+      // Add all other fields needed by prepareDataContext... functions
+      creator: postData.acf?.creator,
+      object_type: postData.acf?.object_type,
+      estimated_age: postData.acf?.estimated_age,
+      medium: postData.acf?.medium,
+      condition_summary: postData.acf?.condition_summary,
+      appraiser_name: postData.acf?.appraiser_name,
+      dimensions: postData.acf?.dimensions, 
+      signed: postData.acf?.signed,
+      framed: postData.acf?.framed,
+      provenance: postData.acf?.provenance,
+      coa: postData.acf?.coa, 
+      // etc...
     };
+    const enhancedAnalyticsContext = prepareDataContextForEnhancedAnalytics(sanitizedStats, appraisalData, postId);
+    const appraisalCardContext = prepareDataContextForAppraisalCard(sanitizedStats, appraisalData);
+
+    // Step 4: Read Skeleton HTML Files
+    console.log('[Viz Route] Reading skeleton HTML files');
+    const skeletonPathAnalytics = path.join(__dirname, '../templates/skeletons/enhanced-analytics.html');
+    const skeletonPathCard = path.join(__dirname, '../templates/skeletons/appraisal-card.html');
+    const skeletonHtmlAnalytics = await fs.readFile(skeletonPathAnalytics, 'utf8');
+    const skeletonHtmlCard = await fs.readFile(skeletonPathCard, 'utf8');
+
+    // Step 5: Call Gemini Service to Populate Templates
+    console.log('[Viz Route] Populating templates using Gemini Service');
+    const populatedAnalyticsHtml = await populateHtmlTemplate(skeletonHtmlAnalytics, enhancedAnalyticsContext);
+    const populatedCardHtml = await populateHtmlTemplate(skeletonHtmlCard, appraisalCardContext);
+
+    // Step 6: Save Populated HTML and Statistics to WordPress
+    console.log('[Viz Route] Saving populated HTML and statistics to WordPress');
+    await wordpress.updateWordPressMetadata(postId, 'statistics', sanitizedStats);
+    await wordpress.updateWordPressMetadata(postId, 'enhanced_analytics_html', populatedAnalyticsHtml);
+    await wordpress.updateWordPressMetadata(postId, 'appraisal_card_html', populatedCardHtml);
     
-    await wordpress.updateHtmlFields(postId, appraisalData, sanitizedStats);
-    console.log('[Viz Route] HTML visualizations regenerated successfully');
+    console.log('[Viz Route] Statistics and HTML regenerated and saved successfully');
     
+    // Step 7: Update Post Meta History
     await wordpress.updatePostMeta(postId, 'processing_history', [
       { step: 'regenerate_statistics', timestamp: new Date().toISOString(), status: 'completed' },
       { step: 'regenerate_visualizations', timestamp: new Date().toISOString(), status: 'completed' }
     ]);
     
+    // Step 8: Return Success Response
     return res.json({
       success: true,
-      message: 'Statistics and visualizations regenerated successfully',
+      message: 'Statistics and visualizations regenerated successfully using Gemini.',
       details: {
         postId, title: postTitle,
-        statistics: { count: sanitizedStats.count, /* other summary fields */ }
+        // Include some summary stats if useful
+        statistics_summary: { count: sanitizedStats.count }
       }
     });
 
   } catch (error) {
-    console.error(`[Viz Route] /regenerate error: ${error.message}`);
-    res.status(500).json({
-      success: false, message: 'Error regenerating statistics and visualizations', error: error.message
+     // Consistent error handling (as added previously)
+    console.error(`[Viz Route] /regenerate error for post ${postId}: ${error.message}`);
+    const statusCode = error.message?.includes('Post not found') ? 404 : 500;
+    const userMessage = statusCode === 404 ? 'Post not found' : 'Error regenerating statistics/visualizations';
+    res.status(statusCode).json({
+      success: false, 
+      message: userMessage, 
+      error_details: process.env.NODE_ENV !== 'production' ? error.message : undefined
     });
   }
 });

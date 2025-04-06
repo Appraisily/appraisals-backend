@@ -10,19 +10,32 @@ router.post('/complete-appraisal-report', async (req, res) => {
 
   const { postId, justificationOnly } = req.body;
 
-  if (!postId) {
+  // --- Input Validation --- 
+  if (!postId || typeof postId !== 'string' && typeof postId !== 'number') { // Check for presence and basic type
     return res.status(400).json({ 
       success: false, 
-      message: 'postId is required.' 
+      message: 'Malformed request. Missing or invalid required parameter: postId.', 
+      usage: {
+          method: 'POST',
+          endpoint: '/complete-appraisal-report',
+          required_body_params: {
+            postId: "string | number",
+            justificationOnly: "boolean (optional, defaults to false)"
+          },
+          example: {
+            postId: "123",
+            justificationOnly: false
+          }
+      },
+      error_details: "postId (string or number) is required."
     });
   }
+  // --- End Input Validation ---
   
-  // If justificationOnly is true, handle justification separately (or redirect/call other service)
-  // For simplicity here, we assume this route handles the *complete* report generation.
-  // If justificationOnly is common, it might belong in its own route/controller.
-  if (justificationOnly === true) {
-    console.log('[Report Route] Justification-only request received. Delegating...');
-    // Option 1: Call the justification service directly
+  const isJustificationOnly = justificationOnly === true;
+
+  if (isJustificationOnly) {
+    console.log('[Report Route] Justification-only request received.');
     try {
       const { postData, title: postTitle } = await wordpress.fetchPostData(postId);
       if (!postTitle) throw new Error('Post not found or title missing');
@@ -34,11 +47,16 @@ router.post('/complete-appraisal-report', async (req, res) => {
         details: { postId, title: postTitle, processedFields: [justificationResult] }
       });
     } catch (error) {
-      console.error(`[Report Route] Justification-only error: ${error.message}`);
-      return res.status(500).json({ success: false, message: error.message, details: { postId, error: error.message } });
+      console.error(`[Report Route] Justification-only error for post ${postId}: ${error.message}`);
+      // Determine status code based on error type if possible (e.g., 404 for 'Post not found')
+      const statusCode = error.message?.includes('Post not found') ? 404 : 500;
+      return res.status(statusCode).json({ 
+          success: false, 
+          message: statusCode === 404 ? error.message : 'Error processing justification.', 
+          // Expose details only in non-production
+          error_details: process.env.NODE_ENV !== 'production' ? error.message : undefined
+      });
     }
-    // Option 2: Return an error/suggestion to use the dedicated justification route
-    // return res.status(400).json({ success: false, message: 'Please use the /process-justification endpoint for justification-only requests.' });
   }
 
   // --- Full Report Generation Logic --- 
@@ -47,11 +65,12 @@ router.post('/complete-appraisal-report', async (req, res) => {
     const { postData, images, title: postTitle } = await wordpress.fetchPostData(postId);
 
     if (!postTitle) {
-      console.warn('[Report Route] Post title not found');
+      console.warn(`[Report Route] Post ${postId} title not found`);
+      // Return 404 specifically for not found
       return res.status(404).json({
         success: false,
         message: 'Post not found or title is missing',
-        details: { postId, title: null, visionAnalysis: null, processedFields: [] }
+        error_details: `Post with ID ${postId} could not be found or lacks a title.`
       });
     }
 
@@ -134,12 +153,19 @@ router.post('/complete-appraisal-report', async (req, res) => {
     });
 
   } catch (error) {
-    // Catch errors from fetchPostData or other unhandled issues
+    // Catch errors from fetchPostData or other unhandled issues in the main flow
     console.error(`[Report Route] Overall error for post ${postId}: ${error.message}`);
-    res.status(500).json({
+    // Check if it was a 'not found' error during initial fetch
+    const statusCode = error.message?.includes('Post not found') ? 404 : 500;
+    const userMessage = statusCode === 404 
+        ? 'Post not found or title is missing' 
+        : 'Error completing appraisal report.';
+        
+    res.status(statusCode).json({
       success: false,
-      message: error.message || 'Error completing appraisal report.',
-      details: { postId, error: error.message }
+      message: userMessage,
+      // Expose details only in non-production
+      error_details: process.env.NODE_ENV !== 'production' ? error.message : undefined
     });
   }
 });

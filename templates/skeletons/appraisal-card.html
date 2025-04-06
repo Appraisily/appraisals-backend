@@ -1,0 +1,144 @@
+<!-- templates/skeletons/appraisal-card.html -->
+<!-- NOTE: This is a skeleton. CSS and JS need to be provided separately. -->
+<!-- Placeholders like {{VARIABLE_NAME}} will be replaced by Gemini. -->
+<!-- Data attributes like data-chart-data='{{METRICS_CHART_DATA_JSON}}' will hold data for client-side JS. -->
+
+<div class="modern-appraisal-card" data-post-id="{{POST_ID}}">
+  <header class="card-header">
+    <div class="header-content">
+      <div class="report-info">
+        <div class="report-badge">
+          <!-- SVG Checkmark -->
+        </div>
+        <div>
+          <h1>Art Analysis Report</h1>
+          <p class="report-date">{{CURRENT_DATE}}</p>
+        </div>
+      </div>
+      <div class="value-display">
+        <div class="value-content">
+          <span class="value-label">APPRAISED VALUE</span>
+          <span class="value-amount">{{VALUE_FORMATTED}} USD</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <div class="card-body">
+    <div class="dual-layout">
+      <div class="artwork-showcase">
+        <div class="artwork-image">
+          {{FEATURED_IMAGE_HTML}} <!-- Simple image tag or placeholder div -->
+        </div>
+        <div class="artwork-info">
+          <h2 class="artwork-title">{{TITLE}}</h2>
+          <p class="artwork-creator">{{CREATOR}}</p>
+          <div class="artwork-details">
+            <div class="detail-item">
+              <span class="detail-label">Object Type</span>
+              <span class="detail-value">{{OBJECT_TYPE}}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Period/Age</span>
+              <span class="detail-value">{{AGE}}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Medium</span>
+              <span class="detail-value">{{MEDIUM}}</span>
+            </div>
+            <div class="detail-item">
+              <span class="detail-label">Condition</span>
+              <span class="detail-value">{{CONDITION}}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="market-position-container" data-percentile-gauge="{{PERCENTILE_NUMBER}}" data-gauge-id="{{CHART_ID_GAUGE}}">
+        <h3>Market Position</h3>
+        <div class="gauge-container">
+          <canvas id="{{CHART_ID_GAUGE}}" height="170"></canvas>
+          <div class="gauge-indicator">
+            <span class="percentile-value">{{PERCENTILE}}</span>
+            <span class="percentile-label">Percentile</span>
+          </div>
+        </div>
+        <div class="position-trend">
+          <span class="trend-label">Market Trend</span>
+          <span class="trend-value {{TREND_CLASS}}">{{PRICE_TREND}} Annual Change</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="metrics-grid">
+      <div class="metrics-chart-container" data-chart-data-metrics="{{METRICS_CHART_DATA_JSON}}">
+        <h3>Item Value Assessment</h3>
+        <div class="chart-container" style="position: relative; height: 240px; max-height: 240px;">
+          <canvas id="{{CHART_ID_METRICS}}"></canvas>
+        </div>
+      </div>
+      <div class="price-distribution-container" data-chart-data-market="{{MARKET_CHART_DATA_JSON}}">
+        <h3>Market Price Distribution</h3>
+        <div class="chart-container" style="position: relative; height: 240px; max-height: 240px;">
+          <canvas id="{{CHART_ID_MARKET}}"></canvas>
+        </div>
+        <div class="distribution-legend">
+            <!-- Static legend or generated client-side -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card-tabs">
+    <div class="tabs-navigation">
+      <button class="tab-button active" data-tab="summary">Summary</button>
+      <button class="tab-button" data-tab="details">Details</button>
+      <button class="tab-button" data-tab="similar">Similar Items</button>
+    </div>
+    <div class="tabs-content">
+      <div id="summary" class="tab-panel active">
+        <h2 class="tab-title">Artwork Details</h2>
+        <div class="artwork-details-table">
+          <table><tbody>{{DETAILS_TABLE_HTML}}</tbody></table>
+        </div>
+      </div>
+      <div id="details" class="tab-panel">
+        <div class="market-analysis">
+          <p class="analysis-text">{{ANALYSIS_TEXT}}</p>
+          <div class="metrics-details">
+            <div class="metric-detail-item">
+              <h4>Market Demand</h4>
+              <div class="metric-bar-container"><div class="metric-bar" style="width: {{MARKET_DEMAND_SCORE}}%;"><span class="metric-value">{{MARKET_DEMAND_SCORE}}%</span></div></div>
+              <p>Current collector interest level</p>
+            </div>
+            <div class="metric-detail-item">
+              <h4>Rarity</h4>
+              <div class="metric-bar-container"><div class="metric-bar" style="width: {{RARITY_SCORE}}%;"><span class="metric-value">{{RARITY_SCORE}}%</span></div></div>
+              <p>Scarcity in the marketplace</p>
+            </div>
+            <div class="metric-detail-item">
+              <h4>Condition</h4>
+              <div class="metric-bar-container"><div class="metric-bar" style="width: {{CONDITION_SCORE}}%;"><span class="metric-value">{{CONDITION_SCORE}}%</span></div></div>
+              <p>Physical state assessment</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="similar" class="tab-panel">
+        <div class="similar-items">
+          <p class="no-similar-items">Similar items can be viewed on the full webpage.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="card-footer">
+    <div class="footer-info">
+      <p>Appraised by: <strong>{{APPRAISER_NAME}}</strong>, Accredited Art Appraiser</p>
+    </div>
+    <a href="#" class="detail-report-button">
+      <span>View Detailed Report</span>
+      <!-- SVG Arrow -->
+    </a>
+  </footer>
+</div> 

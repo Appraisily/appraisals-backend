@@ -615,10 +615,8 @@ async function processJustificationMetadata(postId, postTitle, value, skipMetada
   }
 }
 
-
 module.exports = {
   processAllMetadata,
   processJustificationMetadata,
-  // Export helpers only if needed externally, otherwise keep them internal
-  // validateStatisticsData 
+  validateStatisticsData
 }; 
