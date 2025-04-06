@@ -5,7 +5,9 @@ const templates = require('../templates');
 const { jsonCleaner } = require('../services/utils/jsonCleaner');
 const geminiService = require('../services/geminiService');
 const { prepareDataContextForEnhancedAnalytics, prepareDataContextForAppraisalCard } = require('../services/utils/templateContextUtils');
-const { isObject, sanitizeText } = require('../services/utils/validationUtils');
+
+// Define isObject function directly
+const isObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
 
 /**
  * Debug endpoint for visualization generation
