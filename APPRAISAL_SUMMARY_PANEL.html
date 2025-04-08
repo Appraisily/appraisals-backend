@@ -128,8 +128,8 @@
     
     <div class="summary-tabs">
       <div class="tab-buttons">
-        <button class="tab-button active" onclick="showTab('nutshell')">In a Nutshell</button>
-        <button class="tab-button" onclick="showTab('market')">Market Analysis</button>
+        <button class="tab-button active" onclick="showTab('nutshell')">Summary</button>
+        <button class="tab-button" onclick="showTab('market')">Details</button>
       </div>
       
       <div class="tab-content">
@@ -311,7 +311,7 @@
   font-weight: 700;
   margin: 0 0 0.5rem;
   color: #1a1a1a;
-  text-align: justify;
+  text-align: left;
 }
 
 .artwork-creator {
@@ -547,6 +547,8 @@
   color: #555;
   transition: all 0.2s;
   font-size: 1rem;
+  flex: 1;
+  text-align: center;
 }
 
 .tab-button.active {
@@ -612,11 +614,13 @@
   width: 100%;
   white-space: normal;
   word-wrap: break-word;
+  text-align: left;
 }
 
 .market-summary {
   line-height: 1.7;
   font-size: 1.05rem;
+  text-align: left;
 }
 
 .market-cta {
@@ -715,14 +719,6 @@
     grid-template-columns: 150px 1fr;
   }
   
-  .similar-items-container {
-    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-  }
-  
-  .summary-similar-gallery img {
-    height: 140px;
-  }
-  
   .tab-button {
     padding: 1rem;
     font-size: 0.9rem;
@@ -744,10 +740,6 @@
     border-top: none;
     margin-top: 0;
     padding-top: 0;
-  }
-  
-  .similar-items-container {
-    grid-template-columns: repeat(2, 1fr);
   }
 }
 </style>
@@ -861,11 +853,15 @@ function formatTable() {
       const key = parts[0].trim();
       const value = parts.slice(1).join(':').trim();
       
+      // Decode entities in key and value
+      const decodedKey = decodeEntities(key);
+      const decodedValue = decodeEntities(value);
+      
       const dt = document.createElement('dt');
-      dt.textContent = key;
+      dt.textContent = decodedKey;
       
       const dd = document.createElement('dd');
-      dd.textContent = value;
+      dd.textContent = decodedValue;
       
       dl.appendChild(dt);
       dl.appendChild(dd);
@@ -874,6 +870,13 @@ function formatTable() {
   
   formattedContainer.appendChild(dl);
   nutshellPane.appendChild(formattedContainer);
+}
+
+// Helper function to decode HTML entities
+function decodeEntities(text) {
+  const textarea = document.createElement('textarea');
+  textarea.innerHTML = text;
+  return textarea.value;
 }
 
 // Initialize once the DOM is loaded

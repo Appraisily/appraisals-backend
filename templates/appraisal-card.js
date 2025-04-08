@@ -40,7 +40,17 @@ exports.generateAppraisalCard = function(appraisal, stats, options = {}) {
   
   // Extract data from the appraisal and stats objects or use defaults
   let title = appraisalData.title || 'Untitled Artwork';
-  const creator = appraisalData.creator || 'Unknown Artist';
+  const detailedTitle = appraisalData.detailed_title || title;
+  
+  // If title is truncated or brief title is not available, use detailed title with appropriate length limit
+  if (title.endsWith('...') || title.length < 20) {
+    // Get the first sentence or portion of the detailed title if available
+    const shorterDetailedTitle = detailedTitle ? 
+      (detailedTitle.split('.')[0] + '.').substring(0, 120) : 
+      title;
+    
+    title = shorterDetailedTitle || title;
+  }
   
   // Decode HTML entities in the title and other text fields
   title = title.replace(/&amp;/g, '&')
@@ -49,10 +59,23 @@ exports.generateAppraisalCard = function(appraisal, stats, options = {}) {
                .replace(/&quot;/g, '"')
                .replace(/&#039;/g, "'")
                .replace(/&#215;/g, '×');
+  const creator = appraisalData.creator || 'Unknown Artist';
+  
+  // Get metadata with proper defaults and value checking
   const object_type = appraisalData.object_type || 'Art Object';
-  const age = appraisalData.estimated_age || '20th Century';
+  const age = appraisalData.estimated_age || appraisalData.age_text || '20th Century';
   const medium = appraisalData.medium || 'Mixed Media';
-  const condition = appraisalData.condition_summary || 'Good';
+  const condition = appraisalData.condition_summary || appraisalData.condition || 'Good';
+  
+  // Log metadata values for debugging
+  console.log('Metadata values:', {
+    object_type,
+    age,
+    medium,
+    condition,
+    title,
+    detailedTitle: detailedTitle ? detailedTitle.substring(0, 50) + '...' : 'None'
+  });
   
   // Get metrics
   const market_demand = parseInt(appraisalData.market_demand || 75);
@@ -131,22 +154,35 @@ exports.generateAppraisalCard = function(appraisal, stats, options = {}) {
             <p class="artwork-creator">${escapeHtml(creator)}</p>
             
             <div class="artwork-details">
-              <div class="detail-item">
-                <span class="detail-label">Object Type</span>
-                <span class="detail-value">${escapeHtml(object_type)}</span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">Period/Age</span>
-                <span class="detail-value">${escapeHtml(age)}</span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">Medium</span>
-                <span class="detail-value">${escapeHtml(medium)}</span>
-              </div>
-              <div class="detail-item">
-                <span class="detail-label">Condition</span>
-                <span class="detail-value">${escapeHtml(condition)}</span>
-              </div>
+              ${object_type && object_type !== 'Art Object' ? 
+                `<div class="detail-item">
+                  <span class="detail-label">Object Type</span>
+                  <span class="detail-value">${escapeHtml(object_type)}</span>
+                </div>` : ''
+              }
+              ${age && age !== '20th Century' ? 
+                `<div class="detail-item">
+                  <span class="detail-label">Period/Age</span>
+                  <span class="detail-value">${escapeHtml(age)}</span>
+                </div>` : ''
+              }
+              ${medium && medium !== 'Mixed Media' ? 
+                `<div class="detail-item">
+                  <span class="detail-label">Medium</span>
+                  <span class="detail-value">${escapeHtml(medium)}</span>
+                </div>` : ''
+              }
+              ${condition && condition !== 'Good' ? 
+                `<div class="detail-item">
+                  <span class="detail-label">Condition</span>
+                  <span class="detail-value">${escapeHtml(condition)}</span>
+                </div>` : ''
+              }
+              ${!object_type && !age && !medium && !condition ? 
+                `<div class="empty-metadata-notice">
+                  <p>Additional details available in the summary tab.</p>
+                </div>` : ''
+              }
             </div>
           </div>
         </div>
@@ -917,6 +953,16 @@ exports.generateAppraisalCard = function(appraisal, stats, options = {}) {
       width: 100%;
       justify-content: center;
     }
+  }
+
+  /* Add style for empty metadata notice */
+  .modern-appraisal-card .empty-metadata-notice {
+    width: 100%;
+    text-align: center;
+    padding: 1.5rem;
+    color: var(--neutral-500);
+    font-style: italic;
+    font-size: 0.9rem;
   }
   </style>
 

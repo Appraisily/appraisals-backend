@@ -326,6 +326,8 @@
     position: relative;
     transition: color 0.2s ease;
     border-bottom: 2px solid transparent; /* For active state */
+    flex: 1; /* Make each tab button take equal width */
+    text-align: center; /* Center the text */
 }
 .appraisal-card .tab-button:hover {
     color: var(--primary);
@@ -535,6 +537,32 @@
      }
 }
 
+/* Additional styles to fix text alignment and tab width */
+.appraisal-card .tab-button {
+  flex: 1 !important;
+  text-align: center !important;
+}
+
+.appraisal-card .artwork-info .artwork-title {
+  text-align: left !important;
+}
+
+.appraisal-card .artwork-details-table td:last-child {
+  text-align: left !important;
+}
+
+.appraisal-card .analysis-text,
+.appraisal-card .metric-detail-item p {
+  text-align: left !important;
+}
+
+/* Help with entity decoding */
+.appraisal-card .artwork-title, 
+.appraisal-card .artwork-creator,
+.appraisal-card .detail-value,
+.appraisal-card .artwork-details-table td {
+  font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
 </style>
 
 <!-- templates/skeletons/appraisal-card.html -->
@@ -623,7 +651,6 @@
     <div class="tabs-navigation">
       <button class="tab-button active" data-tab="summary">Summary</button>
       <button class="tab-button" data-tab="details">Details</button>
-      <button class="tab-button" data-tab="similar">Similar Items</button>
     </div>
     <div class="tabs-content">
       <div id="summary" class="tab-panel active">
@@ -670,12 +697,6 @@
           </div>
         </div>
       </div>
-      <div id="similar" class="tab-panel">
-        <div class="similar-items">
-          <!-- Content for similar items (e.g., gallery) should be handled by WP shortcode or client-side JS -->
-          <p class="no-similar-items">Similar items viewable on the full webpage.</p> 
-        </div>
-      </div>
     </div>
   </div>
   
@@ -715,6 +736,31 @@ document.addEventListener('DOMContentLoaded', function() {
                     panel.classList.remove('active');
                 }
             });
+        });
+    });
+    
+    // Handle HTML entity decoding
+    function decodeHtmlEntities(text) {
+        if (!text) return text;
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = text;
+        return textarea.value;
+    }
+    
+    // Apply decoding to important elements
+    const elementSelectors = [
+        '.artwork-title', 
+        '.artwork-creator',
+        '.detail-value',
+        '.artwork-details-table td'
+    ];
+    
+    elementSelectors.forEach(selector => {
+        const elements = card.querySelectorAll(selector);
+        elements.forEach(el => {
+            if (el.textContent) {
+                el.textContent = decodeHtmlEntities(el.textContent);
+            }
         });
     });
 });

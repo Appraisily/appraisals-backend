@@ -8,6 +8,7 @@ A scalable, serverless API service built with Node.js that automates the generat
 - [Features](#features)
 - [Architecture](#architecture)
 - [Project Structure](#project-structure)
+- [HTML Skeleton Files Usage](#html-skeleton-files-usage)
 - [Requirements](#requirements)
 - [Installation](#installation)
 - [Configuration](#configuration)
@@ -122,6 +123,47 @@ A scalable, serverless API service built with Node.js that automates the generat
 ├── Dockerfile
 └── README.md               # This file
 ```
+
+## HTML Skeleton Files Usage
+
+The system uses a skeleton-based approach for generating the visualization HTML. This is critical to understand because:
+
+### Skeletons and Gemini
+
+1. **Only the skeleton files are used**: The system exclusively uses the HTML templates in the `templates/skeletons/` directory. The main ones are:
+   - `appraisal-card.html` - The appraisal summary card that shows at the top of posts
+   - `enhanced-analytics.html` - The detailed analytics section
+   - `appraisal-card-fix.html` - Contains CSS and JavaScript fixes applied to the card
+   - `appraisal-card-head.html` - Additional fixes for entity decoding/styling
+
+2. **Important Guidelines**:
+   - When making changes to visualization layouts, you must modify these skeleton files directly.
+   - The skeletons contain placeholders (e.g., `{{VARIABLE_NAME}}`) that Gemini replaces with actual data.
+   - The skeleton files include both structure (HTML) and styling (CSS).
+   - Any changes to tabs, formatting, or layout must be done in these skeleton files.
+
+3. **File Cleanup Recommendation**:
+   - **Other HTML/PHP files in the repository (outside the skeleton directory) should be considered legacy/obsolete and can be safely deleted.**
+   - Files like `APPRAISAL_SUMMARY_PANEL.html`, old versions of `display_appraisal_card_shortcode.php` and others are no longer used.
+   - The JS-based template generators in `templates/` directory (`appraisal-card.js` and `enhanced-analytics.js`) are deprecated and can be safely removed.
+
+### Workflow for Visual Changes
+
+When making visual changes to the appraisal displays:
+
+1. Edit the appropriate skeleton file in `templates/skeletons/` directory.
+2. If changing tab structures (e.g., removing the "Similar Items" tab), ensure you:
+   - Remove the button/tab from the HTML structure
+   - Remove the corresponding content panel
+   - Adjust the CSS to handle the new layout (e.g., making remaining tabs take full width)
+3. For text alignment issues, add appropriate CSS rules with `!important` to override any conflicting styles.
+4. For fixing entity encoding issues (like strange characters in titles), ensure proper entity decoding is applied in the JavaScript sections of the skeleton files.
+
+### Testing Changes
+
+After making changes to skeleton files:
+1. Use the `POST /api/visualizations/debug` endpoint to generate HTML based on your changes without saving to WordPress.
+2. Once verified, use `POST /regenerate-statistics-and-visualizations` to update actual posts with the new designs.
 
 ## Requirements
 

@@ -54,12 +54,13 @@
 <!-- CSS Fix for Appraisal Card -->
 <style>
   /* Ensure artwork title doesn't overflow */
-  .artwork-info h2 {
+  .artwork-info h2, .artwork-title {
     font-size: 1rem;
     line-height: 1.5;
     overflow-wrap: break-word;
     max-height: 9em;
     overflow-y: auto;
+    text-align: left !important;
   }
   
   /* Fix for gauge chart display */
@@ -81,5 +82,27 @@
   .metric-bar[style="width: 0%;"] .metric-value {
     display: inline-block !important;
     content: "65%" !important;
+  }
+  
+  /* Fix tab buttons to take equal width */
+  .tab-button {
+    flex: 1 !important;
+    text-align: center !important;
+  }
+  
+  /* Ensure text alignment is left for content */
+  .artwork-details-table td,
+  .analysis-text,
+  .metric-detail-item p,
+  .detail-value {
+    text-align: left !important;
+  }
+  
+  /* Better font for special characters */
+  .artwork-title, 
+  .artwork-creator,
+  .detail-value,
+  .artwork-details-table td {
+    font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif !important;
   }
 </style> 
