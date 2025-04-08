@@ -37,7 +37,15 @@ function decodeHtmlEntities(text) {
     '&ldquo;': '"',
     '&rdquo;': '"',
     '&bull;': '•',
-    '&hellip;': '…'
+    '&hellip;': '…',
+    '&#8216;': ''', // Left single quote
+    '&#8217;': ''', // Right single quote
+    '&#8220;': '"', // Left double quote
+    '&#8221;': '"', // Right double quote
+    '&#8226;': '•', // Bullet
+    '&#8211;': '–', // En dash
+    '&#8212;': '—', // Em dash
+    '&#8230;': '…'  // Ellipsis
   };
   
   Object.keys(replacements).forEach(entity => {
@@ -67,6 +75,7 @@ document.addEventListener('DOMContentLoaded', function() {
   // Common text elements to decode
   const commonTextElements = [
     '.artwork-title',
+    '.artwork-info h2', // Specifically target the appraisal card title
     '.artwork-creator',
     '.artwork-description',
     '.detail-value',
@@ -80,3 +89,22 @@ document.addEventListener('DOMContentLoaded', function() {
   
   console.log('HTML entity decoder initialized');
 });
+
+// Also handle cases where the DOM may have already loaded
+if (document.readyState === 'interactive' || document.readyState === 'complete') {
+  const commonTextElements = [
+    '.artwork-title',
+    '.artwork-info h2', // Specifically target the appraisal card title
+    '.artwork-creator',
+    '.artwork-description',
+    '.detail-value',
+    'h1', 'h2', 'h3', 'h4', 'h5',
+    'p', 'span', 'div.text-content',
+    'th', 'td'
+  ];
+  
+  // Decode HTML entities in these elements
+  decodeHtmlInElements(commonTextElements);
+  
+  console.log('HTML entity decoder initialized (on already loaded DOM)');
+}

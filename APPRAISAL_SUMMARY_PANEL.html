@@ -130,7 +130,6 @@
       <div class="tab-buttons">
         <button class="tab-button active" onclick="showTab('nutshell')">In a Nutshell</button>
         <button class="tab-button" onclick="showTab('market')">Market Analysis</button>
-        <button class="tab-button" onclick="showTab('similar')">Similar Items</button>
       </div>
       
       <div class="tab-content">
@@ -145,11 +144,6 @@
             <div class="market-cta">
               <button class="read-more-btn" onclick="scrollToSection('market-research')">See Full Market Analysis</button>
             </div>
-          </div>
-        </div>
-        <div id="similar" class="tab-pane">
-          <div class="similar-items-container">
-            [similar_gallery field_name="googlevision" limit="3" class="summary-similar-gallery"]
           </div>
         </div>
       </div>
@@ -317,6 +311,7 @@
   font-weight: 700;
   margin: 0 0 0.5rem;
   color: #1a1a1a;
+  text-align: justify;
 }
 
 .artwork-creator {
@@ -644,27 +639,6 @@
 .read-more-btn:hover {
   background: #2951b9;
   transform: translateY(-2px);
-}
-
-.similar-items-container {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 1.5rem;
-}
-
-.summary-similar-gallery img {
-  width: 100%;
-  height: 180px;
-  object-fit: cover;
-  border-radius: 8px;
-  transition: all 0.25s;
-  border: 1px solid #eaeaea;
-}
-
-.summary-similar-gallery img:hover {
-  transform: scale(1.05);
-  box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-  border-color: #d0deff;
 }
 
 .summary-footer {

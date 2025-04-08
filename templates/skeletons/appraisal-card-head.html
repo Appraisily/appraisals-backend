@@ -1,0 +1,99 @@
+<!-- Appraisal Card Head Section Fixes -->
+<!-- HTML Entity Decoder - Early Execution -->
+<script>
+  // Immediate HTML entity decoding fix
+  (function() {
+    // HTML entity decoder function
+    function decodeHtmlEntities(text) {
+      if (!text || typeof text !== 'string') return '';
+      
+      // Use textarea trick for basic entity decoding
+      const textarea = document.createElement('textarea');
+      textarea.innerHTML = text;
+      let decoded = textarea.value;
+      
+      // Handle common numeric entities
+      decoded = decoded.replace(/&#(\d+);/g, function(match, dec) {
+        return String.fromCharCode(dec);
+      });
+      
+      // Handle specific entities that may not be properly decoded
+      const replacements = {
+        '&amp;': '&',
+        '&lt;': '<',
+        '&gt;': '>',
+        '&quot;': '"',
+        '&#039;': "'",
+        '&#215;': '×',
+        '&times;': '×',
+        '&#8216;': ''', // Left single quote
+        '&#8217;': ''', // Right single quote
+        '&#8220;': '"', // Left double quote
+        '&#8221;': '"', // Right double quote
+        '&#8226;': '•', // Bullet
+        '&#8211;': '–', // En dash
+        '&#8212;': '—'  // Em dash
+      };
+      
+      for (const entity in replacements) {
+        const regex = new RegExp(entity.replace(/([.*+?^=!:${}()|\[\]\/\\])/g, "\\$1"), 'g');
+        decoded = decoded.replace(regex, replacements[entity]);
+      }
+      
+      return decoded;
+    }
+    
+    // Function to execute on DOM load to decode entities
+    function decodeEntitiesInPage() {
+      const selectors = [
+        '.artwork-title', '.artwork-info h2', '.detail-value', 
+        '.artwork-creator', 'h1', 'h2', 'h3', 'p'
+      ];
+      
+      selectors.forEach(selector => {
+        const elements = document.querySelectorAll(selector);
+        elements.forEach(el => {
+          if (el.textContent && el.textContent.includes('&')) {
+            el.textContent = decodeHtmlEntities(el.textContent);
+          }
+        });
+      });
+    }
+    
+    // Run immediately if DOM is ready
+    if (document.readyState === 'interactive' || document.readyState === 'complete') {
+      setTimeout(decodeEntitiesInPage, 0);
+    } else {
+      // Otherwise wait for DOM to be ready
+      document.addEventListener('DOMContentLoaded', decodeEntitiesInPage);
+    }
+  })();
+</script>
+
+<!-- Chart.js Early Loading -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+
+<!-- Critical CSS fixes for appraisal card -->
+<style>
+  /* Essential fixes for chart display and entity-decoded content */
+  .appraisal-card .artwork-info h2 {
+    font-size: 1rem;
+    line-height: 1.5;
+    overflow-wrap: break-word;
+    max-height: 9em;
+    overflow-y: auto;
+  }
+  
+  .appraisal-card .metric-bar[style="width: 0%;"] {
+    width: 65% !important;
+  }
+  
+  .appraisal-card .metric-bar[style="width: 0%;"] .metric-value {
+    display: inline-block !important;
+  }
+  
+  .appraisal-card .gauge-container {
+    position: relative;
+    min-height: 170px;
+  }
+</style> 

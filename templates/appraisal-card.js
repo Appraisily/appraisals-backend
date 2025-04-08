@@ -200,7 +200,6 @@ exports.generateAppraisalCard = function(appraisal, stats, options = {}) {
       <div class="tabs-navigation">
         <button class="tab-button active" data-tab="summary">Summary</button>
         <button class="tab-button" data-tab="details">Details</button>
-        <button class="tab-button" data-tab="similar">Similar Items</button>
       </div>
       
       <div class="tabs-content">
@@ -252,12 +251,6 @@ exports.generateAppraisalCard = function(appraisal, stats, options = {}) {
                 <p>Physical state assessment</p>
               </div>
             </div>
-          </div>
-        </div>
-        
-        <div id="similar" class="tab-panel">
-          <div class="similar-items">
-            <p class="no-similar-items">Similar items can be viewed on the full webpage.</p>
           </div>
         </div>
       </div>
@@ -474,6 +467,7 @@ exports.generateAppraisalCard = function(appraisal, stats, options = {}) {
     font-size: 1.25rem;
     font-weight: 700;
     margin: 0 0 0.5rem;
+    text-align: justify;
   }
 
   .modern-appraisal-card .artwork-creator {
@@ -805,37 +799,6 @@ exports.generateAppraisalCard = function(appraisal, stats, options = {}) {
     color: var(--neutral-500);
     margin: 0.5rem 0 0;
     text-align: right;
-  }
-
-  /* Similar Items Tab */
-  .modern-appraisal-card .similar-items {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 1.25rem;
-  }
-
-  .modern-appraisal-card .similar-gallery img {
-    width: 100%;
-    aspect-ratio: 1;
-    object-fit: cover;
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--neutral-200);
-    transition: all 0.25s ease;
-  }
-
-  .modern-appraisal-card .similar-gallery img:hover {
-    transform: scale(1.05);
-    box-shadow: var(--shadow-md);
-    border-color: var(--primary-300);
-  }
-
-  .modern-appraisal-card .no-similar-items {
-    text-align: center;
-    color: var(--neutral-500);
-    padding: 2rem;
-    background: var(--neutral-50);
-    border-radius: var(--radius-lg);
-    border: 1px dashed var(--neutral-300);
   }
 
   /* Footer Section */

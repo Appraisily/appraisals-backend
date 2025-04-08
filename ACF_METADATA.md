@@ -52,4 +52,5 @@ This file lists the ACF (Advanced Custom Fields) used by the `appraisals-backend
 | 46| statistics_summary_text| `statistics_summary_text` | Text Area   | Descriptive text summarizing statistics for PDF.                      |
 | 47| enhanced_description | `enhanced_description`    | Text Area   | AI-enhanced description of the item.                                |
 | 48| last_updated         | `last_updated`            | Text        | ISO timestamp of the last backend update.                           |
-| 49| appraisal_status     | `appraisal_status`        | Text        | Status of the appraisal process (e.g., 'pending', 'completed').       | 
+| 49| appraisal_status     | `appraisal_status`        | Text        | Status of the appraisal process (e.g., 'pending', 'completed').       |
+| 50| detailed_title       | `detailed_title`          | Text Area   | Comprehensive metadata-rich description of the artwork used by AI agents. | 
