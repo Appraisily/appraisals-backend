@@ -413,6 +413,254 @@ const ENHANCED_ANALYTICS_TEMPLATE = `
 
 {{scripts}}`;
 
+// Script section specifically for enhanced analytics
+const ENHANCED_ANALYTICS_SCRIPTS = `
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    // Ensure Chart.js is loaded
+    if (typeof Chart === "undefined") {
+        console.log("Loading Chart.js");
+        var script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/npm/chart.js";
+        script.onload = initCharts;
+        document.head.appendChild(script);
+    } else {
+        initCharts();
+    }
+    
+    // Initialize all charts
+    function initCharts() {
+        // Check if sections are visible before initializing
+        const isPriceHistoryVisible = !document.querySelector(".price-history-section").hasAttribute("style") ||
+                                      !document.querySelector(".price-history-section").style.display === "none";
+        
+        initRadarChart();
+        if (isPriceHistoryVisible) {
+            initPriceHistoryChart();
+        }
+        initGaugeChart();
+        setupHistogram();
+        setupSalesTable();
+    }
+    
+    // Initialize radar chart
+    function initRadarChart() {
+        var wrapper = document.querySelector(".radar-wrapper");
+        if (wrapper) {
+            var canvas = wrapper.querySelector("canvas");
+            if (canvas) {
+                var data = {
+                    labels: [
+                        'Condition',
+                        'Rarity',
+                        'Market Demand',
+                        'Historical Significance',
+                        'Investment Potential',
+                        'Provenance'
+                    ],
+                    datasets: [{
+                        label: 'Item Metrics',
+                        data: [
+                            parseInt(document.querySelector('.metrics-grid .metric-card:nth-child(1) .metric-value').textContent),
+                            parseInt(document.querySelector('.metrics-grid .metric-card:nth-child(2) .metric-value').textContent),
+                            parseInt(document.querySelector('.metrics-grid .metric-card:nth-child(3) .metric-value').textContent),
+                            parseInt(document.querySelector('.metrics-grid .metric-card:nth-child(4) .metric-value').textContent),
+                            parseInt(document.querySelector('.metrics-grid .metric-card:nth-child(5) .metric-value').textContent),
+                            parseInt(document.querySelector('.metrics-grid .metric-card:nth-child(6) .metric-value').textContent)
+                        ],
+                        fill: true,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgb(54, 162, 235)',
+                        pointBackgroundColor: 'rgb(54, 162, 235)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgb(54, 162, 235)'
+                    }]
+                };
+                
+                new Chart(canvas, {
+                    type: 'radar',
+                    data: data,
+                    options: {
+                        elements: {
+                            line: {
+                                borderWidth: 3
+                            }
+                        },
+                        scales: {
+                            r: {
+                                angleLines: {
+                                    display: true
+                                },
+                                suggestedMin: 0,
+                                suggestedMax: 100
+                            }
+                        }
+                    }
+                });
+                console.log("Radar chart initialized");
+            }
+        }
+    }
+    
+    // Initialize price history chart
+    function initPriceHistoryChart() {
+        var wrapper = document.querySelector(".price-chart-wrapper");
+        if (wrapper) {
+            try {
+                var canvas = wrapper.querySelector("canvas");
+                if (canvas && wrapper.dataset.chartDataHistory) {
+                    var chartData = JSON.parse(wrapper.dataset.chartDataHistory);
+                    new Chart(canvas, {
+                        type: 'line',
+                        data: chartData,
+                        options: {
+                            responsive: true,
+                            scales: {
+                                y: {
+                                    beginAtZero: false,
+                                    grid: {
+                                        color: 'rgba(0, 0, 0, 0.1)'
+                                    }
+                                },
+                                x: {
+                                    grid: {
+                                        display: false
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    position: 'bottom'
+                                }
+                            }
+                        }
+                    });
+                    console.log("Price history chart initialized successfully");
+                } else {
+                    console.log("No price history data found");
+                }
+            } catch (e) {
+                console.error("Error initializing price history chart:", e);
+            }
+        }
+    }
+    
+    // Initialize gauge chart
+    function initGaugeChart() {
+        // This would be implemented if using a gauge chart library
+        // For now, using CSS-based gauge
+        console.log("Gauge visualization initialized");
+    }
+    
+    // Setup histogram interaction
+    function setupHistogram() {
+        var bars = document.querySelectorAll('.modern-bar-wrap');
+        bars.forEach(function(bar) {
+            bar.addEventListener('mouseenter', function() {
+                var tooltip = this.querySelector('.bar-tooltip');
+                if (tooltip) tooltip.style.display = 'block';
+            });
+            
+            bar.addEventListener('mouseleave', function() {
+                var tooltip = this.querySelector('.bar-tooltip');
+                if (tooltip) tooltip.style.display = 'none';
+            });
+        });
+        console.log("Histogram interaction setup complete");
+    }
+    
+    // Setup sales table sorting and filtering
+    function setupSalesTable() {
+        var salesTable = document.querySelector('.sales-table');
+        if (salesTable) {
+            var sortableHeaders = salesTable.querySelectorAll('th.sortable');
+            sortableHeaders.forEach(function(header) {
+                header.addEventListener('click', function() {
+                    var sortBy = this.getAttribute('data-sort');
+                    sortTable(salesTable, sortBy);
+                });
+            });
+            
+            var searchInput = document.getElementById('searchResults');
+            if (searchInput) {
+                searchInput.addEventListener('input', function() {
+                    filterTable(salesTable, this.value);
+                });
+            }
+            
+            var filterButtons = document.querySelectorAll('.filter-btn');
+            filterButtons.forEach(function(button) {
+                button.addEventListener('click', function() {
+                    document.querySelectorAll('.filter-btn').forEach(btn => btn.classList.remove('active'));
+                    this.classList.add('active');
+                    var filter = this.getAttribute('data-filter');
+                    filterTableByCategory(salesTable, filter);
+                });
+            });
+            console.log("Sales table interaction setup complete");
+        }
+    }
+    
+    // Table sorting function
+    function sortTable(table, sortBy) {
+        var rows = Array.from(table.querySelector('tbody').querySelectorAll('tr'));
+        var headerIdx = Array.from(table.querySelectorAll('th')).findIndex(th => th.getAttribute('data-sort') === sortBy);
+        
+        if (headerIdx > -1) {
+            rows.sort(function(a, b) {
+                var textA = a.querySelectorAll('td')[headerIdx].textContent.trim();
+                var textB = b.querySelectorAll('td')[headerIdx].textContent.trim();
+                
+                // Check if sorting prices
+                if (sortBy === 'price' || sortBy === 'diff') {
+                    // Extract numeric value
+                    var numA = parseFloat(textA.replace(/[^0-9.-]+/g, ""));
+                    var numB = parseFloat(textB.replace(/[^0-9.-]+/g, ""));
+                    return numA - numB;
+                }
+                
+                return textA.localeCompare(textB);
+            });
+            
+            // Re-append sorted rows
+            var tbody = table.querySelector('tbody');
+            rows.forEach(function(row) {
+                tbody.appendChild(row);
+            });
+        }
+    }
+    
+    // Table filtering function
+    function filterTable(table, query) {
+        var rows = table.querySelector('tbody').querySelectorAll('tr');
+        query = query.toLowerCase();
+        
+        rows.forEach(function(row) {
+            var text = row.textContent.toLowerCase();
+            row.style.display = text.includes(query) ? '' : 'none';
+        });
+    }
+    
+    // Filter table by category
+    function filterTableByCategory(table, category) {
+        var rows = table.querySelector('tbody').querySelectorAll('tr');
+        
+        if (category === 'all') {
+            rows.forEach(function(row) {
+                row.style.display = '';
+            });
+        } else {
+            rows.forEach(function(row) {
+                var categoryValue = row.getAttribute('data-category');
+                row.style.display = categoryValue === category ? '' : 'none';
+            });
+        }
+    }
+});
+</script>
+`;
+
 // Extract appraisal card template with placeholders
 const APPRAISAL_CARD_TEMPLATE = `
 <div class="modern-appraisal-card">

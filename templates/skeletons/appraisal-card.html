@@ -165,25 +165,27 @@
     border: 1px solid var(--border);
     object-fit: cover;
 }
-.appraisal-card .artwork-info .artwork-title {
-    font-size: 1.15rem; /* Reduced size */
+.appraisal-card .artwork-info {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+.appraisal-card .artwork-title {
+    font-size: 1.15rem;
     font-weight: 600;
     margin: 0 0 0.25rem 0;
-    /* Changed from single-line truncation to multi-line display with 8 line max */
-    white-space: normal;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: -webkit-box;
-    -webkit-line-clamp: 8; /* Limit to 8 lines */
-    -webkit-box-orient: vertical;
     line-height: 1.4;
-    max-height: 11.2em; /* 8 lines * 1.4 line height */
-    word-wrap: break-word;
 }
-.appraisal-card .artwork-info .artwork-creator {
+.appraisal-card .artwork-creator {
     font-size: 0.9rem;
     color: var(--muted-foreground);
+    margin: 0 0 0.5rem 0;
+}
+.appraisal-card .artwork-description {
+    font-size: 0.85rem;
+    color: var(--card-foreground);
     margin: 0 0 1rem 0;
+    line-height: 1.5;
 }
 .appraisal-card .artwork-details {
     font-size: 0.85rem;
@@ -627,13 +629,14 @@
     <div class="dual-layout">
       <div class="artwork-showcase">
         <div class="artwork-info">
-          <h2 class="artwork-title">{{TITLE}}</h2>
-          <p class="artwork-creator">{{CREATOR}}</p>
+          <h2 class="artwork-title">Street Scene with Horse-Drawn Carriage</h2>
+          <p class="artwork-creator">Giuseppe De Nittis (1846-1884)</p>
+          <p class="artwork-description">This impressionistic work captures a bustling urban setting with pedestrians and a carriage traversing wet cobblestones. The composition leads the viewer's gaze along the street, framed by bare trees. Loose brushwork and a muted palette of grays and browns, with splashes of red and yellow, suggest early morning or late afternoon light.</p>
           <div class="artwork-details">
-            <div class="detail-item"><span class="detail-label">Object Type</span><span class="detail-value">{{OBJECT_TYPE}}</span></div>
-            <div class="detail-item"><span class="detail-label">Period/Age</span><span class="detail-value">{{AGE}}</span></div>
-            <div class="detail-item"><span class="detail-label">Medium</span><span class="detail-value">{{MEDIUM}}</span></div>
-            <div class="detail-item"><span class="detail-label">Condition</span><span class="detail-value">{{CONDITION}}</span></div>
+            <div class="detail-item"><span class="detail-label">Object Type</span><span class="detail-value">Oil Painting on Panel</span></div>
+            <div class="detail-item"><span class="detail-label">Period/Age</span><span class="detail-value">Late 19th Century</span></div>
+            <div class="detail-item"><span class="detail-label">Medium</span><span class="detail-value">Oil on panel</span></div>
+            <div class="detail-item"><span class="detail-label">Condition</span><span class="detail-value">Good, minor wear</span></div>
           </div>
         </div>
       </div>

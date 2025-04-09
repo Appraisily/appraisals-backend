@@ -80,73 +80,93 @@ async function generateEnhancedAnalyticsWithGemini(statisticsData, options = {})
     // Prepare data values with defaults
     const data = prepareEnhancedAnalyticsData(statisticsData, chartIds, options);
     
+    // Read the actual skeleton template file
+    const fs = require('fs');
+    const path = require('path');
+    const skeletonTemplatePath = path.join(__dirname, '../templates/skeletons/enhanced-analytics.html');
+    
+    // Check if file exists
+    if (!fs.existsSync(skeletonTemplatePath)) {
+      console.error(`Skeleton template not found at: ${skeletonTemplatePath}`);
+      throw new Error('Enhanced analytics skeleton template not found');
+    }
+    
+    const skeletonTemplate = fs.readFileSync(skeletonTemplatePath, 'utf8');
+    console.log(`Successfully read skeleton template (${skeletonTemplate.length} bytes)`);
+    
     // Create prompt for Gemini
     const prompt = `
 You are a highly skilled HTML/JavaScript developer. Your task is to create interactive data visualizations 
-for an art appraisal application. I'll provide you with a template and data values.
+for an art appraisal application. I'll provide you with a skeleton template and data values.
 
-Please replace all placeholders in the template (indicated by {{name}}) with the corresponding values from the data.
+Please replace all placeholders in the template (indicated by {{VARIABLE_NAME}}) with the corresponding values from the data.
 Your response should include ONLY the fully realized HTML with CSS and JavaScript, no explanations.
 
-Important guidelines:
-1. If data is missing, use sensible defaults rather than showing empty values
-2. Keep all CSS and JavaScript functionality intact
-3. Format currency values appropriately with $ and commas
-4. Generate unique IDs for chart elements to avoid DOM conflicts
-5. Handle all edge cases gracefully
+IMPORTANT TASK DETAILS:
+1. The skeleton template contains conditional placeholders like {{SHOW_HISTORY ? '' : 'style="display:none;"'}}
+2. You must evaluate these conditionals based on the data values
+3. If data.show_history is TRUE, the div.price-history-section should NOT have a style attribute
+4. If data.show_history is FALSE, the div.price-history-section should have style="display:none;"
+5. The price history chart data is in data.price_history_chart_data_json, which should be added as a data attribute named 'data-chart-data-history'
 
-IMPORTANT SECTION VISIBILITY RULES:
-- For the price-history-section element:
-  - If data.show_history is TRUE: The section should be visible
-  - If data.show_history is FALSE: Add style="display:none;" to the div.price-history-section element
-
-Here's the template:
+Here's the EXACT skeleton template to use:
 \`\`\`html
-${ENHANCED_ANALYTICS_TEMPLATE}
+${skeletonTemplate}
 \`\`\`
 
-Here's the JavaScript to use for the {{scripts}} placeholder:
-\`\`\`javascript
-${ENHANCED_ANALYTICS_SCRIPTS}
-\`\`\`
-
-And here's the data to insert (some values may be missing):
+Here's the data to insert (map data properties to template variables):
 \`\`\`json
 ${JSON.stringify(data, null, 2)}
 \`\`\`
 
-For histogram bars, generate proper HTML from the histogram data. For each histogram bucket, create:
-\`<div class="modern-bar-wrap">
-  <div class="modern-bar ${bucket.contains_target ? 'highlighted' : ''}" style="height: ${bucket.height}%;"> // eslint-disable-line no-undef
-  </div>
-  <div class="bar-tooltip">Price range and count info</div>
-</div>\`
+DATA MAPPING GUIDE (convert these data properties to template variables):
+- data.title → {{TITLE}}
+- data.show_radar → {{SHOW_RADAR}}
+- data.show_history → {{SHOW_HISTORY}}
+- data.show_stats → {{SHOW_STATS}}
+- data.condition_score → {{CONDITION_SCORE}}
+- data.rarity_score → {{RARITY_SCORE}}
+- data.market_demand → {{MARKET_DEMAND_SCORE}}
+- data.historical_significance → {{HISTORICAL_SIGNIFICANCE}}
+- data.investment_potential → {{INVESTMENT_POTENTIAL}}
+- data.provenance_strength → {{PROVENANCE_STRENGTH}}
+- data.trend_class → {{TREND_CLASS}}
+- data.price_trend → {{PRICE_TREND}}
+- data.price_history_chart_data_json → {{HISTORY_CHART_DATA_JSON}}
+- data.chartIds.price → {{CHART_ID_PRICE}}
+- data.chartIds.radar → {{CHART_ID_RADAR}}
+- (and so on for all variables in the template)
 
-For the sales table, generate rows from comparable_sales data. Each row should follow:
-\`<tr class="${sale.is_current ? 'highlight-row' : ''}"> // eslint-disable-line no-undef
-  <td>${sale.title}</td> // eslint-disable-line no-undef
-  <td>${sale.house}</td> // eslint-disable-line no-undef
-  <td>${sale.date}</td> // eslint-disable-line no-undef
-  <td>${formatPrice(sale.price)}</td> // eslint-disable-line no-undef
-  <td class="${diffClass}">${sale.diff}</td> // eslint-disable-line no-undef
-</tr>\`
+Pay very careful attention to the price history section. You should:
+1. Properly evaluate {{SHOW_HISTORY ? '' : 'style="display:none;"'}} based on data.show_history
+2. Add the attribute data-chart-data-history='{{HISTORY_CHART_DATA_JSON}}' to the price-chart-wrapper div
+3. Make sure the chart will initialize properly with the data from this attribute
 
-For confidence dots, generate spans with appropriate classes.
-
-Pay special attention to the price-history-section. When processing the template, make sure to properly handle the conditional display attribute for this section. If data.show_history is FALSE, apply style="display:none;" to the price-history-section div.
-
-Final output should be the complete, working HTML visualization.
+Final output should be the complete, working HTML visualization with all placeholders replaced.
     `;
+    
+    // Request completion from Gemini
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const generatedHtml = response.text();
     
     // DEBUG: Log the prompt and data to file
     try {
       const fs = require('fs');
       const path = require('path');
+      
+      // Define log directory path
       const logDir = path.join(__dirname, '../logs');
       
       // Create logs directory if it doesn't exist
-      if (!fs.existsSync(logDir)) {
-        fs.mkdirSync(logDir, { recursive: true });
+      try {
+        if (!fs.existsSync(logDir)) {
+          fs.mkdirSync(logDir, { recursive: true });
+          console.log(`Created logs directory at ${logDir}`);
+        }
+      } catch (mkdirError) {
+        console.error('Error creating logs directory:', mkdirError);
+        // Continue anyway, we'll try to write to the file
       }
       
       // Create log filename with timestamp
@@ -163,22 +183,20 @@ Final output should be the complete, working HTML visualization.
       };
       
       // Write to file
-      fs.writeFileSync(
-        logFilePath, 
-        JSON.stringify(debugInfo, null, 2),
-        'utf8'
-      );
-      
-      console.log(`DEBUG: Gemini prompt and data logged to ${logFilePath}`);
+      try {
+        fs.writeFileSync(
+          logFilePath, 
+          JSON.stringify(debugInfo, null, 2),
+          'utf8'
+        );
+        console.log(`DEBUG: Gemini prompt and data logged to ${logFilePath}`);
+      } catch (writeError) {
+        console.error('Error writing Gemini debug log to file:', writeError);
+      }
     } catch (logError) {
-      console.error('Error logging Gemini debug info:', logError);
+      console.error('Error in Gemini debug logging process:', logError);
       // Continue execution even if logging fails
     }
-    
-    // Request completion from Gemini
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const generatedHtml = response.text();
     
     if (!generatedHtml || generatedHtml.length < 100) {
       throw new Error('Generated HTML is too short or empty');
@@ -327,80 +345,201 @@ function prepareEnhancedAnalyticsData(statsData, chartIds, options = {}) {
   let hasPriceHistory = false;
   let priceHistory = [];
   
-  if (statsData.price_history && Array.isArray(statsData.price_history) && statsData.price_history.length > 0) {
+  if (statsData.price_history && Array.isArray(statsData.price_history) && statsData.price_history.length > 1) {
     priceHistory = statsData.price_history;
     hasPriceHistory = true;
-    console.log(`Found price history data with ${priceHistory.length} points`);
+    console.log(`Found valid price history data with ${priceHistory.length} points`);
   } else {
-    console.log('No valid price history data found, using default empty array');
-    priceHistory = [];
+    console.log('No valid price history data found or insufficient data points');
+    
+    // Check if we have price history data in a different format
+    if (statsData.historical_prices && Array.isArray(statsData.historical_prices) && statsData.historical_prices.length > 1) {
+      priceHistory = statsData.historical_prices.map(item => ({
+        year: item.year || item.date,
+        price: item.price || item.value
+      }));
+      hasPriceHistory = true;
+      console.log(`Found alternative price history data with ${priceHistory.length} points`);
+    } else {
+      console.log('No alternative price history data found');
+      priceHistory = [];
+    }
+  }
+  
+  // Handle override from options
+  if (options.showHistory === false) {
+    console.log('Price history display explicitly disabled via options');
+    hasPriceHistory = false;
+  } else if (options.showHistory === true && priceHistory.length <= 1) {
+    console.log('Price history display forced via options, but not enough data points');
+    // Create minimal dummy data to satisfy the chart
+    if (priceHistory.length === 0) {
+      const currentYear = new Date().getFullYear();
+      priceHistory = [
+        { year: currentYear - 1, price: 0 },
+        { year: currentYear, price: 0 }
+      ];
+    }
+    hasPriceHistory = true;
   }
   
   // Extract data from statistics or use defaults
   const data = {
-    chartIds,
-    title: 'Enhanced Market Analytics',
+    // Chart IDs matching the template variables
+    CHART_ID_RADAR: chartIds.radar,
+    CHART_ID_PRICE: chartIds.price,
+    CHART_ID_GAUGE: chartIds.gauge,
     
-    // Core statistics
-    condition_score: statsData.condition_score || defaults.condition_score,
-    rarity_score: statsData.rarity || defaults.rarity_score,
-    market_demand: statsData.market_demand || defaults.market_demand,
-    historical_significance: statsData.historical_significance || defaults.historical_significance,
-    investment_potential: statsData.investment_potential || defaults.investment_potential,
-    provenance_strength: statsData.provenance_strength || defaults.provenance_strength,
+    // Template title
+    TITLE: options.title || 'Enhanced Market Analytics',
+    
+    // Section visibility flags - uppercase to match template variables
+    SHOW_RADAR: options.showRadar !== false,
+    SHOW_HISTORY: hasPriceHistory,
+    SHOW_STATS: options.showStats !== false,
+    
+    // Core statistics - uppercase to match template variables
+    CONDITION_SCORE: statsData.condition_score || defaults.condition_score,
+    RARITY_SCORE: statsData.rarity || defaults.rarity_score,
+    MARKET_DEMAND_SCORE: statsData.market_demand || defaults.market_demand,
+    HISTORICAL_SIGNIFICANCE: statsData.historical_significance || defaults.historical_significance,
+    INVESTMENT_POTENTIAL: statsData.investment_potential || defaults.investment_potential,
+    PROVENANCE_STRENGTH: statsData.provenance_strength || defaults.provenance_strength,
     
     // Price statistics
-    avg_price: statsData.average_price ? '$' + numberWithCommas(statsData.average_price) : defaults.avg_price,
-    median_price: statsData.median_price ? '$' + numberWithCommas(statsData.median_price) : defaults.median_price,
-    price_trend: statsData.price_trend_percentage || defaults.price_trend,
-    price_min: statsData.price_min ? '$' + numberWithCommas(statsData.price_min) : defaults.price_min,
-    price_max: statsData.price_max ? '$' + numberWithCommas(statsData.price_max) : defaults.price_max,
+    AVG_PRICE_FORMATTED: statsData.average_price ? '$' + numberWithCommas(statsData.average_price) : defaults.avg_price,
+    MEDIAN_PRICE_FORMATTED: statsData.median_price ? '$' + numberWithCommas(statsData.median_price) : defaults.median_price,
+    PRICE_TREND: statsData.price_trend_percentage || defaults.price_trend,
+    PRICE_MIN_FORMATTED: statsData.price_min ? '$' + numberWithCommas(statsData.price_min) : defaults.price_min,
+    PRICE_MAX_FORMATTED: statsData.price_max ? '$' + numberWithCommas(statsData.price_max) : defaults.price_max,
     
     // Position and confidence
-    percentile: statsData.percentile || defaults.percentile,
-    confidence: statsData.confidence_level || defaults.confidence,
-    coefficient_variation: statsData.coefficient_of_variation || defaults.coefficient_variation,
-    count: statsData.count || defaults.count,
-    std_dev: statsData.standard_deviation ? '$' + numberWithCommas(statsData.standard_deviation) : defaults.std_dev,
+    PERCENTILE: statsData.percentile || defaults.percentile,
+    CONFIDENCE_LEVEL: statsData.confidence_level || defaults.confidence,
+    COEFFICIENT_VARIATION: statsData.coefficient_of_variation || defaults.coefficient_variation,
+    TOTAL_COUNT: statsData.count || defaults.count,
+    STD_DEV_FORMATTED: statsData.standard_deviation ? '$' + numberWithCommas(statsData.standard_deviation) : defaults.std_dev,
     
     // Value data
-    current_price: statsData.value || defaults.current_price,
-    value: statsData.value ? '$' + numberWithCommas(statsData.value) : defaults.value,
-    formatted_value: statsData.value ? '$' + numberWithCommas(statsData.value) : defaults.value,
-    target_position: statsData.target_marker_position || defaults.target_position,
-    raw_value: statsData.value || defaults.raw_value,
+    VALUE: statsData.value || defaults.current_price,
+    VALUE_FORMATTED: statsData.value ? '$' + numberWithCommas(statsData.value) : defaults.value,
+    TARGET_POSITION: statsData.target_marker_position || defaults.target_position,
     
     // Trend calculations
-    is_trend_positive: (statsData.price_trend_percentage || '').includes('+'),
-    trend_class: (statsData.price_trend_percentage || '').includes('+') ? 'positive' : 'negative',
-    market_timing: (statsData.price_trend_percentage || '').includes('+') ? 'Favorable' : 'Challenging',
-    market_segment: (statsData.price_trend_percentage || '').includes('+') ? 'appreciating' : 'depreciating',
+    TREND_CLASS: (statsData.price_trend_percentage || '').includes('+') ? 'positive' : 'negative',
+    APPRECIATION_STATUS: (statsData.price_trend_percentage || '').includes('+') ? 'appreciating' : 'depreciating',
+    MARKET_TIMING: (statsData.price_trend_percentage || '').includes('+') ? 'Favorable' : 'Challenging',
     
     // Market prediction
-    market_prediction: calculateMarketPrediction(statsData.value, statsData.price_trend_percentage),
-    prediction_year: new Date().getFullYear() + 1,
+    PREDICTED_VALUE_FORMATTED: calculateMarketPrediction(statsData.value, statsData.price_trend_percentage),
+    NEXT_YEAR: new Date().getFullYear() + 1,
     
     // Percentile calculations
-    percentile_number: parseInt(String(statsData.percentile || '').replace(/\D/g, '')) || 75,
-    gauge_rotation: (parseInt(String(statsData.percentile || '').replace(/\D/g, '')) || 75) / 100 * 180,
+    PERCENTILE_NUMBER: parseInt(String(statsData.percentile || '').replace(/\D/g, '')) || 75,
+    PERCENTILE_ROTATION: (parseInt(String(statsData.percentile || '').replace(/\D/g, '')) || 75) / 100 * 180,
     
     // Chart data
     histogram: statsData.histogram || [],
     comparable_sales: statsData.comparable_sales || [],
-    sales_count: (statsData.comparable_sales || []).length,
+    COUNT: statsData.count || defaults.count,
+    POST_ID: options.postId || 'default',
     
-    // Explicit price history data
+    // Price history data
     price_history: priceHistory,
-    has_price_history: hasPriceHistory,
-    show_history: (hasPriceHistory && priceHistory.length > 0),
     
-    // Confidence indicator dots
-    confidence_dots: generateConfidenceDots(statsData.confidence_level)
+    // Confidence level class
+    CONFIDENCE_LEVEL_CLASS: getConfidenceClass(statsData.confidence_level)
   };
   
+  // Prepare histogram HTML if data exists
+  if (statsData.histogram && Array.isArray(statsData.histogram) && statsData.histogram.length > 0) {
+    let histogramBarsHtml = '';
+    let histogramAxisHtml = '';
+    
+    statsData.histogram.forEach(bucket => {
+      histogramBarsHtml += `<div class="modern-bar-wrap">
+        <div class="modern-bar ${bucket.contains_target ? 'highlighted' : ''}" style="height: ${bucket.height}%;"></div>
+        <div class="bar-tooltip">$${numberWithCommas(bucket.min)}-$${numberWithCommas(bucket.max)}<br>${bucket.count} items</div>
+      </div>`;
+    });
+    
+    // Generate axis labels
+    const firstBucket = statsData.histogram[0];
+    const lastBucket = statsData.histogram[statsData.histogram.length - 1];
+    if (firstBucket && lastBucket) {
+      histogramAxisHtml = `<span>$${numberWithCommas(firstBucket.min)}</span><span>$${numberWithCommas(lastBucket.max)}</span>`;
+    }
+    
+    data.HISTOGRAM_BARS_HTML = histogramBarsHtml;
+    data.HISTOGRAM_AXIS_HTML = histogramAxisHtml;
+    data.HISTOGRAM_DATA_JSON = JSON.stringify(statsData.histogram);
+  }
+  
+  // Prepare sales table rows if data exists
+  if (statsData.comparable_sales && Array.isArray(statsData.comparable_sales) && statsData.comparable_sales.length > 0) {
+    let salesTableRowsHtml = '';
+    
+    statsData.comparable_sales.forEach(sale => {
+      const diffClass = sale.diff && sale.diff.includes('+') ? 'diff-positive' : 
+                       (sale.diff && sale.diff.includes('-') ? 'diff-negative' : '');
+      
+      salesTableRowsHtml += `<tr class="${sale.is_current ? 'highlight-row' : ''}">
+        <td>${sale.title || 'Unknown Item'}</td>
+        <td>${sale.house || '-'}</td>
+        <td>${sale.date || '-'}</td>
+        <td>${typeof sale.price === 'number' ? '$' + numberWithCommas(sale.price) : (sale.price || '-')}</td>
+        <td class="${diffClass}">${sale.diff || '-'}</td>
+      </tr>`;
+    });
+    
+    data.SALES_TABLE_ROWS_HTML = salesTableRowsHtml;
+    data.SALES_DATA_JSON = JSON.stringify(statsData.comparable_sales);
+  }
+  
+  // Prepare radar chart data
+  const radarData = {
+    labels: [
+      'Condition',
+      'Rarity',
+      'Market Demand',
+      'Historical Significance',
+      'Investment Potential',
+      'Provenance'
+    ],
+    datasets: [{
+      label: 'Item Metrics',
+      data: [
+        data.CONDITION_SCORE,
+        data.RARITY_SCORE,
+        data.MARKET_DEMAND_SCORE,
+        data.HISTORICAL_SIGNIFICANCE,
+        data.INVESTMENT_POTENTIAL,
+        data.PROVENANCE_STRENGTH
+      ],
+      fill: true,
+      backgroundColor: 'rgba(54, 162, 235, 0.2)',
+      borderColor: 'rgb(54, 162, 235)',
+      pointBackgroundColor: 'rgb(54, 162, 235)',
+      pointBorderColor: '#fff',
+      pointHoverBackgroundColor: '#fff',
+      pointHoverBorderColor: 'rgb(54, 162, 235)'
+    }]
+  };
+  data.RADAR_CHART_DATA_JSON = JSON.stringify(radarData);
+  
   // Prepare chart data for price history
-  if (hasPriceHistory) {
-    data.price_history_chart_data = {
+  if (hasPriceHistory && priceHistory.length > 0) {
+    console.log(`Preparing price history chart data with ${priceHistory.length} points`);
+    
+    // Sort price history by year
+    priceHistory.sort((a, b) => {
+      // Handle different year formats (string or number)
+      const yearA = typeof a.year === 'string' ? parseInt(a.year, 10) : a.year;
+      const yearB = typeof b.year === 'string' ? parseInt(b.year, 10) : b.year;
+      return yearA - yearB;
+    });
+    
+    const historyChartData = {
       labels: priceHistory.map(p => p.year),
       datasets: [{
         label: 'Comparable Items',
@@ -410,6 +549,25 @@ function prepareEnhancedAnalyticsData(statsData, chartIds, options = {}) {
         tension: 0.1
       }]
     };
+    
+    // Add the current item's data point if available
+    if (statsData.value) {
+      const currentYear = new Date().getFullYear();
+      historyChartData.datasets.push({
+        label: 'Your Item',
+        data: priceHistory.map(p => p.year == currentYear ? statsData.value : null).filter(v => v !== null),
+        borderColor: 'rgb(255, 99, 132)',
+        backgroundColor: 'rgba(255, 99, 132, 0.2)',
+        pointRadius: 6,
+        pointHoverRadius: 8
+      });
+    }
+    
+    // Store the chart data as JSON string
+    data.HISTORY_CHART_DATA_JSON = JSON.stringify(historyChartData);
+  } else {
+    console.log('Not preparing price history chart data due to insufficient data');
+    data.SHOW_HISTORY = false;
   }
   
   return data;
@@ -628,32 +786,21 @@ function calculateMarketPrediction(value, trendPercentage) {
 }
 
 /**
- * Generate HTML for confidence level indicator dots
+ * Get confidence class based on confidence level
  * @param {string} confidenceLevel - Confidence level string
- * @returns {string} - HTML for confidence indicator dots
+ * @returns {string} - CSS class for confidence
  */
-function generateConfidenceDots(confidenceLevel) {
-  let confidenceValue = 4; // Default: High (4 dots)
+function getConfidenceClass(confidenceLevel) {
+  if (!confidenceLevel) return 'medium';
   
-  if (confidenceLevel === 'Very High') {
-    confidenceValue = 5;
-  } else if (confidenceLevel === 'High') {
-    confidenceValue = 4;
-  } else if (confidenceLevel === 'Medium' || confidenceLevel === 'Moderate') {
-    confidenceValue = 3;
-  } else if (confidenceLevel === 'Low') {
-    confidenceValue = 2;
-  } else if (confidenceLevel === 'Very Low') {
-    confidenceValue = 1;
-  }
+  const level = confidenceLevel.toLowerCase();
+  if (level.includes('very high')) return 'very-high';
+  if (level.includes('high')) return 'high';
+  if (level.includes('medium') || level.includes('moderate')) return 'medium';
+  if (level.includes('low')) return 'low';
+  if (level.includes('very low')) return 'very-low';
   
-  let dotsHtml = '';
-  for (let i = 1; i <= 5; i++) {
-    const active = i <= confidenceValue ? '' : 'inactive';
-    dotsHtml += `<span class="dot ${active}"></span>`;
-  }
-  
-  return dotsHtml;
+  return 'medium'; // Default
 }
 
 module.exports = {
