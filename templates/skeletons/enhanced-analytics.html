@@ -976,7 +976,22 @@ document.addEventListener("DOMContentLoaded", function() {
         initCharts();
     }
     
+    // Add section visibility handling based on data attributes
+    function checkSectionVisibility() {
+        // Find price history section and check if it should be hidden
+        var priceHistorySection = document.querySelector('.price-history-section');
+        if (priceHistorySection && priceHistorySection.hasAttribute('style') && 
+            priceHistorySection.getAttribute('style').includes('display:none')) {
+            console.log("Price History section is hidden by template condition");
+            return false;
+        }
+        return true;
+    }
+    
     function initCharts() {
+        // Call visibility check first
+        var isPriceHistoryVisible = checkSectionVisibility();
+        
         // Initialize Radar Chart
         var radarWrapper = document.querySelector(".radar-wrapper");
         if (radarWrapper && radarWrapper.dataset.chartDataRadar) {
@@ -1003,12 +1018,18 @@ document.addEventListener("DOMContentLoaded", function() {
             }
         }
         
+        // Initialize price history chart only if section is visible
+        if (isPriceHistoryVisible) {
+            initPriceHistoryChart();
+        } else {
+            console.log("Skipping price history chart initialization as section is hidden");
+        }
+        
         // Initialize other charts
-        initPriceHistoryChart();
         initDataTable();
         initHistogram();
         initConfidenceIndicator();
-        initTablePagination(); // Initialize table pagination after data is loaded
+        initTablePagination();
     }
     
     function initPriceHistoryChart() {
@@ -1023,10 +1044,21 @@ document.addEventListener("DOMContentLoaded", function() {
                         data: data,
                         options: { responsive: true }
                     });
+                    console.log("Price history chart initialized successfully");
                 }
             } catch (e) {
                 console.error("Error initializing price history chart:", e);
+                // Try to create a fallback visualization if the data is invalid
+                if (canvas) {
+                    var ctx = canvas.getContext('2d');
+                    ctx.font = '14px Arial';
+                    ctx.fillStyle = '#666';
+                    ctx.textAlign = 'center';
+                    ctx.fillText('Price history data unavailable', canvas.width/2, canvas.height/2);
+                }
             }
+        } else {
+            console.warn("Price chart wrapper or data not found");
         }
     }
     

@@ -411,8 +411,7 @@ const ENHANCED_ANALYTICS_TEMPLATE = `
 
 {{styles}}
 
-{{scripts}}
-`;
+{{scripts}}`;
 
 // Extract appraisal card template with placeholders
 const APPRAISAL_CARD_TEMPLATE = `
@@ -606,5 +605,6 @@ const APPRAISAL_CARD_TEMPLATE = `
 // Export templates
 module.exports = {
   ENHANCED_ANALYTICS_TEMPLATE,
+  ENHANCED_ANALYTICS_SCRIPTS,
   APPRAISAL_CARD_TEMPLATE
 };

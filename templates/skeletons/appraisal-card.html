@@ -169,13 +169,15 @@
     font-size: 1.15rem; /* Reduced size */
     font-weight: 600;
     margin: 0 0 0.25rem 0;
-    /* Changed from single-line truncation to multi-line display */
+    /* Changed from single-line truncation to multi-line display with 8 line max */
     white-space: normal;
-    overflow: visible;
-    text-overflow: clip;
-    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    display: -webkit-box;
+    -webkit-line-clamp: 8; /* Limit to 8 lines */
+    -webkit-box-orient: vertical;
     line-height: 1.4;
-    max-height: 4.2em; /* Allow approximately 3 lines of text */
+    max-height: 11.2em; /* 8 lines * 1.4 line height */
     word-wrap: break-word;
 }
 .appraisal-card .artwork-info .artwork-creator {
@@ -624,9 +626,6 @@
   <div class="card-body">
     <div class="dual-layout">
       <div class="artwork-showcase">
-        <div class="artwork-image">
-          {{FEATURED_IMAGE_HTML}} <!-- Expects <img...> or <div>... placeholder -->
-        </div>
         <div class="artwork-info">
           <h2 class="artwork-title">{{TITLE}}</h2>
           <p class="artwork-creator">{{CREATOR}}</p>
@@ -750,33 +749,33 @@ document.addEventListener('DOMContentLoaded', function() {
 
     console.log('[DEBUG] Appraisal card found with ID: {{POST_ID}}');
     
-    // Set up a MutationObserver to detect when charts are added to the DOM
-    const observer = new MutationObserver(function(mutations) {
-        mutations.forEach(function(mutation) {
-            if (mutation.type === 'childList') {
-                const addedNodes = Array.from(mutation.addedNodes);
-                addedNodes.forEach(node => {
-                    if (node.nodeType === 1) { // Element node
-                        const canvases = node.querySelectorAll('canvas');
-                        if (canvases.length > 0) {
-                            console.log('[DEBUG] Canvas elements added to DOM:', canvases);
-                            
-                            // Check if Chart.js is loaded and initialize if needed
-                            if (typeof window.AppraisalCardChart !== 'undefined') {
-                                // Try to re-initialize charts
-                                setTimeout(initializeCharts, 500);
-                            }
-                        }
-                    }
-                });
-            }
+    // Set up tab switching
+    const tabButtons = card.querySelectorAll('.tabs-navigation .tab-button');
+    const tabPanels = card.querySelectorAll('.tabs-content .tab-panel');
+
+    tabButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const tabId = this.getAttribute('data-tab');
+
+            // Update button active state
+            tabButtons.forEach(btn => btn.classList.remove('active'));
+            this.classList.add('active');
+
+            // Update panel active state
+            tabPanels.forEach(panel => {
+                if (panel.getAttribute('id') === tabId) {
+                    panel.classList.add('active');
+                } else {
+                    panel.classList.remove('active');
+                }
+            });
         });
     });
     
-    // Start observing the card for DOM changes
-    observer.observe(card, { childList: true, subtree: true });
+    // Load Chart.js if needed and initialize charts
+    loadChartJsAndInitialize();
     
-    // Load Chart.js if not already loaded
+    // Helper function to load Chart.js and initialize charts
     function loadChartJsAndInitialize() {
         if (typeof window.Chart !== 'undefined') {
             // Chart.js already loaded globally
@@ -805,299 +804,262 @@ document.addEventListener('DOMContentLoaded', function() {
         };
         document.head.appendChild(script);
     }
-    
-    // Initialize all charts
-    function initializeCharts() {
-        console.log('[DEBUG] Initializing charts...');
-        
-        try {
-            // Get DOM elements
-            const gaugeCanvas = document.getElementById('{{CHART_ID_GAUGE}}');
-            const metricsCanvas = document.getElementById('{{CHART_ID_METRICS}}');
-            const marketCanvas = document.getElementById('{{CHART_ID_MARKET}}');
-            
-            // Get chart data
-            const metricsContainer = card.querySelector('.metrics-chart-container');
-            const marketContainer = card.querySelector('.price-distribution-container');
-            
-            const metricsDataRaw = metricsContainer.dataset.chartDataMetrics;
-            const marketDataRaw = marketContainer.dataset.chartDataMarket;
-            
-            // Initialize gauge chart
-            if (gaugeCanvas) {
-                initializeGaugeChart(gaugeCanvas);
-            }
-            
-            // Initialize metrics chart
-            if (metricsCanvas && metricsDataRaw) {
-                try {
-                    const metricsData = JSON.parse(metricsDataRaw);
-                    initializeMetricsChart(metricsCanvas, metricsData);
-                } catch (e) {
-                    console.error('[DEBUG] Error parsing metrics data:', e);
-                    // Fallback to default data
-                    initializeMetricsChart(metricsCanvas, {
-                        labels: ['Market Demand', 'Rarity', 'Condition'],
-                        datasets: [{
-                            data: [75, 85, 80],
-                            backgroundColor: ['rgba(59, 130, 246, 0.8)', 'rgba(139, 92, 246, 0.8)', 'rgba(16, 185, 129, 0.8)']
-                        }]
-                    });
-                }
-            }
-            
-            // Initialize market chart
-            if (marketCanvas && marketDataRaw) {
-                try {
-                    const marketData = JSON.parse(marketDataRaw);
-                    initializeMarketChart(marketCanvas, marketData);
-                } catch (e) {
-                    console.error('[DEBUG] Error parsing market data:', e);
-                    // Fallback to default data
-                    initializeMarketChart(marketCanvas, {
-                        labels: ['$0-20k', '$20-40k', '$40-60k', '$60-80k', '$80-100k'],
-                        datasets: [{
-                            label: 'Market Distribution',
-                            data: [10, 25, 30, 20, 15],
-                            backgroundColor: 'rgba(59, 130, 246, 0.6)',
-                            borderColor: 'rgba(59, 130, 246, 1)'
-                        }, {
-                            label: 'Your Item',
-                            data: [0, 0, 0, 65, 0],
-                            backgroundColor: 'rgba(239, 68, 68, 0.6)',
-                            borderColor: 'rgba(239, 68, 68, 1)'
-                        }]
-                    });
-                }
-            }
-            
-            console.log('[DEBUG] Charts initialized successfully');
-        } catch (e) {
-            console.error('[DEBUG] Error initializing charts:', e);
-        }
-    }
-    
-    // Initialize gauge chart
-    function initializeGaugeChart(canvas) {
-        const container = canvas.closest('.gauge-container');
-        const percentileEl = container ? container.querySelector('.percentile-value') : null;
-        let percentile = 48; // Default from the screenshot
-        
-        if (percentileEl) {
-            // Extract numeric value
-            const matches = percentileEl.textContent.match(/(\d+)/);
-            if (matches && matches[1]) {
-                percentile = parseInt(matches[1]);
-            }
-        }
-        
-        console.log('[DEBUG] Creating gauge chart with percentile:', percentile);
-        
-        const ctx = canvas.getContext('2d');
-        
-        // Function to create gradients
-        function createGradient(ctx, colors) {
-            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
-            colors.forEach((color, index) => {
-                gradient.addColorStop(index / (colors.length - 1), color);
-            });
-            return gradient;
-        }
-        
-        new window.AppraisalCardChart(ctx, {
-            type: 'doughnut',
-            data: {
-                datasets: [{
-                    data: [percentile, 100 - percentile],
-                    backgroundColor: [
-                        createGradient(ctx, ['#3b82f6', '#1d4ed8']),
-                        '#e5e7eb'
-                    ],
-                    borderWidth: 0,
-                    circumference: 180,
-                    rotation: 270
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                cutout: '75%',
-                plugins: {
-                    legend: { display: false },
-                    tooltip: { enabled: false }
-                },
-                animation: {
-                    animateRotate: true,
-                    animateScale: false,
-                    duration: 2000,
-                    easing: 'easeOutQuart'
-                }
-            }
-        });
-    }
-    
-    // Initialize metrics chart
-    function initializeMetricsChart(canvas, chartData) {
-        console.log('[DEBUG] Creating metrics chart with data:', chartData);
-        
-        const ctx = canvas.getContext('2d');
-        new window.AppraisalCardChart(ctx, {
-            type: 'bar',
-            data: {
-                labels: chartData.labels,
-                datasets: [{
-                    data: chartData.datasets[0].data,
-                    backgroundColor: chartData.datasets[0].backgroundColor || [
-                        'rgba(59, 130, 246, 0.8)',
-                        'rgba(139, 92, 246, 0.8)',
-                        'rgba(16, 185, 129, 0.8)'
-                    ],
-                    borderRadius: 6,
-                    maxBarThickness: 50
-                }]
-            },
-            options: {
-                indexAxis: 'y',
-                responsive: true,
-                maintainAspectRatio: true,
-                aspectRatio: 2,
-                scales: {
-                    x: {
-                        beginAtZero: true,
-                        max: 100,
-                        grid: {
-                            display: true,
-                            color: 'rgba(0, 0, 0, 0.05)'
-                        },
-                        ticks: {
-                            callback: function(value) {
-                                return value + '%';
-                            }
-                        }
-                    },
-                    y: {
-                        grid: {
-                            display: false
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.parsed.x + '%';
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    }
-    
-    // Initialize market chart
-    function initializeMarketChart(canvas, chartData) {
-        console.log('[DEBUG] Creating market chart with data:', chartData);
-        
-        const ctx = canvas.getContext('2d');
-        new window.AppraisalCardChart(ctx, {
-            type: 'bar',
-            data: chartData,
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                aspectRatio: 2,
-                scales: {
-                    x: {
-                        grid: {
-                            display: false
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        grid: {
-                            color: 'rgba(0, 0, 0, 0.05)'
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                }
-            }
-        });
-    }
-    
-    // Load Charts.js and initialize charts
-    loadChartJsAndInitialize();
-    
-    // Log chart container IDs and data
-    console.log('[DEBUG] Chart IDs:', {
-        gauge: document.getElementById('{{CHART_ID_GAUGE}}'),
-        metrics: document.getElementById('{{CHART_ID_METRICS}}'),
-        market: document.getElementById('{{CHART_ID_MARKET}}')
-    });
-    
-    // Log chart data
-    const metricsData = card.querySelector('.metrics-chart-container').dataset.chartDataMetrics;
-    const marketData = card.querySelector('.price-distribution-container').dataset.chartDataMarket;
-    
-    console.log('[DEBUG] Chart data available:', {
-        metrics: metricsData ? 'Yes (length: ' + metricsData.length + ')' : 'No',
-        market: marketData ? 'Yes (length: ' + marketData.length + ')' : 'No'
-    });
-    
-    // If Chart.js is available, log that too
-    console.log('[DEBUG] Chart.js available:', typeof window.Chart !== 'undefined' || typeof window.AppraisalCardChart !== 'undefined');
-
-    const tabButtons = card.querySelectorAll('.tabs-navigation .tab-button');
-    const tabPanels = card.querySelectorAll('.tabs-content .tab-panel');
-
-    tabButtons.forEach(button => {
-        button.addEventListener('click', function() {
-            const tabId = this.getAttribute('data-tab');
-
-            // Update button active state
-            tabButtons.forEach(btn => btn.classList.remove('active'));
-            this.classList.add('active');
-
-            // Update panel active state
-            tabPanels.forEach(panel => {
-                if (panel.getAttribute('id') === tabId) {
-                    panel.classList.add('active');
-                } else {
-                    panel.classList.remove('active');
-                }
-            });
-        });
-    });
-    
-    // Handle HTML entity decoding
-    function decodeHtmlEntities(text) {
-        if (!text) return text;
-        const textarea = document.createElement('textarea');
-        textarea.innerHTML = text;
-        return textarea.value;
-    }
-    
-    // Apply decoding to important elements
-    const elementSelectors = [
-        '.artwork-title', 
-        '.artwork-creator',
-        '.detail-value',
-        '.artwork-details-table td'
-    ];
-    
-    elementSelectors.forEach(selector => {
-        const elements = card.querySelectorAll(selector);
-        elements.forEach(el => {
-            if (el.textContent) {
-                el.textContent = decodeHtmlEntities(el.textContent);
-            }
-        });
-    });
 });
+
+// Initialize all charts
+function initializeCharts() {
+    console.log('[DEBUG] Initializing charts...');
+    
+    try {
+        // Get DOM elements
+        const gaugeCanvas = document.getElementById('{{CHART_ID_GAUGE}}');
+        const metricsCanvas = document.getElementById('{{CHART_ID_METRICS}}');
+        const marketCanvas = document.getElementById('{{CHART_ID_MARKET}}');
+        
+        // Get chart data
+        const metricsContainer = card.querySelector('.metrics-chart-container');
+        const marketContainer = card.querySelector('.price-distribution-container');
+        
+        const metricsDataRaw = metricsContainer.dataset.chartDataMetrics;
+        const marketDataRaw = marketContainer.dataset.chartDataMarket;
+        
+        // Initialize gauge chart
+        if (gaugeCanvas) {
+            initializeGaugeChart(gaugeCanvas);
+        }
+        
+        // Initialize metrics chart
+        if (metricsCanvas) {
+            let metricsData;
+            try {
+                if (metricsDataRaw && metricsDataRaw !== '{}') {
+                    metricsData = JSON.parse(metricsDataRaw);
+                }
+            } catch (e) {
+                console.error('[DEBUG] Error parsing metrics data:', e);
+            }
+            
+            initializeMetricsChart(metricsCanvas, metricsData);
+        }
+        
+        // Initialize market chart
+        if (marketCanvas) {
+            let marketData;
+            try {
+                if (marketDataRaw && marketDataRaw !== '{}') {
+                    marketData = JSON.parse(marketDataRaw);
+                }
+            } catch (e) {
+                console.error('[DEBUG] Error parsing market data:', e);
+            }
+            
+            initializeMarketChart(marketCanvas, marketData);
+        }
+        
+        console.log('[DEBUG] Charts initialized successfully');
+    } catch (e) {
+        console.error('[DEBUG] Error initializing charts:', e);
+    }
+}
+
+// Initialize gauge chart
+function initializeGaugeChart(canvas) {
+    console.log('[DEBUG] Creating gauge chart');
+    
+    const container = canvas.closest('.gauge-container');
+    const percentileEl = container ? container.querySelector('.percentile-value') : null;
+    let percentile = 36; // Default from the image
+    
+    if (percentileEl) {
+        // Extract numeric value
+        const percentileText = percentileEl.textContent.trim();
+        const matches = percentileText.match(/(\d+)/);
+        if (matches && matches[1]) {
+            percentile = parseInt(matches[1]);
+        }
+    }
+    
+    console.log('[DEBUG] Gauge percentile:', percentile);
+    
+    const ctx = canvas.getContext('2d');
+    
+    // Create a gradient for the gauge
+    function createGradient(ctx, colors) {
+        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        colors.forEach((color, index) => {
+            gradient.addColorStop(index / (colors.length - 1), color);
+        });
+        return gradient;
+    }
+    
+    new window.AppraisalCardChart(ctx, {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [percentile, 100 - percentile],
+                backgroundColor: [
+                    createGradient(ctx, ['#3b82f6', '#1d4ed8']), // Blue gradient
+                    '#e5e7eb' // Light gray
+                ],
+                borderWidth: 0,
+                circumference: 180,
+                rotation: 270
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '75%',
+            plugins: {
+                legend: { display: false },
+                tooltip: { enabled: false }
+            },
+            animation: {
+                animateRotate: true,
+                animateScale: false,
+                duration: 2000,
+                easing: 'easeOutQuart'
+            }
+        }
+    });
+}
+
+// Initialize metrics chart
+function initializeMetricsChart(canvas, chartData) {
+    console.log('[DEBUG] Creating metrics chart with data:', chartData);
+    
+    // Default data if not provided
+    if (!chartData || !chartData.datasets || !chartData.datasets[0] || !chartData.datasets[0].data) {
+        chartData = {
+            labels: ['Market Demand', 'Rarity', 'Condition'],
+            datasets: [{
+                data: [75, 80, 85], // Default values matching ACF
+                backgroundColor: [
+                    'rgba(59, 130, 246, 0.8)', // Blue
+                    'rgba(139, 92, 246, 0.8)', // Purple
+                    'rgba(16, 185, 129, 0.8)'  // Green
+                ],
+                borderRadius: 6,
+                maxBarThickness: 50
+            }]
+        };
+    }
+    
+    const ctx = canvas.getContext('2d');
+    new window.AppraisalCardChart(ctx, {
+        type: 'bar',
+        data: chartData,
+        options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: 2,
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    max: 100,
+                    grid: {
+                        display: true,
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value + '%';
+                        }
+                    }
+                },
+                y: {
+                    grid: {
+                        display: false
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.parsed.x + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Initialize market chart
+function initializeMarketChart(canvas, chartData) {
+    console.log('[DEBUG] Creating market chart with data:', chartData);
+    
+    // Default data if not provided or invalid
+    if (!chartData || !chartData.datasets) {
+        // Get appraised value
+        let value = 65000; // Default
+        const valueEl = document.querySelector('.value-amount');
+        if (valueEl) {
+            const valueMatch = valueEl.textContent.match(/[\d,]+/);
+            if (valueMatch) {
+                value = parseInt(valueMatch[0].replace(/,/g, ''));
+            }
+        }
+        
+        // Generate a bell curve distribution around the value
+        const min = Math.floor(value * 0.7);
+        const step = Math.floor((value * 0.6) / 5);
+        
+        chartData = {
+            labels: [
+                '$' + (min).toLocaleString(),
+                '$' + (min + step).toLocaleString(),
+                '$' + (min + step * 2).toLocaleString(),
+                '$' + (min + step * 3).toLocaleString(),
+                '$' + (min + step * 4).toLocaleString(),
+                '$' + (min + step * 5).toLocaleString()
+            ],
+            datasets: [{
+                label: 'Market Distribution',
+                data: [5, 15, 25, 30, 15, 10], // Bell curve
+                backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                borderColor: 'rgba(59, 130, 246, 1)'
+            }, {
+                label: 'Your Item',
+                data: [0, 0, 0, 30, 0, 0], // Position your item in the middle-high range
+                backgroundColor: 'rgba(239, 68, 68, 0.6)',
+                borderColor: 'rgba(239, 68, 68, 1)'
+            }]
+        };
+    }
+    
+    const ctx = canvas.getContext('2d');
+    new window.AppraisalCardChart(ctx, {
+        type: 'bar',
+        data: chartData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: true,
+            aspectRatio: 2,
+            scales: {
+                x: {
+                    grid: {
+                        display: false
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        color: 'rgba(0, 0, 0, 0.05)'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: false
+                }
+            }
+        }
+    });
+}
 </script> 

@@ -9,6 +9,7 @@ const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const secretClient = new SecretManagerServiceClient();
 const {
   ENHANCED_ANALYTICS_TEMPLATE,
+  ENHANCED_ANALYTICS_SCRIPTS,
   APPRAISAL_CARD_TEMPLATE
 } = require('../templates/gemini-templates');
 
@@ -77,7 +78,7 @@ async function generateEnhancedAnalyticsWithGemini(statisticsData, options = {})
     };
     
     // Prepare data values with defaults
-    const data = prepareEnhancedAnalyticsData(statisticsData, chartIds);
+    const data = prepareEnhancedAnalyticsData(statisticsData, chartIds, options);
     
     // Create prompt for Gemini
     const prompt = `
@@ -94,9 +95,19 @@ Important guidelines:
 4. Generate unique IDs for chart elements to avoid DOM conflicts
 5. Handle all edge cases gracefully
 
+IMPORTANT SECTION VISIBILITY RULES:
+- For the price-history-section element:
+  - If data.show_history is TRUE: The section should be visible
+  - If data.show_history is FALSE: Add style="display:none;" to the div.price-history-section element
+
 Here's the template:
 \`\`\`html
 ${ENHANCED_ANALYTICS_TEMPLATE}
+\`\`\`
+
+Here's the JavaScript to use for the {{scripts}} placeholder:
+\`\`\`javascript
+${ENHANCED_ANALYTICS_SCRIPTS}
 \`\`\`
 
 And here's the data to insert (some values may be missing):
@@ -122,8 +133,47 @@ For the sales table, generate rows from comparable_sales data. Each row should f
 
 For confidence dots, generate spans with appropriate classes.
 
+Pay special attention to the price-history-section. When processing the template, make sure to properly handle the conditional display attribute for this section. If data.show_history is FALSE, apply style="display:none;" to the price-history-section div.
+
 Final output should be the complete, working HTML visualization.
     `;
+    
+    // DEBUG: Log the prompt and data to file
+    try {
+      const fs = require('fs');
+      const path = require('path');
+      const logDir = path.join(__dirname, '../logs');
+      
+      // Create logs directory if it doesn't exist
+      if (!fs.existsSync(logDir)) {
+        fs.mkdirSync(logDir, { recursive: true });
+      }
+      
+      // Create log filename with timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const logFilePath = path.join(logDir, `gemini-prompt-${timestamp}.log`);
+      
+      // Format debug info
+      const debugInfo = {
+        timestamp: new Date().toISOString(),
+        originalStatistics: statisticsData,
+        preparedData: data,
+        prompt: prompt,
+        options: options
+      };
+      
+      // Write to file
+      fs.writeFileSync(
+        logFilePath, 
+        JSON.stringify(debugInfo, null, 2),
+        'utf8'
+      );
+      
+      console.log(`DEBUG: Gemini prompt and data logged to ${logFilePath}`);
+    } catch (logError) {
+      console.error('Error logging Gemini debug info:', logError);
+      // Continue execution even if logging fails
+    }
     
     // Request completion from Gemini
     const result = await model.generateContent(prompt);
@@ -242,11 +292,12 @@ Final output should be the complete, working HTML visualization.
 
 /**
  * Prepares data for enhanced analytics visualization
- * @param {Object} statsData - Statistics data from the backend
- * @param {Object} chartIds - Unique chart IDs
- * @returns {Object} - Prepared data for template
+ * @param {Object} statsData - Statistics data
+ * @param {Object} chartIds - Unique IDs for charts
+ * @param {Object} options - Optional parameters
+ * @returns {Object} - Prepared data for visualization
  */
-function prepareEnhancedAnalyticsData(statsData, chartIds) {
+function prepareEnhancedAnalyticsData(statsData, chartIds, options = {}) {
   // Default values for when data is missing
   const defaults = {
     condition_score: 70,
@@ -262,19 +313,28 @@ function prepareEnhancedAnalyticsData(statsData, chartIds) {
     price_max: '$6,800',
     percentile: '68th',
     confidence: 'High',
-    confidence_class: 'high',
     coefficient_variation: 15.8,
     count: 5,
     std_dev: '$650',
     current_price: 4500,
     value: '$4,500',
+    formatted_value: '$4,500',
     target_position: 50,
-    raw_value: 4500,
-    is_trend_positive: true,
-    trend_class: 'positive',
-    market_timing: 'Favorable',
-    market_segment: 'appreciating'
+    raw_value: 4500
   };
+  
+  // Specifically handle price history data
+  let hasPriceHistory = false;
+  let priceHistory = [];
+  
+  if (statsData.price_history && Array.isArray(statsData.price_history) && statsData.price_history.length > 0) {
+    priceHistory = statsData.price_history;
+    hasPriceHistory = true;
+    console.log(`Found price history data with ${priceHistory.length} points`);
+  } else {
+    console.log('No valid price history data found, using default empty array');
+    priceHistory = [];
+  }
   
   // Extract data from statistics or use defaults
   const data = {
@@ -329,9 +389,28 @@ function prepareEnhancedAnalyticsData(statsData, chartIds) {
     comparable_sales: statsData.comparable_sales || [],
     sales_count: (statsData.comparable_sales || []).length,
     
+    // Explicit price history data
+    price_history: priceHistory,
+    has_price_history: hasPriceHistory,
+    show_history: (hasPriceHistory && priceHistory.length > 0),
+    
     // Confidence indicator dots
     confidence_dots: generateConfidenceDots(statsData.confidence_level)
   };
+  
+  // Prepare chart data for price history
+  if (hasPriceHistory) {
+    data.price_history_chart_data = {
+      labels: priceHistory.map(p => p.year),
+      datasets: [{
+        label: 'Comparable Items',
+        data: priceHistory.map(p => p.price),
+        borderColor: 'rgb(75, 192, 192)',
+        backgroundColor: 'rgba(75, 192, 192, 0.2)',
+        tension: 0.1
+      }]
+    };
+  }
   
   return data;
 }
