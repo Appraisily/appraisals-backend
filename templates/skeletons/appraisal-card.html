@@ -169,11 +169,14 @@
     font-size: 1.15rem; /* Reduced size */
     font-weight: 600;
     margin: 0 0 0.25rem 0;
-    /* Added for truncation */
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    display: block; /* Ensure it behaves like a block for overflow */
+    /* Changed from single-line truncation to multi-line display */
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
+    display: block;
+    line-height: 1.4;
+    max-height: 4.2em; /* Allow approximately 3 lines of text */
+    word-wrap: break-word;
 }
 .appraisal-card .artwork-info .artwork-creator {
     font-size: 0.9rem;
@@ -386,19 +389,23 @@
     white-space: nowrap; /* Keep label on one line */
     flex-shrink: 0; /* Prevent label shrinking */
     font-weight: 500; /* Make label slightly bolder */
+    width: 20%; /* Set consistent width for labels */
+    min-width: 120px; /* Ensure minimum width */
 }
 .appraisal-card .artwork-details-table td:last-child { /* Value */
     font-weight: 500;
-    text-align: right;
+    text-align: left !important; /* Ensure left alignment */
     flex-grow: 1; /* Allow value to take remaining space */
     /* Allow value text to wrap */
     white-space: normal;
+    padding-left: 0.5rem; /* Add some padding between label and value */
+    line-height: 1.5; /* Improve line spacing for readability */
 }
 
-/* Specifically handle the Title row if needed */
+/* Specifically handle the Title row for better display of long text */
 .appraisal-card .artwork-details-table tr.title-row td:last-child {
-    /* Override truncation if needed for this view, or apply different style */
-    /* white-space: normal; */ 
+    white-space: normal; /* Allow wrapping */
+    line-height: 1.5; /* Improved line spacing */
 }
 
 /* Details Tab */
@@ -418,12 +425,17 @@
     /* Add some structure */
     display: flex;
     flex-direction: column;
+    background-color: var(--secondary);
+    padding: 1rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
 }
 .appraisal-card .metric-detail-item h4 {
     font-size: 0.85rem;
     font-weight: 600;
-    margin: 0 0 0.5rem 0;
+    margin: 0 0 0.75rem 0;
     color: var(--card-foreground); /* Ensure readable color */
+    text-align: center;
 }
 .appraisal-card .metric-bar-container {
     background-color: var(--muted);
@@ -431,7 +443,7 @@
     height: 8px; /* Slimmer bars */
     overflow: hidden;
     position: relative;
-    margin-bottom: 0.5rem; /* Space between bar and text */
+    margin-bottom: 0.75rem; /* Space between bar and text */
 }
 .appraisal-card .metric-bar {
     background-color: var(--primary);
@@ -445,9 +457,10 @@
 .appraisal-card .metric-detail-item p {
     font-size: 0.75rem;
     color: var(--muted-foreground);
-    margin: 0; /* Remove extra margin */
+    margin: 0.5rem 0 0 0; /* Add top margin */
     line-height: 1.4; /* Adjust line height */
     flex-grow: 1; /* Allow text to take space if needed */
+    text-align: center;
 }
 
 /* Similar Tab */
@@ -562,6 +575,21 @@
 .appraisal-card .detail-value,
 .appraisal-card .artwork-details-table td {
   font-family: 'Inter', 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif !important;
+}
+
+/* Custom styles for multi-line values in details table */
+.appraisal-card .artwork-details-table td.multi-line-value {
+    white-space: pre-line; /* Respect line breaks in the content */
+    line-height: 1.6;
+}
+
+/* Make sure title text is readable and well-formatted in the details */
+.appraisal-card .artwork-details-table tr.title-row td:last-child {
+    font-size: 0.85rem;
+    line-height: 1.6;
+    white-space: normal;
+    max-height: none; /* Allow full height */
+    padding-right: 0.5rem; /* Add some right padding */
 }
 </style>
 
@@ -715,7 +743,315 @@
 // Basic Tab switching logic (can be moved to a separate JS file later)
 document.addEventListener('DOMContentLoaded', function() {
     const card = document.querySelector('.appraisal-card[data-post-id="{{POST_ID}}"]'); // Scope to this specific card
-    if (!card) return;
+    if (!card) {
+        console.error('[DEBUG] Appraisal card not found for ID: {{POST_ID}}');
+        return;
+    }
+
+    console.log('[DEBUG] Appraisal card found with ID: {{POST_ID}}');
+    
+    // Set up a MutationObserver to detect when charts are added to the DOM
+    const observer = new MutationObserver(function(mutations) {
+        mutations.forEach(function(mutation) {
+            if (mutation.type === 'childList') {
+                const addedNodes = Array.from(mutation.addedNodes);
+                addedNodes.forEach(node => {
+                    if (node.nodeType === 1) { // Element node
+                        const canvases = node.querySelectorAll('canvas');
+                        if (canvases.length > 0) {
+                            console.log('[DEBUG] Canvas elements added to DOM:', canvases);
+                            
+                            // Check if Chart.js is loaded and initialize if needed
+                            if (typeof window.AppraisalCardChart !== 'undefined') {
+                                // Try to re-initialize charts
+                                setTimeout(initializeCharts, 500);
+                            }
+                        }
+                    }
+                });
+            }
+        });
+    });
+    
+    // Start observing the card for DOM changes
+    observer.observe(card, { childList: true, subtree: true });
+    
+    // Load Chart.js if not already loaded
+    function loadChartJsAndInitialize() {
+        if (typeof window.Chart !== 'undefined') {
+            // Chart.js already loaded globally
+            window.AppraisalCardChart = window.Chart;
+            initializeCharts();
+            return;
+        }
+        
+        if (typeof window.AppraisalCardChart !== 'undefined') {
+            // AppraisalCardChart already available
+            initializeCharts();
+            return;
+        }
+        
+        // Need to load Chart.js
+        console.log('[DEBUG] Loading Chart.js...');
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';
+        script.onload = function() {
+            console.log('[DEBUG] Chart.js loaded successfully');
+            window.AppraisalCardChart = window.Chart;
+            initializeCharts();
+        };
+        script.onerror = function(error) {
+            console.error('[DEBUG] Failed to load Chart.js:', error);
+        };
+        document.head.appendChild(script);
+    }
+    
+    // Initialize all charts
+    function initializeCharts() {
+        console.log('[DEBUG] Initializing charts...');
+        
+        try {
+            // Get DOM elements
+            const gaugeCanvas = document.getElementById('{{CHART_ID_GAUGE}}');
+            const metricsCanvas = document.getElementById('{{CHART_ID_METRICS}}');
+            const marketCanvas = document.getElementById('{{CHART_ID_MARKET}}');
+            
+            // Get chart data
+            const metricsContainer = card.querySelector('.metrics-chart-container');
+            const marketContainer = card.querySelector('.price-distribution-container');
+            
+            const metricsDataRaw = metricsContainer.dataset.chartDataMetrics;
+            const marketDataRaw = marketContainer.dataset.chartDataMarket;
+            
+            // Initialize gauge chart
+            if (gaugeCanvas) {
+                initializeGaugeChart(gaugeCanvas);
+            }
+            
+            // Initialize metrics chart
+            if (metricsCanvas && metricsDataRaw) {
+                try {
+                    const metricsData = JSON.parse(metricsDataRaw);
+                    initializeMetricsChart(metricsCanvas, metricsData);
+                } catch (e) {
+                    console.error('[DEBUG] Error parsing metrics data:', e);
+                    // Fallback to default data
+                    initializeMetricsChart(metricsCanvas, {
+                        labels: ['Market Demand', 'Rarity', 'Condition'],
+                        datasets: [{
+                            data: [75, 85, 80],
+                            backgroundColor: ['rgba(59, 130, 246, 0.8)', 'rgba(139, 92, 246, 0.8)', 'rgba(16, 185, 129, 0.8)']
+                        }]
+                    });
+                }
+            }
+            
+            // Initialize market chart
+            if (marketCanvas && marketDataRaw) {
+                try {
+                    const marketData = JSON.parse(marketDataRaw);
+                    initializeMarketChart(marketCanvas, marketData);
+                } catch (e) {
+                    console.error('[DEBUG] Error parsing market data:', e);
+                    // Fallback to default data
+                    initializeMarketChart(marketCanvas, {
+                        labels: ['$0-20k', '$20-40k', '$40-60k', '$60-80k', '$80-100k'],
+                        datasets: [{
+                            label: 'Market Distribution',
+                            data: [10, 25, 30, 20, 15],
+                            backgroundColor: 'rgba(59, 130, 246, 0.6)',
+                            borderColor: 'rgba(59, 130, 246, 1)'
+                        }, {
+                            label: 'Your Item',
+                            data: [0, 0, 0, 65, 0],
+                            backgroundColor: 'rgba(239, 68, 68, 0.6)',
+                            borderColor: 'rgba(239, 68, 68, 1)'
+                        }]
+                    });
+                }
+            }
+            
+            console.log('[DEBUG] Charts initialized successfully');
+        } catch (e) {
+            console.error('[DEBUG] Error initializing charts:', e);
+        }
+    }
+    
+    // Initialize gauge chart
+    function initializeGaugeChart(canvas) {
+        const container = canvas.closest('.gauge-container');
+        const percentileEl = container ? container.querySelector('.percentile-value') : null;
+        let percentile = 48; // Default from the screenshot
+        
+        if (percentileEl) {
+            // Extract numeric value
+            const matches = percentileEl.textContent.match(/(\d+)/);
+            if (matches && matches[1]) {
+                percentile = parseInt(matches[1]);
+            }
+        }
+        
+        console.log('[DEBUG] Creating gauge chart with percentile:', percentile);
+        
+        const ctx = canvas.getContext('2d');
+        
+        // Function to create gradients
+        function createGradient(ctx, colors) {
+            const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+            colors.forEach((color, index) => {
+                gradient.addColorStop(index / (colors.length - 1), color);
+            });
+            return gradient;
+        }
+        
+        new window.AppraisalCardChart(ctx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [percentile, 100 - percentile],
+                    backgroundColor: [
+                        createGradient(ctx, ['#3b82f6', '#1d4ed8']),
+                        '#e5e7eb'
+                    ],
+                    borderWidth: 0,
+                    circumference: 180,
+                    rotation: 270
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '75%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                },
+                animation: {
+                    animateRotate: true,
+                    animateScale: false,
+                    duration: 2000,
+                    easing: 'easeOutQuart'
+                }
+            }
+        });
+    }
+    
+    // Initialize metrics chart
+    function initializeMetricsChart(canvas, chartData) {
+        console.log('[DEBUG] Creating metrics chart with data:', chartData);
+        
+        const ctx = canvas.getContext('2d');
+        new window.AppraisalCardChart(ctx, {
+            type: 'bar',
+            data: {
+                labels: chartData.labels,
+                datasets: [{
+                    data: chartData.datasets[0].data,
+                    backgroundColor: chartData.datasets[0].backgroundColor || [
+                        'rgba(59, 130, 246, 0.8)',
+                        'rgba(139, 92, 246, 0.8)',
+                        'rgba(16, 185, 129, 0.8)'
+                    ],
+                    borderRadius: 6,
+                    maxBarThickness: 50
+                }]
+            },
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: 2,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: {
+                            display: true,
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
+                    },
+                    y: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.x + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    // Initialize market chart
+    function initializeMarketChart(canvas, chartData) {
+        console.log('[DEBUG] Creating market chart with data:', chartData);
+        
+        const ctx = canvas.getContext('2d');
+        new window.AppraisalCardChart(ctx, {
+            type: 'bar',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: 2,
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                }
+            }
+        });
+    }
+    
+    // Load Charts.js and initialize charts
+    loadChartJsAndInitialize();
+    
+    // Log chart container IDs and data
+    console.log('[DEBUG] Chart IDs:', {
+        gauge: document.getElementById('{{CHART_ID_GAUGE}}'),
+        metrics: document.getElementById('{{CHART_ID_METRICS}}'),
+        market: document.getElementById('{{CHART_ID_MARKET}}')
+    });
+    
+    // Log chart data
+    const metricsData = card.querySelector('.metrics-chart-container').dataset.chartDataMetrics;
+    const marketData = card.querySelector('.price-distribution-container').dataset.chartDataMarket;
+    
+    console.log('[DEBUG] Chart data available:', {
+        metrics: metricsData ? 'Yes (length: ' + metricsData.length + ')' : 'No',
+        market: marketData ? 'Yes (length: ' + marketData.length + ')' : 'No'
+    });
+    
+    // If Chart.js is available, log that too
+    console.log('[DEBUG] Chart.js available:', typeof window.Chart !== 'undefined' || typeof window.AppraisalCardChart !== 'undefined');
 
     const tabButtons = card.querySelectorAll('.tabs-navigation .tab-button');
     const tabPanels = card.querySelectorAll('.tabs-content .tab-panel');

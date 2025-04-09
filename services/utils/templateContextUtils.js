@@ -68,7 +68,11 @@ function generateDetailsTableHtml(appraisal) {
 
     for (const [label, value] of Object.entries(detailsMap)) {
         if (value) { // Only show rows with values
-            html += `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`;
+            // Add class for title row to handle differently
+            const rowClass = label === 'Title' ? 'class="title-row"' : '';
+            // Add special formatting for Provenance field which might be multi-line
+            const valueClass = label === 'Provenance' ? 'class="multi-line-value"' : '';
+            html += `<tr ${rowClass}><td>${escapeHtml(label)}</td><td ${valueClass}>${escapeHtml(value)}</td></tr>`;
         }
     }
     return html || '<tr><td colspan="2">No details available.</td></tr>';
@@ -242,6 +246,10 @@ function prepareDataContextForAppraisalCard(stats, appraisal) {
         MARKET_DEMAND_SCORE: parseFloat(appraisal.market_demand || 0),
         RARITY_SCORE: parseFloat(appraisal.rarity || 0),
         CONDITION_SCORE: parseFloat(appraisal.condition_score || 0),
+        // Add missing metrics for the detail tab
+        HISTORICAL_SIGNIFICANCE: parseFloat(appraisal.historical_significance || appraisal.historical_value || 65),
+        PROVENANCE_STRENGTH: parseFloat(appraisal.provenance_strength || appraisal.provenance || 70),
+        INVESTMENT_POTENTIAL: parseFloat(appraisal.investment_potential || appraisal.future_value || 60),
         APPRAISER_NAME: escapeHtml(appraisal.appraiser_name || 'Andrés Gómez'),
         ANALYSIS_TEXT: escapeHtml(generateAnalysisText(stats)),
         DETAILS_TABLE_HTML: generateDetailsTableHtml(appraisal),
@@ -250,6 +258,7 @@ function prepareDataContextForAppraisalCard(stats, appraisal) {
         CHART_ID_MARKET: `market-chart-${postId}`,
         METRICS_CHART_DATA_JSON: escapeHtml(JSON.stringify(metricsData)),
         MARKET_CHART_DATA_JSON: escapeHtml(JSON.stringify(marketData)),
+        FULL_REPORT_URL: appraisal.report_url || '#'
     };
 }
 

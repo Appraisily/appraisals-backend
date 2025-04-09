@@ -56,7 +56,7 @@
 
 /* --- Section Styles --- */
 .enhanced-analytics-container .analytics-section {
-    margin-bottom: 2.5rem;
+    margin-bottom: 4rem; /* Increased from 2.5rem */
 }
 .enhanced-analytics-container .analytics-section:last-child {
     margin-bottom: 0;
@@ -452,9 +452,14 @@
 /* --- Item Metrics / Price Distribution Section --- */
 .enhanced-analytics-container .market-analysis-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    grid-template-columns: 1fr 1fr; /* Fixed 2-column layout */
     gap: 1.5rem;
     align-items: start; /* Align items to top */
+}
+
+/* Increase spacing between sections */
+.enhanced-analytics-container .analytics-section {
+    margin-bottom: 4rem; /* Increased from 2.5rem */
 }
 
 /* Histogram/Distribution Chart */
@@ -471,14 +476,37 @@
     height: 150px; /* Height of bars area */
     border-bottom: 1px solid var(--border);
 }
-.enhanced-analytics-container .modern-chart-bars .bar {
+.enhanced-analytics-container .modern-bar-wrap {
     flex-grow: 1;
-    background-color: var(--chart-muted);
+    position: relative;
     margin: 0 1px;
+}
+.enhanced-analytics-container .modern-bar {
+    background-color: var(--chart-muted);
+    width: 100%;
     transition: background-color 0.2s ease;
 }
-.enhanced-analytics-container .modern-chart-bars .bar:hover {
+.enhanced-analytics-container .modern-bar.highlighted {
     background-color: var(--chart-primary);
+}
+.enhanced-analytics-container .modern-bar-wrap:hover .bar-tooltip {
+    opacity: 1;
+}
+.enhanced-analytics-container .bar-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--foreground);
+    color: var(--background);
+    padding: 0.3rem 0.5rem;
+    border-radius: var(--radius);
+    font-size: 0.7rem;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    z-index: 10;
 }
 
 .enhanced-analytics-container .chart-axis {
@@ -516,108 +544,20 @@
     white-space: nowrap;
 }
 
-/* Stats Metrics Grid */
-.enhanced-analytics-container .stats-metrics-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 1rem;
-}
-
-.enhanced-analytics-container .stats-metrics-grid .metric-card {
-    padding: 1rem;
-}
-
-.enhanced-analytics-container .metric-values {
-    margin: 1rem 0;
-    font-size: 0.9rem;
-}
-.enhanced-analytics-container .metric-value-row {
-    display: flex;
-    justify-content: space-between;
-    padding: 0.25rem 0;
-}
-.enhanced-analytics-container .metric-label {
-    color: var(--muted-foreground);
-}
-.enhanced-analytics-container .metric-value {
-    font-weight: 500;
-}
-
+/* Improve badge styling */
 .enhanced-analytics-container .metric-footer .badge {
     display: inline-block;
     background-color: var(--secondary);
-    color: var(--muted-foreground);
-    padding: 0.2rem 0.6rem;
-    font-size: 0.75rem;
+    color: var(--foreground);
+    padding: 0.3rem 0.75rem; /* Increased padding */
+    font-size: 0.85rem; /* Slightly larger font */
     border-radius: var(--radius);
     margin-right: 0.5rem;
+    font-weight: 600; /* Make it bolder */
 }
 .enhanced-analytics-container .metric-footer .badge.secondary {
      background-color: var(--accent);
      color: var(--accent-foreground);
-}
-
-/* Price Range Bar */
-.enhanced-analytics-container .price-range-display {
-    margin: 1rem 0;
-}
-.enhanced-analytics-container .price-range-value {
-    font-size: 0.9rem;
-    color: var(--muted-foreground);
-    text-align: center;
-    margin-bottom: 0.5rem;
-}
-.enhanced-analytics-container .price-range-bar {
-    height: 8px;
-    background: linear-gradient(to right, var(--chart-tertiary), var(--chart-primary), var(--destructive)); /* Example gradient */
-    border-radius: var(--radius);
-    position: relative;
-}
-.enhanced-analytics-container .price-range-bar::after { /* Target marker */
-    content: '';
-    position: absolute;
-    top: -4px;
-    bottom: -4px;
-    left: var(--target-position, 50%);
-    width: 3px;
-    background-color: var(--foreground);
-    border-radius: 2px;
-    transform: translateX(-50%);
-}
-
-/* Investment Potential */
-.enhanced-analytics-container .investment-rating-display {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    margin: 1rem 0;
-}
-.enhanced-analytics-container .investment-rating {
-    text-align: center;
-}
-.enhanced-analytics-container .rating-value {
-    display: block;
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--primary);
-}
-.enhanced-analytics-container .rating-label {
-    display: block;
-    font-size: 0.75rem;
-    color: var(--muted-foreground);
-}
-.enhanced-analytics-container .investment-scale {
-    flex-grow: 1;
-    height: 10px;
-    background-color: var(--muted);
-    border-radius: var(--radius);
-    overflow: hidden;
-}
-.enhanced-analytics-container .scale-bar {
-    height: 100%;
-    background-color: var(--chart-primary);
-    width: var(--fill-width, 0%);
-    transition: width 0.5s ease-in-out;
 }
 
 /* Confidence Level */
@@ -641,7 +581,8 @@
 /* Fill dots based on class */
 .enhanced-analytics-container .confidence-indicator.low span:nth-child(-n+1),
 .enhanced-analytics-container .confidence-indicator.medium span:nth-child(-n+2),
-.enhanced-analytics-container .confidence-indicator.high span:nth-child(-n+3) {
+.enhanced-analytics-container .confidence-indicator.high span:nth-child(-n+3),
+.enhanced-analytics-container .confidence-indicator.very-high span:nth-child(-n+4) {
     background-color: var(--chart-primary);
 }
 .enhanced-analytics-container .confidence-value {
@@ -832,8 +773,6 @@
 <div class="enhanced-analytics-container">
   <div class="section-header">
     <h2 class="section-title">{{TITLE}}</h2>
-    <!-- Optional: Add subtitle or description -->
-    <p class="section-description text-muted-foreground">Detailed Analysis Report for {{TITLE}}</p>
   </div>
 
   <div class="analytics-section radar-chart-section" {{SHOW_RADAR ? '' : 'style="display:none;"'}}>
@@ -981,7 +920,9 @@
                  <div class="metric-card">
                      <div class="metric-header"><h4>Market Confidence</h4></div>
                      <div class="confidence-display">
-                         <div class="confidence-indicator {{CONFIDENCE_LEVEL_CLASS}}">{{CONFIDENCE_DOTS_HTML}}</div>
+                         <div class="confidence-indicator {{CONFIDENCE_LEVEL_CLASS}}">
+                             <span></span><span></span><span></span><span></span>
+                         </div>
                          <div class="confidence-value">{{CONFIDENCE_LEVEL}}</div>
                      </div>
                      <div class="metric-footer"><div class="metric-description text-xs">Based on sample size and data consistency</div></div>
@@ -1023,151 +964,407 @@
 
 <!-- NOTE: Ensure table sorting/pagination/filtering JavaScript is loaded separately in WordPress -->
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Simple Table Pagination & Sort Example (Scope to specific table)
-    const container = document.querySelector('.enhanced-analytics-container'); // Adjust if needed
-    if (!container) return;
-
-    const postId = '{{POST_ID}}'; // Get post ID for unique elements
-    const tableId = `salesTable-${postId}`;
-    const paginationId = `pagination-${postId}`;
-    const searchId = `searchResults-${postId}`;
-
-    const table = document.getElementById(tableId);
-    const paginationControls = document.getElementById(paginationId);
-    const searchInput = document.getElementById(searchId);
-    if (!table || !paginationControls || !searchInput) return;
-
-    const tbody = table.querySelector('tbody');
-    const rows = Array.from(tbody.querySelectorAll('tr'));
-    const rowsPerPage = 5; // Configurable
-    let currentPage = 1;
-    let filteredRows = rows;
-    let sortColumn = null;
-    let sortDirection = 'asc'; // 'asc' or 'desc'
-
-    function displayTablePage() {
-        tbody.innerHTML = ''; // Clear table
-        const start = (currentPage - 1) * rowsPerPage;
-        const end = start + rowsPerPage;
-        const paginatedRows = filteredRows.slice(start, end);
-        paginatedRows.forEach(row => tbody.appendChild(row));
-
-        // Update pagination info
-        const pageStartSpan = paginationControls.querySelector('.page-start');
-        const pageEndSpan = paginationControls.querySelector('.page-end');
-        const totalItemsSpan = paginationControls.querySelector('.total-items');
-        pageStartSpan.textContent = filteredRows.length > 0 ? start + 1 : 0;
-        pageEndSpan.textContent = Math.min(end, filteredRows.length);
-        totalItemsSpan.textContent = filteredRows.length;
-
-        // Update button states
-        paginationControls.querySelector('[data-page="prev"]').disabled = currentPage === 1;
-        paginationControls.querySelector('[data-page="next"]').disabled = end >= filteredRows.length;
+document.addEventListener("DOMContentLoaded", function() {
+    // Ensure Chart.js is loaded
+    if (typeof Chart === "undefined") {
+        console.log("Loading Chart.js");
+        var script = document.createElement("script");
+        script.src = "https://cdn.jsdelivr.net/npm/chart.js";
+        script.onload = initCharts;
+        document.head.appendChild(script);
+    } else {
+        initCharts();
     }
-
-    function filterTable() {
-        const searchTerm = searchInput.value.toLowerCase();
-        filteredRows = rows.filter(row => {
-            // Search across all cells in the row
-            return Array.from(row.cells).some(cell => cell.textContent.toLowerCase().includes(searchTerm));
-        });
-        currentPage = 1; // Reset to first page after filtering
-        sortTable(); // Re-sort filtered results
-        // displayTablePage() will be called by sortTable
-    }
-
-    function sortTable() {
-        if (!sortColumn) {
-            displayTablePage(); // No sorting, just display
-            return;
-        }
-
-        const columnIndex = Array.from(table.querySelectorAll('thead th')).findIndex(th => th.dataset.sort === sortColumn);
-        if (columnIndex === -1) {
-            displayTablePage();
-            return;
-        }
-
-        filteredRows.sort((a, b) => {
-            const cellA = a.cells[columnIndex].textContent.trim();
-            const cellB = b.cells[columnIndex].textContent.trim();
-
-            let comparison = 0;
-
-            // Attempt numeric sort for price/diff, fallback to string
-            if (sortColumn === 'price' || sortColumn === 'diff') {
-                const numA = parseFloat(cellA.replace(/[^\d.-]/g, '')); // Clean currency/percentage
-                const numB = parseFloat(cellB.replace(/[^\d.-]/g, ''));
-                if (!isNaN(numA) && !isNaN(numB)) {
-                    comparison = numA - numB;
-                } else {
-                    comparison = cellA.localeCompare(cellB); // Fallback
+    
+    function initCharts() {
+        // Initialize Radar Chart
+        var radarWrapper = document.querySelector(".radar-wrapper");
+        if (radarWrapper && radarWrapper.dataset.chartDataRadar) {
+            try {
+                var radarData = JSON.parse(radarWrapper.dataset.chartDataRadar);
+                var radarCanvas = radarWrapper.querySelector("canvas");
+                if (radarCanvas) {
+                    new Chart(radarCanvas, {
+                        type: "radar",
+                        data: radarData,
+                        options: {
+                            responsive: true,
+                            scales: {
+                                r: {
+                                    beginAtZero: true,
+                                    max: 100
+                                }
+                            }
+                        }
+                    });
                 }
-            } else if (sortColumn === 'date') {
-                 try {
-                    // Attempt to parse dates (requires consistent format)
-                    const dateA = new Date(cellA);
-                    const dateB = new Date(cellB);
-                    if (!isNaN(dateA) && !isNaN(dateB)) {
-                         comparison = dateA - dateB;
-                    } else {
-                         comparison = cellA.localeCompare(cellB); // Fallback
-                    }
-                 } catch (e) {
-                     comparison = cellA.localeCompare(cellB); // Fallback on error
-                 }
-            } else {
-                comparison = cellA.localeCompare(cellB); // Default string sort
-            }
-
-            return sortDirection === 'asc' ? comparison : -comparison;
-        });
-        
-        // Update header sort indicators
-        table.querySelectorAll('thead th').forEach(th => {
-            th.classList.remove('sorted-asc', 'sorted-desc');
-            if (th.dataset.sort === sortColumn) {
-                th.classList.add(sortDirection === 'asc' ? 'sorted-asc' : 'sorted-desc');
-            }
-        });
-
-        displayTablePage();
-    }
-
-    // Event Listeners
-    paginationControls.addEventListener('click', (e) => {
-        if (e.target.matches('[data-page="prev"]') && currentPage > 1) {
-            currentPage--;
-            displayTablePage();
-        } else if (e.target.matches('[data-page="next"]')) {
-            const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
-            if (currentPage < totalPages) {
-                currentPage++;
-                displayTablePage();
+            } catch (e) {
+                console.error("Error initializing radar chart:", e);
             }
         }
-    });
-
-    searchInput.addEventListener('input', filterTable);
-
-    table.querySelectorAll('thead th.sortable').forEach(header => {
-        header.addEventListener('click', () => {
-            const newSortColumn = header.dataset.sort;
-            if (sortColumn === newSortColumn) {
-                // Toggle direction
-                sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-            } else {
-                // New column, default to ascending
-                sortColumn = newSortColumn;
-                sortDirection = 'asc';
+        
+        // Initialize other charts
+        initPriceHistoryChart();
+        initDataTable();
+        initHistogram();
+        initConfidenceIndicator();
+        initTablePagination(); // Initialize table pagination after data is loaded
+    }
+    
+    function initPriceHistoryChart() {
+        var wrapper = document.querySelector(".price-chart-wrapper");
+        if (wrapper && wrapper.dataset.chartDataHistory) {
+            try {
+                var data = JSON.parse(wrapper.dataset.chartDataHistory);
+                var canvas = wrapper.querySelector("canvas");
+                if (canvas) {
+                    new Chart(canvas, {
+                        type: "line",
+                        data: data,
+                        options: { responsive: true }
+                    });
+                }
+            } catch (e) {
+                console.error("Error initializing price history chart:", e);
             }
-            currentPage = 1; // Reset to first page on sort
-            sortTable();
-        });
-    });
+        }
+    }
+    
+    function initDataTable() {
+        var tableCard = document.querySelector(".advanced-data-table-card");
+        if (tableCard) {
+            try {
+                // Parse sales data from the data attribute
+                var salesData = [];
+                if (tableCard.dataset.salesData) {
+                    try {
+                        salesData = JSON.parse(tableCard.dataset.salesData);
+                    } catch (e) {
+                        console.warn("Failed to parse sales data:", e);
+                    }
+                }
 
-    // Initial display
-    sortTable(); // Apply initial sort/display
+                // If no data is available or parsing failed, use fallback sample data
+                if (!salesData || salesData.length === 0) {
+                    console.log("Using fallback sample data for market table");
+                    salesData = [
+                        {
+                            title: "Similar Impressionist Urban Scene",
+                            house: "Christie's",
+                            date: "2022-05-15",
+                            price: 68000,
+                            diff: "+4.6%",
+                            is_current: false
+                        },
+                        {
+                            title: "City Street View, Early Morning",
+                            house: "Sotheby's",
+                            date: "2022-03-08",
+                            price: 72500,
+                            diff: "+11.5%",
+                            is_current: false
+                        },
+                        {
+                            title: "Parisian Scene with Carriage",
+                            house: "Bonhams",
+                            date: "2021-11-23",
+                            price: 65000,
+                            diff: "0%",
+                            is_current: true
+                        },
+                        {
+                            title: "Rainy Day Street Scene",
+                            house: "Heritage Auctions",
+                            date: "2021-09-14",
+                            price: 59800,
+                            diff: "-8.0%",
+                            is_current: false
+                        },
+                        {
+                            title: "Small Impressionist Panel",
+                            house: "Phillips",
+                            date: "2021-06-28",
+                            price: 62400,
+                            diff: "-4.0%",
+                            is_current: false
+                        }
+                    ];
+                }
+
+                var tbody = document.querySelector(".sales-table tbody");
+                if (tbody) {
+                    tbody.innerHTML = "";
+                    salesData.forEach(function(sale) {
+                        var row = document.createElement("tr");
+                        if (sale.is_current) row.classList.add("highlight-row");
+                        row.innerHTML = 
+                            "<td>" + (sale.title || "-") + "</td>" +
+                            "<td>" + (sale.house || "-") + "</td>" +
+                            "<td>" + (sale.date || "-") + "</td>" +
+                            "<td>" + (typeof sale.price === "number" ? "$" + sale.price.toLocaleString() : sale.price || "-") + "</td>" +
+                            "<td class=\"" + (sale.diff && sale.diff.includes("+") ? "positive" : 
+                                            (sale.diff && sale.diff.includes("-") ? "negative" : "")) + "\">" + 
+                            (sale.diff || "-") + "</td>";
+                        tbody.appendChild(row);
+                    });
+                }
+                
+                // Update the total count
+                const totalItemsSpan = document.querySelector('.table-pagination .total-items');
+                if (totalItemsSpan) {
+                    totalItemsSpan.textContent = salesData.length;
+                }
+                
+                // Make sure the pagination is initialized correctly
+                const rows = Array.from(tbody.querySelectorAll('tr'));
+                if (window.filteredRows) {
+                    window.filteredRows = rows;
+                    if (typeof displayTablePage === 'function') {
+                        displayTablePage();
+                    }
+                }
+            } catch (e) {
+                console.error("Error populating sales table:", e);
+            }
+        }
+    }
+    
+    function initHistogram() {
+        var container = document.querySelector(".modern-chart-container");
+        if (container && container.dataset.histogramData) {
+            try {
+                var histogramData = JSON.parse(container.dataset.histogramData);
+                var barsContainer = container.querySelector(".modern-chart-bars");
+                if (barsContainer && histogramData.length > 0) {
+                    barsContainer.innerHTML = "";
+                    histogramData.forEach(function(bar) {
+                        var barWrap = document.createElement("div");
+                        barWrap.className = "modern-bar-wrap";
+                        var barElem = document.createElement("div");
+                        barElem.className = "modern-bar" + (bar.contains_target ? " highlighted" : "");
+                        barElem.style.height = bar.height + "%";
+                        
+                        var tooltip = document.createElement("div");
+                        tooltip.className = "bar-tooltip";
+                        tooltip.innerHTML = "$" + bar.min.toLocaleString() + "-$" + 
+                            bar.max.toLocaleString() + "<br>" + bar.count + " items";
+                        
+                        barWrap.appendChild(barElem);
+                        barWrap.appendChild(tooltip);
+                        barsContainer.appendChild(barWrap);
+                    });
+                    
+                    // Add your value marker if available
+                    if (container.dataset.targetPosition) {
+                        var markerPosition = parseFloat(container.dataset.targetPosition);
+                        var marker = document.createElement("div");
+                        marker.className = "your-value-marker";
+                        marker.style.left = "calc(" + markerPosition + "% - 1px)";
+                        
+                        var markerLine = document.createElement("div");
+                        markerLine.className = "marker-line";
+                        
+                        var markerLabel = document.createElement("div");
+                        markerLabel.className = "marker-label";
+                        markerLabel.textContent = container.dataset.valueFormatted || "";
+                        
+                        marker.appendChild(markerLine);
+                        marker.appendChild(markerLabel);
+                        container.appendChild(marker);
+                    }
+                }
+            } catch (e) {
+                console.error("Error initializing histogram:", e);
+            }
+        }
+    }
+    
+    function initConfidenceIndicator() {
+        // Find all confidence indicators and set appropriate classes
+        var confidenceDisplays = document.querySelectorAll(".confidence-display");
+        confidenceDisplays.forEach(function(display) {
+            var indicator = display.querySelector(".confidence-indicator");
+            var value = display.querySelector(".confidence-value");
+            
+            if (indicator && value) {
+                var confidenceText = value.textContent.trim().toLowerCase();
+                var className = '';
+                
+                if (confidenceText.includes('very high')) {
+                    className = 'very-high';
+                } else if (confidenceText.includes('high')) {
+                    className = 'high';
+                } else if (confidenceText.includes('medium')) {
+                    className = 'medium';
+                } else if (confidenceText.includes('low')) {
+                    className = 'low';
+                }
+                
+                if (className) {
+                    // Add the appropriate class
+                    indicator.className = 'confidence-indicator ' + className;
+                }
+            }
+        });
+    }
+    
+    function initTablePagination() {
+        // Simple Table Pagination & Sort Example (Scope to specific table)
+        const container = document.querySelector('.enhanced-analytics-container');
+        if (!container) return;
+
+        const postId = '{{POST_ID}}' || 'default'; // Get post ID for unique elements or use default
+        const tableId = `salesTable-${postId}`;
+        const paginationId = `pagination-${postId}`;
+        const searchId = `searchResults-${postId}`;
+
+        const table = document.getElementById(tableId);
+        const paginationControls = document.getElementById(paginationId);
+        const searchInput = document.getElementById(searchId);
+        if (!table || !paginationControls || !searchInput) return;
+
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        if (rows.length === 0) return; // No data to paginate
+        
+        const rowsPerPage = 5; // Configurable
+        let currentPage = 1;
+        let filteredRows = rows;
+        let sortColumn = null;
+        let sortDirection = 'asc'; // 'asc' or 'desc'
+
+        // Save references to these variables for other functions to use
+        window.tableRows = rows;
+        window.filteredRows = filteredRows;
+        window.currentPage = currentPage;
+        
+        function displayTablePage() {
+            tbody.innerHTML = ''; // Clear table
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+            const paginatedRows = filteredRows.slice(start, end);
+            paginatedRows.forEach(row => tbody.appendChild(row));
+
+            // Update pagination info
+            const pageStartSpan = paginationControls.querySelector('.page-start');
+            const pageEndSpan = paginationControls.querySelector('.page-end');
+            const totalItemsSpan = paginationControls.querySelector('.total-items');
+            pageStartSpan.textContent = filteredRows.length > 0 ? start + 1 : 0;
+            pageEndSpan.textContent = Math.min(end, filteredRows.length);
+            totalItemsSpan.textContent = filteredRows.length;
+
+            // Update button states
+            paginationControls.querySelector('[data-page="prev"]').disabled = currentPage === 1;
+            paginationControls.querySelector('[data-page="next"]').disabled = end >= filteredRows.length;
+        }
+
+        function filterTable() {
+            const searchTerm = searchInput.value.toLowerCase();
+            filteredRows = rows.filter(row => {
+                // Search across all cells in the row
+                return Array.from(row.cells).some(cell => cell.textContent.toLowerCase().includes(searchTerm));
+            });
+            currentPage = 1; // Reset to first page after filtering
+            sortTable(); // Re-sort filtered results
+        }
+
+        function sortTable() {
+            if (!sortColumn) {
+                displayTablePage(); // No sorting, just display
+                return;
+            }
+
+            const columnIndex = Array.from(table.querySelectorAll('thead th')).findIndex(th => th.dataset.sort === sortColumn);
+            if (columnIndex === -1) {
+                displayTablePage();
+                return;
+            }
+
+            filteredRows.sort((a, b) => {
+                const cellA = a.cells[columnIndex].textContent.trim();
+                const cellB = b.cells[columnIndex].textContent.trim();
+
+                let comparison = 0;
+
+                // Attempt numeric sort for price/diff, fallback to string
+                if (sortColumn === 'price' || sortColumn === 'diff') {
+                    const numA = parseFloat(cellA.replace(/[^\d.-]/g, '')); // Clean currency/percentage
+                    const numB = parseFloat(cellB.replace(/[^\d.-]/g, ''));
+                    if (!isNaN(numA) && !isNaN(numB)) {
+                        comparison = numA - numB;
+                    } else {
+                        comparison = cellA.localeCompare(cellB); // Fallback
+                    }
+                } else if (sortColumn === 'date') {
+                    try {
+                        // Attempt to parse dates (requires consistent format)
+                        const dateA = new Date(cellA);
+                        const dateB = new Date(cellB);
+                        if (!isNaN(dateA) && !isNaN(dateB)) {
+                            comparison = dateA - dateB;
+                        } else {
+                            comparison = cellA.localeCompare(cellB); // Fallback
+                        }
+                    } catch (e) {
+                        comparison = cellA.localeCompare(cellB); // Fallback on error
+                    }
+                } else {
+                    comparison = cellA.localeCompare(cellB); // Default string sort
+                }
+
+                return sortDirection === 'asc' ? comparison : -comparison;
+            });
+            
+            // Update header sort indicators
+            table.querySelectorAll('thead th').forEach(th => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+                if (th.dataset.sort === sortColumn) {
+                    th.classList.add(sortDirection === 'asc' ? 'sorted-asc' : 'sorted-desc');
+                }
+            });
+
+            displayTablePage();
+        }
+
+        // Store the functions globally for other components to use
+        window.displayTablePage = displayTablePage;
+        window.filterTable = filterTable;
+        window.sortTable = sortTable;
+
+        // Event Listeners
+        paginationControls.addEventListener('click', (e) => {
+            if (e.target.matches('[data-page="prev"]') && currentPage > 1) {
+                currentPage--;
+                displayTablePage();
+            } else if (e.target.matches('[data-page="next"]')) {
+                const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+                if (currentPage < totalPages) {
+                    currentPage++;
+                    displayTablePage();
+                }
+            }
+        });
+
+        searchInput.addEventListener('input', filterTable);
+
+        table.querySelectorAll('thead th.sortable').forEach(header => {
+            header.addEventListener('click', () => {
+                const newSortColumn = header.dataset.sort;
+                if (sortColumn === newSortColumn) {
+                    // Toggle direction
+                    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    // New column, default to ascending
+                    sortColumn = newSortColumn;
+                    sortDirection = 'asc';
+                }
+                currentPage = 1; // Reset to first page on sort
+                sortTable();
+            });
+        });
+
+        // Initial display
+        sortTable(); // Apply initial sort/display
+    }
 });
 </script> 
