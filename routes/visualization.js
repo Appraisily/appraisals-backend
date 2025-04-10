@@ -226,6 +226,9 @@ router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
             console.error('[Viz Route] Invalid success/statistics structure from valuer-agent:', statsResponse);
             throw new Error('Invalid statistics response structure from valuer agent');
         }
+
+        // ADD YOUR LOG HERE - Log the full Valuer Agent response payload
+        console.log('[Viz Route] FULL VALUER AGENT RESPONSE:', JSON.stringify(statsResponse, null, 2));
     } catch (agentError) {
         console.error('[Viz Route] Error calling/processing valuer-agent:', agentError);
         // Ensure the error message passed up is informative
