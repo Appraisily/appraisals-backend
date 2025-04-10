@@ -114,19 +114,74 @@ router.post('/generate-visualizations', async (req, res) => {
     const populatedAnalyticsHtml = await populateHtmlTemplate(skeletonHtmlAnalytics, enhancedAnalyticsContext);
     const populatedCardHtml = await populateHtmlTemplate(skeletonHtmlCard, appraisalCardContext);
 
-    // Step 6: Save Populated HTML and Statistics to WordPress
-    console.log('[Viz Route] Saving populated HTML and statistics to WordPress');
+    // Step 6: Save Populated HTML and ACF fields to WordPress
+    console.log('[Viz Route] Saving populated HTML and ACF fields to WordPress');
     try {
       // Prepare fields, ensuring strings and handling nulls/undefined
       const statisticsString = sanitizedStats ? JSON.stringify(sanitizedStats) : '{}'; // Stringify or use empty object JSON
       const analyticsHtmlString = populatedAnalyticsHtml || ''; // Default to empty string if null/undefined
       const cardHtmlString = populatedCardHtml || ''; // Default to empty string if null/undefined
 
-      await wordpress.updatePostACFFields(postId, { 
+      // Extract key metrics from sanitizedStats to update as individual ACF fields
+      const acfFields = {
         'statistics': statisticsString,
         'enhanced_analytics_html': analyticsHtmlString, 
-        'appraisal_card_html': cardHtmlString 
-      });
+        'appraisal_card_html': cardHtmlString
+      };
+      
+      // Extract individual metrics if they exist in sanitizedStats
+      if (sanitizedStats) {
+        // Store key metrics as individual ACF fields
+        if (typeof sanitizedStats.historical_significance === 'number') {
+          acfFields.historical_significance = sanitizedStats.historical_significance;
+        }
+        if (typeof sanitizedStats.investment_potential === 'number') {
+          acfFields.investment_potential = sanitizedStats.investment_potential;
+        }
+        if (typeof sanitizedStats.provenance_strength === 'number') {
+          acfFields.provenance_strength = sanitizedStats.provenance_strength;
+        }
+        
+        // Store top auction results separately if available
+        if (Array.isArray(sanitizedStats.comparable_sales) && sanitizedStats.comparable_sales.length > 0) {
+          acfFields.top_auction_results = JSON.stringify(sanitizedStats.comparable_sales);
+        }
+        
+        // Generate and store statistics summary text if it doesn't already exist
+        if (!postData.acf?.statistics_summary_text) {
+          const summaryParts = [];
+          
+          if (sanitizedStats.count) {
+            summaryParts.push(`Analysis based on ${sanitizedStats.count} comparable items.`);
+          }
+          
+          if (sanitizedStats.price_min && sanitizedStats.price_max) {
+            summaryParts.push(`Market range: $${Math.round(sanitizedStats.price_min).toLocaleString()} to $${Math.round(sanitizedStats.price_max).toLocaleString()}.`);
+          }
+          
+          if (sanitizedStats.price_trend_percentage) {
+            const trend = sanitizedStats.price_trend_percentage;
+            const trendDirection = trend.includes('+') ? 'increasing' : 'decreasing';
+            summaryParts.push(`Market prices ${trendDirection} at ${trend}.`);
+          }
+          
+          if (sanitizedStats.confidence_level) {
+            summaryParts.push(`${sanitizedStats.confidence_level} confidence in valuation.`);
+          }
+          
+          if (summaryParts.length > 0) {
+            acfFields.statistics_summary_text = summaryParts.join(' ');
+          }
+        }
+        
+        // If a detailed title doesn't already exist, generate one based on the data
+        if (postData && (!postData.acf?.detailed_title || postData.acf.detailed_title === '')) {
+          const detailedTitle = `${postTitle}. Valued at $${sanitizedStats.value ? Math.round(sanitizedStats.value).toLocaleString() : ''}. ${acfFields.statistics_summary_text || ''}`;
+          acfFields.detailed_title = detailedTitle;
+        }
+      }
+
+      await wordpress.updatePostACFFields(postId, acfFields);
       console.log('[Viz Route] ACF fields updated successfully.');
     } catch (acfUpdateError) {
         // Log the error but continue execution
@@ -293,11 +348,65 @@ router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
       const analyticsHtmlString = populatedAnalyticsHtml || ''; // Default to empty string if null/undefined
       const cardHtmlString = populatedCardHtml || ''; // Default to empty string if null/undefined
 
-      await wordpress.updatePostACFFields(postId, { 
+      // Extract key metrics from sanitizedStats to update as individual ACF fields
+      const acfFields = {
         'statistics': statisticsString,
         'enhanced_analytics_html': analyticsHtmlString, 
-        'appraisal_card_html': cardHtmlString 
-      });
+        'appraisal_card_html': cardHtmlString,
+        'valuer_agent_data': JSON.stringify(statsResponse || {})
+      };
+      
+      // Extract individual metrics if they exist in sanitizedStats
+      if (sanitizedStats) {
+        // Store key metrics as individual ACF fields
+        if (typeof sanitizedStats.historical_significance === 'number') {
+          acfFields.historical_significance = sanitizedStats.historical_significance;
+        }
+        if (typeof sanitizedStats.investment_potential === 'number') {
+          acfFields.investment_potential = sanitizedStats.investment_potential;
+        }
+        if (typeof sanitizedStats.provenance_strength === 'number') {
+          acfFields.provenance_strength = sanitizedStats.provenance_strength;
+        }
+        
+        // Store top auction results separately if available
+        if (Array.isArray(sanitizedStats.comparable_sales) && sanitizedStats.comparable_sales.length > 0) {
+          acfFields.top_auction_results = JSON.stringify(sanitizedStats.comparable_sales);
+        }
+        
+        // Generate and store statistics summary text
+        const summaryParts = [];
+        
+        if (sanitizedStats.count) {
+          summaryParts.push(`Analysis based on ${sanitizedStats.count} comparable items.`);
+        }
+        
+        if (sanitizedStats.price_min && sanitizedStats.price_max) {
+          summaryParts.push(`Market range: $${Math.round(sanitizedStats.price_min).toLocaleString()} to $${Math.round(sanitizedStats.price_max).toLocaleString()}.`);
+        }
+        
+        if (sanitizedStats.price_trend_percentage) {
+          const trend = sanitizedStats.price_trend_percentage;
+          const trendDirection = trend.includes('+') ? 'increasing' : 'decreasing';
+          summaryParts.push(`Market prices ${trendDirection} at ${trend}.`);
+        }
+        
+        if (sanitizedStats.confidence_level) {
+          summaryParts.push(`${sanitizedStats.confidence_level} confidence in valuation.`);
+        }
+        
+        if (summaryParts.length > 0) {
+          acfFields.statistics_summary_text = summaryParts.join(' ');
+        }
+        
+        // If a detailed title doesn't already exist, generate one based on the data
+        if (postData && (!postData.acf?.detailed_title || postData.acf.detailed_title === '')) {
+          const detailedTitle = `${postTitle}. Valued at $${sanitizedStats.value ? Math.round(sanitizedStats.value).toLocaleString() : ''}. ${acfFields.statistics_summary_text || ''}`;
+          acfFields.detailed_title = detailedTitle;
+        }
+      }
+
+      await wordpress.updatePostACFFields(postId, acfFields);
       console.log('[Viz Route] ACF fields updated successfully.');
     } catch (acfUpdateError) {
         // Log the error but continue execution
