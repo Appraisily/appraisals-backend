@@ -16,6 +16,12 @@ let drive;
 
 async function initializeGoogleApis() {
   try {
+    // Check if credentials exist before trying to parse them
+    if (!config.GOOGLE_DOCS_CREDENTIALS) {
+      console.log('Google Docs credentials not provided. PDF functionality will be unavailable.');
+      return;
+    }
+    
     const credentials = JSON.parse(config.GOOGLE_DOCS_CREDENTIALS);
 
     const auth = new google.auth.GoogleAuth({
@@ -34,7 +40,9 @@ async function initializeGoogleApis() {
     console.log('Google Docs and Drive clients initialized successfully.');
   } catch (error) {
     console.error('Error initializing Google APIs:', error);
-    throw error;
+    console.log('PDF functionality will be unavailable.');
+    // Don't throw the error, just log it
+    // This allows the server to start even if Google APIs are unavailable
   }
 }
 

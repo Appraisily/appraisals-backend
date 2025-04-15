@@ -102,10 +102,23 @@ async function startServer() {
 
     // Skip Google APIs initialization when running locally
     if (process.env.SKIP_SECRET_MANAGER !== 'true') {
-      // Initialize Google APIs
-      await initializeGoogleApis();
+      try {
+        // Initialize Google APIs
+        await initializeGoogleApis();
+      } catch (googleApisError) {
+        console.error('Error during Google APIs initialization:', googleApisError.message);
+        console.log('Continuing server startup without Google APIs.');
+      }
     } else {
       console.log('Skipping Google APIs initialization for local development.');
+    }
+
+    // Try to initialize Gemini client, but don't block server startup if it fails
+    try {
+      await initializeGeminiClient();
+    } catch (geminiError) {
+      console.error('Error initializing Gemini client:', geminiError.message);
+      console.log('Continuing server startup without Gemini client.');
     }
 
     // Load routers after secrets are available
