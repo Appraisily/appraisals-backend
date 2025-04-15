@@ -4,12 +4,12 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { getSecret } = require('../config'); // Assuming getSecret is used to get API keys
 const { jsonCleaner } = require('./utils/jsonCleaner');
 const { generateContent } = require('./openai');
-const wordpress = require('./wordpress'); // Import the main WP service
+const wordpress = require('./wordpress/index'); // Import directly from WordPress folder
 const { getPrompt, buildContextualPrompt } = require('./utils/promptUtils');
 const { PROMPT_PROCESSING_ORDER } = require('./constants/reportStructure');
 const { performContextualSearch, searchGoogle, formatSearchResults } = require('./serper');
 const { justifyValue, getEnhancedStatistics } = require('./valuerAgentClient');
-const { updateWordPressMetadata } = require('./wordpress');
+const { updateWordPressMetadata } = wordpress; // Import directly from WordPress service
 
 // --- Helper Functions Moved from metadata.js ---
 

@@ -1,8 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const wordpress = require('../services/wordpress');
+const wordpress = require('../services/wordpress/index');
 const { processMainImageWithGoogleVision } = require('../services/vision');
-const { processAllMetadata, processJustificationMetadata } = require('../services/metadata');
+const { processAllMetadata, processJustificationMetadata } = require('../services/metadataProcessor');
 
 // Moved from appraisal.js
 router.post('/complete-appraisal-report', async (req, res) => {

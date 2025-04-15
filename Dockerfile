@@ -1,22 +1,31 @@
-# Dockerfile
+# Dockerfile for Appraisals Backend
+# Optimized for Cloud Run deployment with proper secret access
 
-# Usa una imagen oficial de Node.js
-FROM node:18
+# Use Node.js LTS version
+FROM node:18-slim
 
-# Crear y cambiar al directorio de la app
+# Set working directory
 WORKDIR /usr/src/app
 
-# Copiar los archivos de dependencia
+# Copy package files first (for better layer caching)
 COPY package*.json ./
 
-# Instalar dependencias
-RUN npm install --only=production
+# Install dependencies with production-only flag
+RUN npm ci --only=production
 
-# Copiar el resto de los archivos de la app
+# Copy the rest of the application
 COPY . .
 
-# Exponer el puerto
+# Create a non-root user for security
+RUN groupadd -r appuser && \
+    useradd -r -g appuser -d /usr/src/app appuser && \
+    chown -R appuser:appuser /usr/src/app
+
+# Switch to non-root user
+USER appuser
+
+# Expose the port
 EXPOSE 8080
 
-# Comando para correr la app
+# Command to run the app
 CMD [ "npm", "start" ]

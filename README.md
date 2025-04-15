@@ -17,6 +17,7 @@ A scalable, serverless API service built with Node.js that automates the generat
 - [Development](#development)
 - [Troubleshooting](#troubleshooting)
 - [License](#license)
+- [Code Organization](#code-organization)
 
 ## Overview
 
@@ -322,3 +323,38 @@ The following endpoints are available on the service:
 ## License
 
 MIT License - See LICENSE file for details (if one exists).
+
+## Code Organization
+
+The codebase has been restructured to eliminate duplications and improve organization:
+
+### Directory Structure
+
+- `src/` - Organized source code
+  - `services/` - Core backend services 
+  - `templates/` - Template management
+
+- `templates/` - HTML/text templates and skeletons
+  - `skeletons/` - Base templates for AI text generation
+
+- `services/` - Service implementations
+  - `openai.js` - OpenAI API client
+  - `wordpress/` - WordPress API integration
+  - `constants/` - Configuration constants
+  - `utils/` - Shared utility functions
+  - `metadataProcessor.js` - Core metadata processing
+
+- `routes/` - Express route handlers
+
+### Key Changes
+
+1. Removed duplicate service files:
+   - `services/openaiService.js` (use `openai.js` directly)
+   - `services/wordpress.js` (use `wordpress/index.js` directly)
+   - `services/metadata.js` (use `metadataProcessor.js` directly)
+
+2. Centralized template management in `src/templates/`
+
+3. Improved code organization with clear responsibilities for each file
+
+See `src/README.md` for detailed information about the code organization.

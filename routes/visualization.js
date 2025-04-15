@@ -276,7 +276,8 @@ router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
     
     // Step 2: Fetch Images
     console.log('[Viz Route] Fetching images for post');
-    const images = await wordpress.getPostImages(postId);
+    const postDataWithImages = await wordpress.fetchPostData(postId);
+    const images = postDataWithImages.images;
     
     // Step 3: Get or Generate Statistics
     console.log('[Viz Route] Fetching statistics from valuer-agent');

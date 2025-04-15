@@ -1,35 +1,56 @@
-# Environment variables
-.env
-
-# Node dependencies
-node_modules/
-dist/
-
-# Logs
-logs/
-*.log
+# Dependencies
+/node_modules
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-
-# Editor directories and files
-.idea
-.vscode
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.swp
+package-lock.json
+yarn.lock
 
 # Build files
-build/
+/build
+/dist
+/.next
+/out
+*.tsbuildinfo
 
-# Cache files
-.npm
-.eslintcache
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
-# Other
+# Debug logs
+logs
+*.log
+
+# IDE files
+.idea/
+.vscode/
+*.sublime-project
+*.sublime-workspace
+
+# OS files
 .DS_Store
-.dockerignore
-# Ignore template examples
-templates/example_files/ 
+Thumbs.db
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~.nib
+
+# Compiled output
+*.min.js
+*.min.css
+
+# Coverage directory
+/coverage
+
+# Service worker
+/public/sw.js
+/public/workbox-*.js
+
+# Cache directories
+.cache/
+.temp/ 

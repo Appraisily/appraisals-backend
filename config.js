@@ -1,83 +1,59 @@
-// config.js
-const config = {};
+/**
+ * Configuration module that loads environment variables and secrets
+ */
 
-// Export empty config object initially
-module.exports = config;
+// Import required modules for Secret Manager access
+const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 
-// These will be populated by loadSecrets() in index.js
-Object.defineProperties(config, {
-  'WORDPRESS_API_URL': {
-    enumerable: true,
-    get() {
-      if (!process.env.WORDPRESS_API_URL) {
-        throw new Error('WORDPRESS_API_URL not loaded from secrets');
+// Create a Secret Manager client
+const secretClient = new SecretManagerServiceClient();
+
+// Environment variables (with defaults)
+const config = {
+  // WordPress API
+  WORDPRESS_API_URL: process.env.WORDPRESS_API_URL,
+  WORDPRESS_USERNAME: process.env.wp_username,
+  WORDPRESS_APP_PASSWORD: process.env.wp_app_password,
+  
+  // AI Services
+  OPENAI_API_KEY: process.env.OPENAI_API_KEY,
+  GEMINI_API_KEY: process.env.GEMINI_API_KEY, 
+  GEMINI_API_ENDPOINT: process.env.GEMINI_API_ENDPOINT || 'https://generativelanguage.googleapis.com',
+  GOOGLE_VISION_CREDENTIALS: process.env.GOOGLE_VISION_CREDENTIALS,
+  
+  // PDF Generation
+  GOOGLE_DOCS_CREDENTIALS: process.env.GOOGLE_DOCS_CREDENTIALS,
+  GOOGLE_DOCS_TEMPLATE_ID: process.env.GOOGLE_DOCS_TEMPLATE_ID,
+  GOOGLE_DRIVE_FOLDER_ID: process.env.GOOGLE_DRIVE_FOLDER_ID,
+  
+  // External APIs
+  VALUER_AGENT_API_URL: process.env.VALUER_AGENT_API_URL || 'https://valuer-agent-yqytg4sqmq-uc.a.run.app',
+  SERPER_API: process.env.SERPER_API,
+  
+  // Server configuration
+  PORT: process.env.PORT || 8080,
+  NODE_ENV: process.env.NODE_ENV || 'development',
+  GOOGLE_CLOUD_PROJECT_ID: process.env.GOOGLE_CLOUD_PROJECT_ID,
+  
+  // CORS configuration
+  CORS_ALLOWED_ORIGINS: process.env.CORS_ALLOWED_ORIGINS || '',
+  
+  // Helper function to get a secret from Secret Manager
+  getSecret: async function(secretName) {
+    try {
+      const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+      if (!projectId) {
+        throw new Error('GOOGLE_CLOUD_PROJECT_ID environment variable is not set.');
       }
-      return process.env.WORDPRESS_API_URL;
-    }
-  },
-  'WORDPRESS_USERNAME': {
-    enumerable: true,
-    get() {
-      if (!process.env.wp_username) {
-        throw new Error('wp_username not loaded from secrets');
-      }
-      return process.env.wp_username;
-    }
-  },
-  'WORDPRESS_APP_PASSWORD': {
-    enumerable: true,
-    get() {
-      if (!process.env.wp_app_password) {
-        throw new Error('wp_app_password not loaded from secrets');
-      }
-      return process.env.wp_app_password;
-    }
-  },
-  'OPENAI_API_KEY': {
-    enumerable: true,
-    get() {
-      if (!process.env.OPENAI_API_KEY) {
-        throw new Error('OPENAI_API_KEY not loaded from secrets');
-      }
-      return process.env.OPENAI_API_KEY;
-    }
-  },
-  'GOOGLE_VISION_CREDENTIALS': {
-    enumerable: true,
-    get() {
-      if (!process.env.GOOGLE_VISION_CREDENTIALS) {
-        throw new Error('GOOGLE_VISION_CREDENTIALS not loaded from secrets');
-      }
-      return process.env.GOOGLE_VISION_CREDENTIALS;
-    }
-  },
-  'GOOGLE_DOCS_CREDENTIALS': {
-    enumerable: true,
-    get() {
-      if (!process.env.GOOGLE_DOCS_CREDENTIALS) {
-        throw new Error('GOOGLE_DOCS_CREDENTIALS not loaded from secrets');
-      }
-      return process.env.GOOGLE_DOCS_CREDENTIALS;
-    }
-  },
-  'SERPER_API': {
-    enumerable: true,
-    get() {
-      return process.env.SERPER_API || null; // Return null if not available, making it optional
-    }
-  },
-  // Add Valuer Agent URL
-  'VALUER_AGENT_API_URL': {
-    enumerable: true,
-    get() {
-      if (!process.env.VALUER_AGENT_API_URL) {
-        // Optionally provide a default or throw error if critical
-        console.warn('VALUER_AGENT_API_URL not found in environment variables. Using default or potentially failing.');
-        // You might want to throw an error instead if this service is mandatory:
-        // throw new Error('VALUER_AGENT_API_URL not loaded from environment');
-        return 'https://valuer-agent-856401495068.us-central1.run.app'; // Fallback or default
-      }
-      return process.env.VALUER_AGENT_API_URL;
+      const secretPath = `projects/${projectId}/secrets/${secretName}/versions/latest`;
+      const [version] = await secretClient.accessSecretVersion({ name: secretPath });
+      return version.payload.data.toString('utf8');
+    } catch (error) {
+      console.error(`Error getting secret '${secretName}':`, error);
+      throw error;
     }
   }
-});
+};
+
+// Export the config object
+module.exports = config; 

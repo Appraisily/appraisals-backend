@@ -1,3 +1,6 @@
+// Load environment variables from .env file
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const requestIp = require('request-ip');
@@ -43,6 +46,13 @@ const secretClient = new SecretManagerServiceClient();
 // Load secrets
 async function loadSecrets() {
   try {
+    // Skip Secret Manager when running locally
+    if (process.env.SKIP_SECRET_MANAGER === 'true') {
+      console.log('Skipping Secret Manager, using environment variables directly.');
+      // Use existing environment variables loaded from .env
+      return;
+    }
+
     // Load secrets into process.env
     process.env.WORDPRESS_API_URL = await getSecret('WORDPRESS_API_URL');
     process.env.wp_username = await getSecret('wp_username');
@@ -90,8 +100,13 @@ async function startServer() {
     // Load secrets first
     await loadSecrets();
 
-    // Initialize Google APIs
-    await initializeGoogleApis();
+    // Skip Google APIs initialization when running locally
+    if (process.env.SKIP_SECRET_MANAGER !== 'true') {
+      // Initialize Google APIs
+      await initializeGoogleApis();
+    } else {
+      console.log('Skipping Google APIs initialization for local development.');
+    }
 
     // Load routers after secrets are available
     const reportRouter = require('./routes/report');
