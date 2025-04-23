@@ -1,32 +1,36 @@
 # Templates Directory
 
-This directory contains the templates used in the appraisal generation process.
+This directory contains the HTML templates used in the appraisal generation process.
 
 ## Directory Structure
 
-- `skeletons/` - Base templates used by AI to generate content
-  - Template files used for AI prompting to ensure consistent output structure
-
-- `enhanced-analytics.js` - Visualization template generator for enhanced analytics
-- `appraisal-card.js` - Template generator for appraisal card display
-- `index.js` - Re-exports template generators for use by the application
+- `skeletons/` - HTML templates used by AI to generate content
+  - `appraisal-card.html` - HTML template for appraisal card display
+  - `enhanced-analytics.html` - HTML template for enhanced analytics visualization
+- `index.js` - Exports raw HTML templates for use by the application
 
 ## Template Usage
 
-The templates in the `skeletons/` directory are used as prompts for AI services to ensure consistent formatting of the generated content. The JavaScript files in this directory convert the data from the API into properly formatted HTML.
+The templates in the `skeletons/` directory are raw HTML files sent directly to AI services without any preprocessing or parsing. This approach eliminates potential errors that could be introduced during template manipulation.
 
 ### Accessing Templates
 
-Templates should be accessed through the centralized interface in `src/templates/index.js` rather than directly. This provides a cleaner interface and better organization.
+Templates should be accessed through the centralized interface in `templates/index.js`:
 
 ```javascript
 // Recommended way to import templates
-const templates = require('./src/templates');
+const templates = require('./templates');
 
-// Then use specific templates
-const htmlContent = templates['enhanced-analytics'](data);
+// Then use specific templates directly with AI services
+const htmlTemplate = templates['appraisal-card']; 
 ```
 
-## DEPRECATED Folder
+## Legacy JavaScript Files
 
-The `DEPRECATED/` folder contains old template files that are no longer actively used but are kept for reference. These files should not be used in new development. 
+The repository still contains the following JavaScript files that previously handled template generation:
+
+- `enhanced-analytics.js` - Previously used for visualization template generation
+- `appraisal-card.js` - Previously used for appraisal card template generation
+- `gemini-templates.js` - Previously used for Gemini template generation
+
+These files are kept for reference but are no longer actively used in the template handling process. 

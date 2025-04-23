@@ -1,218 +1,163 @@
+/**
+ * Enhanced PDF generation routes with step-by-step processing
+ */
+
 const express = require('express');
-const { v4: uuidv4 } = require('uuid');
-const he = require('he');
-const { google } = require('googleapis');
-const wordpress = require('../services/wordpress');
-const { processMetadata } = require('../services/pdf/metadata/processing');
-const { 
-  getTemplateId,
-  initializeGoogleApis,
-  cloneTemplate,
-  moveFileToFolder,
-  insertImageAtPlaceholder,
-  replacePlaceholdersInDocument,
-  adjustTitleFontSize,
-  addGalleryImages,
-  exportToPDF,
-  uploadPDFToDrive
-} = require('../services/pdf');
-// Restore local require for githubService
-// const githubService = require('../src/services/utils/githubService'); // Remove unused githubService
-
-// Revert to standard router export
-// module.exports = function(githubService) {
 const router = express.Router();
+const { PDF_STEPS, generatePdfStepByStep } = require('../services/pdf/pdf-steps');
 
+/**
+ * Generate PDF with step-by-step processing
+ * POST /api/pdf/generate-pdf
+ */
 router.post('/generate-pdf', async (req, res) => {
-  const { postId, session_ID } = req.body;
-
+  const { postId, session_ID, options } = req.body;
+  
   if (!postId) {
-    return res.status(400).json({ 
-      success: false, 
-      message: 'postId is required.' 
+    return res.status(400).json({
+      success: false,
+      message: 'postId is required.'
     });
   }
-
-  console.log(`Starting PDF generation for post ${postId}`);
-  let clonedDocId = null;
-
+  
   try {
-    // Step 1: Initialize Google APIs
-    await initializeGoogleApis();
-
-    const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
-    if (!folderId) {
-      throw new Error('GOOGLE_DRIVE_FOLDER_ID must be set in environment variables.');
-    }
-
-    // Fetch all data in a single request
-    console.log(`Fetching post data for ${postId}`);
-    const { postData, images, title: postTitle, date: postDate } = await wordpress.fetchPostData(postId);
-    console.log(`Post data fetched: ${postTitle}`);
-
-    // Process and validate metadata
-    console.log('Processing metadata...');
-    const { metadata, validation } = await processMetadata(postData);
+    // Log the request
+    console.log(`Starting step-by-step PDF generation for post ${postId}`);
     
-    // If invalid, log warning but continue with what we have
-    if (!validation.isValid) {
-      console.warn(`Missing metadata fields: ${validation.missingFields.join(', ')}, but continuing anyway`);
-      // Add a note to WordPress about the missing fields
-      try {
-        await wordpress.updateNotes(postId, `PDF generation warning: Missing fields: ${validation.missingFields.join(', ')}`);
-      } catch (notesError) {
-        console.error('Failed to update notes:', notesError);
-      }
+    // Generate PDF with default starting step
+    const result = await generatePdfStepByStep(
+      postId,
+      session_ID,
+      PDF_STEPS.FETCH_POST_DATA, // Always start from the beginning
+      options || {}
+    );
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'PDF generated successfully.',
+        pdfLink: result.pdfLink,
+        docLink: result.docLink
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: result.error || 'Error generating PDF'
+      });
     }
-
-    // Get template ID based on appraisal type
-    const templateId = await getTemplateId();
-    console.log('Using template ID:', templateId);
-
-    // Decode HTML entities in title
-    const decodedTitle = postTitle ? he.decode(postTitle) : 'Untitled Appraisal';
-
-    // Log all retrieved data (limit to avoid console overload)
-    console.log('Post title:', decodedTitle);
-    console.log('Post date:', postDate || 'No date');
-    console.log('Images found:', Object.keys(images || {}).join(', ') || 'None');
-
-    // Step 6: Clone template
-    console.log('Cloning document template...');
-    const clonedDoc = await cloneTemplate(templateId);
-    clonedDocId = clonedDoc.id;
-    const clonedDocLink = clonedDoc.link;
-    console.log('Template cloned successfully:', clonedDocId);
-
-    // Step 7: Move to folder
-    console.log('Moving document to folder...');
-    await moveFileToFolder(clonedDocId, folderId);
-
-    // Step 8: Replace placeholders
-    console.log('Replacing placeholders in document...');
-    const data = {
-      ...metadata,
-      appraisal_title: decodedTitle,
-      appraisal_date: postDate || new Date().toISOString().split('T')[0],
-    };
-    await replacePlaceholdersInDocument(clonedDocId, data);
-
-    // Step 9: Adjust title font size
-    console.log('Adjusting title font size...');
-    try {
-      await adjustTitleFontSize(clonedDocId, postTitle);
-    } catch (titleError) {
-      console.error('Error adjusting title font size:', titleError);
-      console.log('Continuing despite title adjustment error');
-    }
-
-    // Step 10: Add gallery images
-    console.log('Adding gallery images...');
-    try {
-      if (images && images.gallery && images.gallery.length > 0) {
-        await addGalleryImages(clonedDocId, images.gallery);
-      } else {
-        console.log('No gallery images to add');
-      }
-    } catch (error) {
-      console.error('Error adding gallery images:', error);
-      console.log('Continuing with PDF generation despite gallery error');
-    }
-
-    // Step 11: Insert specific images
-    console.log('Inserting specific images...');
-    try {
-      if (images && images.age) {
-        await insertImageAtPlaceholder(clonedDocId, 'age_image', images.age);
-      }
-      if (images && images.signature) {
-        await insertImageAtPlaceholder(clonedDocId, 'signature_image', images.signature);
-      }
-      if (images && images.main) {
-        await insertImageAtPlaceholder(clonedDocId, 'main_image', images.main);
-      }
-    } catch (imagesError) {
-      console.error('Error inserting specific images:', imagesError);
-      console.log('Continuing despite image insertion error');
-    }
-
-    // Step 12: Export to PDF
-    console.log('Exporting document to PDF...');
-    const pdfBuffer = await exportToPDF(clonedDocId);
-    console.log('PDF generated successfully, size:', pdfBuffer.length);
-
-    // Step 13: Generate filename
-    const pdfFilename = session_ID?.trim()
-      ? `${session_ID}.pdf`
-      : `Appraisal_Report_Post_${postId}_${uuidv4()}.pdf`;
-    console.log('PDF filename:', pdfFilename);
-
-    // Step 14: Upload PDF
-    console.log('Uploading PDF to Google Drive...');
-    const pdfLink = await uploadPDFToDrive(pdfBuffer, pdfFilename, folderId);
-    console.log('PDF uploaded successfully');
-
-    // Step 15: Update WordPress
-    console.log('Updating WordPress with PDF link...');
-    await wordpress.updatePostACFFields(postId, pdfLink, clonedDocLink);
-    console.log('WordPress updated successfully');
-
-    // Return response
-    console.log('PDF generation completed successfully');
-    console.log('PDF Link:', pdfLink);
-    console.log('Doc Link:', clonedDocLink);
-
-    res.json({
-      success: true,
-      message: 'PDF generated successfully.',
-      pdfLink,
-      docLink: clonedDocLink
-    });
-
   } catch (error) {
-    console.error('Error generating PDF:', error);
-    // Let the global error handler in index.js create the GitHub issue
-    /* try { 
-            await githubService.createGithubIssue(error, req); 
-    } catch(e){ console.error("Error calling createGithubIssue:", e); } */
-    
-    // Try to record the error in WordPress
-    try {
-      await wordpress.updateNotes(postId, `PDF generation error: ${error.message}`);
-    } catch (notesError) {
-      console.error('Failed to update error notes:', notesError);
-    }
-    
-    // If we've created a document but failed, try to add an error note to it
-    if (clonedDocId) {
-      try {
-        console.log('Adding error note to document...');
-        const docs = google.docs({ version: 'v1' });
-        await docs.documents.batchUpdate({
-          documentId: clonedDocId,
-          requestBody: {
-            requests: [{
-              insertText: {
-                location: { index: 1 },
-                text: `ERROR GENERATING PDF: ${error.message}\n\n`
-              }
-            }]
-          }
-        });
-      } catch (docError) {
-        console.error('Failed to add error note to document:', docError);
-      }
-    }
-    
-    // Ensure response is sent only once
-    if (!res.headersSent) {
-        res.status(500).json({
-            success: false,
-            message: error.message || 'Error generating PDF'
-        });
-    }
+    console.error('Unexpected error in PDF generation:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Unexpected error in PDF generation'
+    });
   }
 });
 
-module.exports = router; // Export the router directly again
-// };
+/**
+ * Generate PDF with step-by-step processing from a specific step
+ * POST /api/pdf/generate-pdf-steps
+ */
+router.post('/generate-pdf-steps', async (req, res) => {
+  const { postId, session_ID, startStep, options } = req.body;
+  
+  if (!postId) {
+    return res.status(400).json({
+      success: false,
+      message: 'postId is required.'
+    });
+  }
+  
+  try {
+    // Validate step name if provided
+    if (startStep && !Object.values(PDF_STEPS).includes(startStep)) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid step name: ${startStep}. Valid steps are: ${Object.values(PDF_STEPS).join(', ')}`
+      });
+    }
+
+    // Log the request
+    console.log(`Starting step-by-step PDF generation for post ${postId}${startStep ? ` from step ${startStep}` : ''}`);
+    
+    // Generate PDF with the requested starting step
+    const result = await generatePdfStepByStep(
+      postId,
+      session_ID,
+      startStep || PDF_STEPS.FETCH_POST_DATA,
+      options || {}
+    );
+    
+    if (result.success) {
+      res.json({
+        success: true,
+        message: 'PDF generated successfully.',
+        pdfLink: result.pdfLink,
+        docLink: result.docLink,
+        steps: result.logs.map(log => ({
+          time: log.timestamp,
+          level: log.level,
+          message: log.message
+        }))
+      });
+    } else {
+      res.status(500).json({
+        success: false,
+        message: result.error || 'Error generating PDF',
+        steps: result.logs.map(log => ({
+          time: log.timestamp,
+          level: log.level,
+          message: log.message
+        }))
+      });
+    }
+  } catch (error) {
+    console.error('Unexpected error in PDF step-by-step generation:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Unexpected error in PDF generation'
+    });
+  }
+});
+
+/**
+ * Get available PDF steps
+ * GET /api/pdf/steps
+ */
+router.get('/steps', (req, res) => {
+  res.json({
+    success: true,
+    steps: Object.values(PDF_STEPS),
+    defaultOrder: [
+      PDF_STEPS.FETCH_POST_DATA,
+      PDF_STEPS.PROCESS_METADATA,
+      PDF_STEPS.GET_TEMPLATE,
+      PDF_STEPS.CLONE_TEMPLATE,
+      PDF_STEPS.MOVE_TO_FOLDER,
+      PDF_STEPS.REPLACE_PLACEHOLDERS,
+      PDF_STEPS.ADJUST_TITLE,
+      PDF_STEPS.INSERT_MAIN_IMAGE,
+      PDF_STEPS.INSERT_GALLERY,
+      PDF_STEPS.INSERT_SPECIFIC_IMAGES,
+      PDF_STEPS.EXPORT_PDF,
+      PDF_STEPS.UPLOAD_PDF,
+      PDF_STEPS.UPDATE_WORDPRESS
+    ]
+  });
+});
+
+/**
+ * Legacy route compatibility
+ * POST /api/pdf/generate-pdf-legacy
+ * 
+ * This route forwards to the legacy implementation for compatibility
+ * @deprecated
+ */
+router.post('/generate-pdf-legacy', async (req, res) => {
+  const legacyRouter = require('./pdf-legacy');
+  // Pass the request to the legacy handler
+  console.log('Forwarding to legacy PDF generation route');
+  return legacyRouter.handle(req, res);
+});
+
+module.exports = router;

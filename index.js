@@ -123,24 +123,25 @@ async function startServer() {
 
     // Load routers after secrets are available
     const reportRouter = require('./routes/report');
-    const visualizationRouter = require('./routes/visualization');
+    const visualizationsRouter = require('./routes/visualizations');
     const descriptionRouter = require('./routes/description');
     const utilityRouter = require('./routes/utility');
     const pdfRouter = require('./routes/pdf');
-    const pdfStepsRouter = require('./routes/pdf-steps');
+    const pdfLegacyRouter = require('./routes/pdf-legacy');
     const htmlRouter = require('./routes/html');
-    const debugVisualizationsRouter = require('./routes/visualizations'); 
 
-    // Use routers - Mount new routers at base path '/'
-    app.use('/', reportRouter); 
-    app.use('/', visualizationRouter); 
-    app.use('/', descriptionRouter);
-    app.use('/', utilityRouter);
-    // Mount existing routers
-    app.use('/', pdfRouter); 
-    app.use('/api/pdf', pdfStepsRouter);
+    // Use routers - organize by domain and API structure
+    app.use('/api/report', reportRouter); 
+    app.use('/api/visualizations', visualizationsRouter);
+    app.use('/api/description', descriptionRouter);
+    app.use('/api/utility', utilityRouter);
+    app.use('/api/pdf', pdfRouter);
+    app.use('/api/pdf-legacy', pdfLegacyRouter);
     app.use('/api/html', htmlRouter);
-    app.use('/api/visualizations', debugVisualizationsRouter);
+
+    // Legacy compatibility routes - maintain backwards compatibility
+    app.use('/', reportRouter); // Keep legacy direct routes for backward compatibility
+    app.use('/', utilityRouter); // Keep legacy direct routes for backward compatibility
 
     // Error handling middleware (must be after routers)
     app.use(async (err, req, res, next) => {
