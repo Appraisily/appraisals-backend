@@ -15,6 +15,9 @@ const config = {
   WORDPRESS_USERNAME: process.env.wp_username,
   WORDPRESS_APP_PASSWORD: process.env.wp_app_password,
   
+  // Debug logging for credentials
+  DEBUG_WORDPRESS_CREDS: !!process.env.DEBUG_WORDPRESS_CREDS || false,
+  
   // AI Services
   OPENAI_API_KEY: process.env.OPENAI_API_KEY,
   GEMINI_API_KEY: process.env.GEMINI_API_KEY, 

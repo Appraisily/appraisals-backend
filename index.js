@@ -57,6 +57,16 @@ async function loadSecrets() {
     process.env.WORDPRESS_API_URL = await getSecret('WORDPRESS_API_URL');
     process.env.wp_username = await getSecret('wp_username');
     process.env.wp_app_password = await getSecret('wp_app_password');
+    
+    // Add validation and logging for WordPress credentials
+    if (!process.env.wp_username || !process.env.wp_app_password) {
+      console.error('WARNING: WordPress credentials are missing or empty!');
+      console.error('wp_username exists:', !!process.env.wp_username);
+      console.error('wp_app_password exists:', !!process.env.wp_app_password);
+    } else {
+      console.log('WordPress credentials loaded successfully from Secret Manager');
+    }
+    
     process.env.OPENAI_API_KEY = await getSecret('OPENAI_API_KEY');
     process.env.GOOGLE_VISION_CREDENTIALS = await getSecret('GOOGLE_VISION_CREDENTIALS');
     process.env.GOOGLE_DOCS_CREDENTIALS = await getSecret('GOOGLE_DOCS_CREDENTIALS');

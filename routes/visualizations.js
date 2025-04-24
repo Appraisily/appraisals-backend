@@ -333,7 +333,7 @@ router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
     
     // Step 3: Get or Generate Statistics
     console.log('[Viz Route] Fetching statistics from valuer-agent');
-    const valuerAgentUrl = `${config.VALUER_AGENT_URL}/stats/${postId}`;
+    const valuerAgentUrl = `${config.VALUER_AGENT_API_URL}/stats/${postId}`;
     
     let stats;
     try {
