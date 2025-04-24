@@ -138,7 +138,7 @@ async function startServer() {
     app.use('/api/pdf', pdfRouter);
     app.use('/api/pdf-legacy', pdfLegacyRouter);
     app.use('/api/html', htmlRouter);
-
+    
     // Legacy compatibility routes - maintain backwards compatibility
     app.use('/', reportRouter); // Keep legacy direct routes for backward compatibility
     app.use('/', utilityRouter); // Keep legacy direct routes for backward compatibility
