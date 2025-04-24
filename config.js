@@ -15,6 +15,10 @@ const config = {
   WORDPRESS_USERNAME: process.env.wp_username,
   WORDPRESS_APP_PASSWORD: process.env.wp_app_password,
   
+  // Secret names for WordPress credentials
+  WORDPRESS_USERNAME_SECRET: 'wp_username',
+  WORDPRESS_PASSWORD_SECRET: 'wp_app_password',
+  
   // Debug logging for credentials
   DEBUG_WORDPRESS_CREDS: !!process.env.DEBUG_WORDPRESS_CREDS || false,
   
@@ -54,6 +58,28 @@ const config = {
     } catch (error) {
       console.error(`Error getting secret '${secretName}':`, error);
       throw error;
+    }
+  },
+
+  // Function to initialize secrets from Secret Manager
+  initSecrets: async function() {
+    try {
+      console.log('Loading WordPress credentials from Secret Manager...');
+      
+      // Get WordPress username from Secret Manager
+      this.WORDPRESS_USERNAME = await this.getSecret(this.WORDPRESS_USERNAME_SECRET);
+      console.log('WordPress username loaded from Secret Manager');
+      
+      // Get WordPress password from Secret Manager
+      this.WORDPRESS_APP_PASSWORD = await this.getSecret(this.WORDPRESS_PASSWORD_SECRET);
+      console.log('WordPress app password loaded from Secret Manager');
+      
+      return true;
+    } catch (error) {
+      console.error('Failed to load secrets from Secret Manager:', error);
+      // Fall back to environment variables if Secret Manager fails
+      console.log('Falling back to environment variables for WordPress credentials');
+      return false;
     }
   }
 };

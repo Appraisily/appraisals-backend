@@ -36,6 +36,20 @@ const DEFAULT_OPTIONS = {
   timeout: 30000
 };
 
+// Function to create new headers with updated credentials if they've changed
+function getUpdatedHeaders() {
+  // Make a copy of the default headers
+  const updatedHeaders = { ...DEFAULT_HEADERS };
+  
+  // Update authorization if credentials exist and are different from what was used initially
+  if (config.WORDPRESS_USERNAME && config.WORDPRESS_APP_PASSWORD) {
+    const newAuthValue = `Basic ${Buffer.from(`${config.WORDPRESS_USERNAME}:${config.WORDPRESS_APP_PASSWORD}`).toString('base64')}`;
+    updatedHeaders.Authorization = newAuthValue;
+  }
+  
+  return updatedHeaders;
+}
+
 async function fetchWordPress(endpoint, options = {}) {
   const url = `${config.WORDPRESS_API_URL}${endpoint}`;
   console.log(`[WordPress] Fetching: ${url}`);
@@ -51,18 +65,45 @@ async function fetchWordPress(endpoint, options = {}) {
   }
   
   try {
+    // Check if authentication credentials are present
+    if (!config.WORDPRESS_USERNAME || !config.WORDPRESS_APP_PASSWORD) {
+      console.error('[WordPress] Authentication credentials missing! This will cause 401 errors.');
+    }
+    
+    // Always get updated headers to ensure we have the latest credentials
+    const updatedHeaders = getUpdatedHeaders();
+    
     const response = await fetch(url, {
       ...DEFAULT_OPTIONS,
-      ...options
+      ...options,
+      headers: {
+        ...updatedHeaders,
+        ...(options.headers || {})
+      }
     });
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('WordPress API error:', {
-        status: response.status,
-        body: errorText
-      });
-      throw new Error(`WordPress API error: ${errorText}`);
+      
+      // More detailed error handling for common cases
+      if (response.status === 401) {
+        console.error('WordPress API authentication error (401):', {
+          status: response.status,
+          body: errorText,
+          credentials: {
+            usernameExists: !!config.WORDPRESS_USERNAME,
+            passwordExists: !!config.WORDPRESS_APP_PASSWORD,
+            headerExists: !!updatedHeaders.Authorization
+          }
+        });
+        throw new Error(`WordPress API authentication failed (401): ${errorText}`);
+      } else {
+        console.error('WordPress API error:', {
+          status: response.status,
+          body: errorText
+        });
+        throw new Error(`WordPress API error: ${response.status} ${response.statusText}`);
+      }
     }
 
     return response;

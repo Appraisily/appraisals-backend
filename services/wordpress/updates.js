@@ -104,18 +104,51 @@ async function updateNotes(postId, note) {
 /**
  * Updates a post's metadata (custom fields/meta)
  * @param {number|string} postId - The WordPress post ID
- * @param {string} metaKey - The metadata key
- * @param {any} metaValue - The metadata value
+ * @param {string|object} metaKey - The metadata key or an object of key-value pairs
+ * @param {any} metaValue - The metadata value (optional if metaKey is an object)
  * @returns {Promise<boolean>} Success status
  */
 async function updatePostMeta(postId, metaKey, metaValue) {
   try {
-    console.log(`Updating post meta (via ACF) for post ID ${postId}, key: ${metaKey}`);
-    // Directly use the working ACF update function
-    return await updateWordPressMetadata(postId, metaKey, metaValue);
+    // Handle case where metaKey is an object containing multiple key/value pairs
+    if (typeof metaKey === 'object' && metaKey !== null) {
+      console.log(`Updating multiple post meta fields for post ID ${postId}`);
+      
+      // Create an object to hold all ACF fields to update
+      const acfFields = {};
+      
+      // Process each key/value pair
+      for (const [key, value] of Object.entries(metaKey)) {
+        // Ensure proper stringification of objects and arrays
+        if (typeof value === 'object' && value !== null) {
+          acfFields[key] = JSON.stringify(value);
+        } else {
+          acfFields[key] = value;
+        }
+      }
+      
+      // Update the post with all fields at once
+      await client.updatePost(postId, {
+        acf: acfFields
+      });
+      
+      return true;
+    } else {
+      // Original single key/value pair case
+      console.log(`Updating post meta (via ACF) for post ID ${postId}, key: ${metaKey}`);
+      
+      // Ensure proper stringification of objects and arrays
+      let finalValue = metaValue;
+      if (typeof metaValue === 'object' && metaValue !== null) {
+        finalValue = JSON.stringify(metaValue);
+      }
+      
+      // Directly use the working ACF update function
+      return await updateWordPressMetadata(postId, metaKey, finalValue);
+    }
   } catch (error) {
     // Log the error, but the specific error from updateWordPressMetadata will be logged within that function
-    console.error(`Error occurred in updatePostMeta while calling updateWordPressMetadata for post ID ${postId}, key: ${metaKey}:`, error.message);
+    console.error(`Error occurred in updatePostMeta for post ID ${postId}, key: ${typeof metaKey === 'object' ? 'multiple keys' : metaKey}:`, error.message);
     // Re-throw the error to indicate failure
     throw error; 
   }

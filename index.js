@@ -7,6 +7,7 @@ const requestIp = require('request-ip');
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const { initializeGoogleApis } = require('./services/pdf');
 const { initializeGeminiClient } = require('./services/gemini-visualization');
+const config = require('./config');
 
 const app = express();
 
@@ -53,20 +54,30 @@ async function loadSecrets() {
       return;
     }
 
-    // Load secrets into process.env
-    process.env.WORDPRESS_API_URL = await getSecret('WORDPRESS_API_URL');
-    process.env.wp_username = await getSecret('wp_username');
-    process.env.wp_app_password = await getSecret('wp_app_password');
-    
-    // Add validation and logging for WordPress credentials
-    if (!process.env.wp_username || !process.env.wp_app_password) {
-      console.error('WARNING: WordPress credentials are missing or empty!');
-      console.error('wp_username exists:', !!process.env.wp_username);
-      console.error('wp_app_password exists:', !!process.env.wp_app_password);
-    } else {
+    // Initialize WordPress credentials from Secret Manager
+    try {
+      await config.initSecrets();
       console.log('WordPress credentials loaded successfully from Secret Manager');
+    } catch (wpError) {
+      console.error('Error loading WordPress credentials from Secret Manager:', wpError.message);
+      console.log('Falling back to direct Secret Manager access for WordPress credentials');
+      
+      // Fall back to the direct approach
+      process.env.wp_username = await getSecret('wp_username');
+      process.env.wp_app_password = await getSecret('wp_app_password');
     }
     
+    // Add validation and logging for WordPress credentials
+    if (!config.WORDPRESS_USERNAME || !config.WORDPRESS_APP_PASSWORD) {
+      console.error('WARNING: WordPress credentials are missing or empty!');
+      console.error('WORDPRESS_USERNAME exists:', !!config.WORDPRESS_USERNAME);
+      console.error('WORDPRESS_APP_PASSWORD exists:', !!config.WORDPRESS_APP_PASSWORD);
+    } else {
+      console.log('WordPress credentials verified');
+    }
+    
+    // Load other secrets
+    process.env.WORDPRESS_API_URL = await getSecret('WORDPRESS_API_URL');
     process.env.OPENAI_API_KEY = await getSecret('OPENAI_API_KEY');
     process.env.GOOGLE_VISION_CREDENTIALS = await getSecret('GOOGLE_VISION_CREDENTIALS');
     process.env.GOOGLE_DOCS_CREDENTIALS = await getSecret('GOOGLE_DOCS_CREDENTIALS');

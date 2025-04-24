@@ -11,6 +11,7 @@ const { populateHtmlTemplate } = require('../services/geminiService');
 const { updateHtmlFields } = require('../services/wordpress');
 const { generateEnhancedAnalyticsWithGemini, generateAppraisalCardWithGemini } = require('../services/gemini-visualization');
 const { prepareDataContextForEnhancedAnalytics, prepareDataContextForAppraisalCard } = require('../services/utils/templateContextUtils');
+const valuerAgentClient = require('../services/valuerAgentClient');
 
 // Define isObject function directly
 const isObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -331,23 +332,22 @@ router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
     const postDataWithImages = await wordpress.fetchPostData(postId);
     const images = postDataWithImages.images;
     
-    // Step 3: Get or Generate Statistics
+    // Step 3: Get or Generate Statistics - UPDATED TO USE VALUER AGENT CLIENT
     console.log('[Viz Route] Fetching statistics from valuer-agent');
-    const valuerAgentUrl = `${config.VALUER_AGENT_API_URL}/stats/${postId}`;
     
     let stats;
     try {
-      const statsResponse = await fetch(valuerAgentUrl, { method: 'GET' });
-      if (!statsResponse.ok) {
-        throw new Error(`Valuer-agent response not OK: ${statsResponse.status} ${statsResponse.statusText}`);
+      // Use the enhanced-statistics endpoint instead of /stats/{postId}
+      const value = postData.acf?.value;
+      const title = postTitle;
+      
+      const statsResponse = await valuerAgentClient.getEnhancedStatistics(title, value);
+      
+      if (!statsResponse.success) {
+        throw new Error(`Valuer-agent returned error: ${statsResponse.message || 'Unknown error'}`);
       }
       
-      const statsData = await statsResponse.json();
-      if (!statsData.success) {
-        throw new Error(`Valuer-agent returned error: ${statsData.message}`);
-      }
-      
-      stats = statsData.data;
+      stats = statsResponse.statistics;
       console.log('[Viz Route] Statistics fetched successfully');
     } catch (statsError) {
       console.error('[Viz Route] Error fetching statistics:', statsError);
