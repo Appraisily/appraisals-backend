@@ -7,6 +7,7 @@ const requestIp = require('request-ip');
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const { initializeGoogleApis } = require('./services/pdf');
 const { initializeGeminiClient } = require('./services/gemini-visualization');
+const { initializeVisionClient } = require('./services/vision');
 const config = require('./config');
 
 const app = express();
@@ -130,8 +131,18 @@ async function startServer() {
         console.error('Error during Google APIs initialization:', googleApisError.message);
         console.log('Continuing server startup without Google APIs.');
       }
+      
+      // Initialize Vision client
+      try {
+        console.log('Initializing Google Vision client...');
+        await initializeVisionClient();
+        console.log('Google Vision client initialized successfully.');
+      } catch (visionError) {
+        console.error('Error initializing Google Vision client:', visionError.message);
+        console.log('Continuing server startup without Vision client. Vision features will not work properly.');
+      }
     } else {
-      console.log('Skipping Google APIs initialization for local development.');
+      console.log('Skipping Google APIs and Vision initialization for local development.');
     }
 
     // Try to initialize Gemini client, but don't block server startup if it fails

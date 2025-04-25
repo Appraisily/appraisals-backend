@@ -5,17 +5,47 @@ const config = require('../config');
 const vision = require('@google-cloud/vision');
 const { getImageUrl } = require('./wordpress');
 const { uploadImageToWordPress, updateWordPressGallery } = require('../services/wordpress');
+const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 
 let visionClient;
 
-function initializeVisionClient() {
+async function initializeVisionClient() {
   try {
-    const credentials = JSON.parse(config.GOOGLE_VISION_CREDENTIALS);
+    let credentials;
+    
+    // Check if credentials are already available in config
+    if (config.GOOGLE_VISION_CREDENTIALS) {
+      try {
+        credentials = JSON.parse(config.GOOGLE_VISION_CREDENTIALS);
+      } catch (parseError) {
+        console.error('Error parsing GOOGLE_VISION_CREDENTIALS from config:', parseError);
+        // If parsing fails, try to get from Secret Manager directly
+      }
+    }
+    
+    // If credentials are not available or parsing failed, try Secret Manager directly
+    if (!credentials) {
+      console.log('Fetching Google Vision credentials directly from Secret Manager');
+      const secretClient = new SecretManagerServiceClient();
+      const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
+      
+      if (!projectId) {
+        throw new Error('GOOGLE_CLOUD_PROJECT_ID environment variable is not set.');
+      }
+      
+      const secretPath = `projects/${projectId}/secrets/GOOGLE_VISION_CREDENTIALS/versions/latest`;
+      const [version] = await secretClient.accessSecretVersion({ name: secretPath });
+      const secretValue = version.payload.data.toString('utf8');
+      credentials = JSON.parse(secretValue);
+    }
+    
     visionClient = new vision.ImageAnnotatorClient({
       credentials,
-      projectId: 'civil-forge-403609'
+      projectId: process.env.GOOGLE_CLOUD_PROJECT_ID || 'civil-forge-403609'
     });
+    
     console.log('Google Vision client initialized successfully.');
+    return visionClient;
   } catch (error) {
     console.error('Error initializing Vision client:', error);
     throw error;
@@ -25,7 +55,7 @@ function initializeVisionClient() {
 async function processMainImageWithGoogleVision(postId) {
   try {
     if (!visionClient) {
-      initializeVisionClient();
+      await initializeVisionClient();
     }
 
     // Check if gallery is already populated

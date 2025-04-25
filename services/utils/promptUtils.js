@@ -26,11 +26,28 @@ async function getPrompt(custom_post_type_name) {
 
 function buildContextualPrompt(prompt, context, searchResults = null) {
   let contextualPrompt = prompt;
+  
+  // Incorporate detailed title if available
+  if (context.detailedTitle) {
+    // Only add the detailed title at the beginning of the prompt
+    // if it's not already being handled by the calling function
+    if (!contextualPrompt.includes('Detailed Description:')) {
+      contextualPrompt = `Detailed Description: ${context.detailedTitle}\n\n${contextualPrompt}`;
+    }
+  }
 
-  // Add previous generated content
-  if (Object.keys(context).length > 0) {
+  // Add appraisal type context if available
+  if (context.appraisalType && context.appraisalType !== 'regular') {
+    contextualPrompt = `This is a ${context.appraisalType.toUpperCase()} appraisal.\n\n${contextualPrompt}`;
+  }
+
+  // Add previous generated content (filtered to exclude detailedTitle and appraisalType)
+  const contentEntries = Object.entries(context)
+    .filter(([key]) => !['detailedTitle', 'appraisalType'].includes(key));
+    
+  if (contentEntries.length > 0) {
     contextualPrompt = `Previous content generated for this report:\n\n${
-      Object.entries(context)
+      contentEntries
         .map(([field, content]) => `${field}:\n${content}\n`)
         .join('\n')
     }\n\nUsing the context above and maintaining consistency, ${prompt}`;
@@ -38,7 +55,7 @@ function buildContextualPrompt(prompt, context, searchResults = null) {
   
   // Add search results if available
   if (searchResults && searchResults.formattedContext) {
-    contextualPrompt = `${contextualPrompt}\n\n${searchResults.formattedContext}\n\nUsing the search results above to inform your content where relevant, please generate the requested section.`;
+    contextualPrompt = `${contextualPrompt}\n\nWeb Search Results:\n${searchResults.formattedContext}\n\nUsing the search results above to inform your content where relevant, please generate the requested section.`;
     
     console.log('PromptUtils: Added search results to prompt');
     // Log the query that generated these results

@@ -348,6 +348,21 @@ async function processAllMetadata(postId, postTitle, { postData, images }) {
   const results = [];
   const context = {};
   
+  // Get the detailed title if available
+  try {
+    if (postData?.acf?.detailedTitle) {
+      const detailedTitle = postData.acf.detailedTitle;
+      console.log(`[Processor] Found detailed title: "${detailedTitle}"`);
+      context.detailedTitle = detailedTitle;
+    } else {
+      console.log('[Processor] No detailed title found, using standard title');
+      context.detailedTitle = postTitle; // Fallback to regular title
+    }
+  } catch (titleError) {
+    console.error('[Processor] Error retrieving detailed title:', titleError);
+    context.detailedTitle = postTitle; // Fallback to regular title
+  }
+  
   let appraisalType = 'regular';
   try {
     if (postData?.acf?.appraisaltype) {
@@ -369,19 +384,11 @@ async function processAllMetadata(postId, postTitle, { postData, images }) {
     searchResults = await performContextualSearch(postTitle);
     if (searchResults.success) {
       console.log('[Processor] Contextual search completed successfully');
-      await updateWordPressMetadata(postId, 'serper_search_results', {
-        query: searchResults.searchQuery,
-        timestamp: new Date().toISOString(),
-        success: true,
-        results: searchResults.searchResults // Store raw results
-      }); // Pass object directly
+      // Remove WordPress update for search results as requested
+      // Skip updating WordPress metadata for contextual search results
     } else {
       console.warn('[Processor] Contextual search failed:', searchResults.error);
-      await updateWordPressMetadata(postId, 'serper_search_results', { 
-        timestamp: new Date().toISOString(), 
-        success: false, 
-        error: searchResults.error 
-      }); // Pass object directly
+      // Skip updating WordPress metadata for contextual search results
     }
   } catch (searchError) {
     console.error('[Processor] Error during contextual search:', searchError);
@@ -392,15 +399,18 @@ async function processAllMetadata(postId, postTitle, { postData, images }) {
     try {
       console.log(`[Processor] Processing field: ${field}`);
       const basePrompt = await getPrompt(field);
-      const prompt = buildContextualPrompt(basePrompt, context, searchResults);
+      
+      // Build context-enhanced prompt with search results and detailed title
+      // The buildContextualPrompt function now handles detailed title automatically
+      const finalPrompt = buildContextualPrompt(basePrompt, context, searchResults);
       
       if (searchResults?.success) {
         console.log(`[Processor] Using search results for field: ${field}`);
       }
       
-      const content = await generateContent(prompt, postTitle, images);
+      const content = await generateContent(finalPrompt, postTitle, images);
       context[field] = content;
-      await updateWordPressMetadata(postId, field, content);
+      await wordpress.updateWordPressMetadata(postId, field, content);
       
       results.push({ field, status: 'success' });
     } catch (error) {
@@ -416,7 +426,7 @@ async function processAllMetadata(postId, postTitle, { postData, images }) {
     if (staticMetadata[appraisalType]) {
       for (const [key, value] of Object.entries(staticMetadata[appraisalType])) {
         console.log(`[Processor] Adding static metadata: ${key}`);
-        await updateWordPressMetadata(postId, key, value);
+        await wordpress.updateWordPressMetadata(postId, key, value);
         results.push({ field: key, status: 'success (static)' });
       }
     } else {
@@ -439,8 +449,23 @@ async function processJustificationMetadata(postId, postTitle, value, skipMetada
     const numericValue = parseFloat(value);
     if (isNaN(numericValue)) throw new Error('Invalid numeric value');
 
-    console.log(`[Processor] Calling valuer agent /api/justify`);
-    const valuerResponse = await justifyValue(postTitle, numericValue);
+    // Fetch post data to get detailed title if available
+    let detailedTitle = null;
+    try {
+      const { postData } = await wordpress.fetchPostData(postId);
+      if (postData?.acf?.detailedTitle) {
+        detailedTitle = postData.acf.detailedTitle;
+        console.log(`[Processor] Using detailed title for justification: "${detailedTitle}"`);
+      }
+    } catch (detailedTitleError) {
+      console.warn('[Processor] Could not retrieve detailed title, using standard title:', detailedTitleError.message);
+    }
+    
+    // Use the detailed title for valuation if available
+    const titleForValuation = detailedTitle || postTitle;
+    console.log(`[Processor] Calling valuer agent /api/justify with title: "${titleForValuation}"`);
+    
+    const valuerResponse = await justifyValue(titleForValuation, numericValue);
     console.log(`[Processor] Valuer agent /api/justify success: ${valuerResponse.success}`);
     
     let { explanation, auctionResults, allSearchResults, success } = valuerResponse;
@@ -477,13 +502,13 @@ async function processJustificationMetadata(postId, postTitle, value, skipMetada
     const isConsistent = verifyResultsConsistency(postTitle, auctionResults);
     if (!isConsistent) {
       console.warn(`[Processor] Warning: Auction results inconsistent with "${postTitle}"`);
-      await updateWordPressMetadata(postId, 'consistency_warning', `Auction results may not be relevant.`);
+      await wordpress.updateWordPressMetadata(postId, 'consistency_warning', `Auction results may not be relevant.`);
     }
 
     try {
       console.log('[Processor] Storing raw valuer agent data');
       // Stringify the raw valuerResponse object before saving
-      await updateWordPressMetadata(postId, 'valuer_agent_data', JSON.stringify(valuerResponse)); 
+      await wordpress.updateWordPressMetadata(postId, 'valuer_agent_data', JSON.stringify(valuerResponse)); 
     } catch (rawDataError) {
       console.error('[Processor] Error storing raw valuer agent data:', rawDataError);
     }
@@ -528,18 +553,29 @@ async function processJustificationMetadata(postId, postTitle, value, skipMetada
     const currentStats = statistics.enhancedStats || statistics;
     const validatedStats = validateStatisticsData(currentStats);
 
+    // Update the prompt to include the detailed title if available
     const justificationPrompt = await getPrompt('justification');
     let searchContext = '';
     try {
       console.log('[Processor] Performing targeted search for justification');
-      const searchQuery = `${postTitle} auction value ${numericValue}`;
+      // Use detailed title in search query if available
+      const searchQuery = `${titleForValuation} auction value ${numericValue}`;
       const googleResults = await searchGoogle(searchQuery);
       searchContext = formatSearchResults(googleResults);
     } catch (searchError) {
       console.error('[Processor] Error during justification search:', searchError);
     }
 
-    let finalPrompt = `${justificationPrompt}\n\nItem: "${postTitle}"\nValue: ${numericValue}\n\nExplanation: ${explanation}\n\nAuction Data Summary: ${JSON.stringify(validatedStats, null, 2).substring(0, 1000)}...`; // Use validated stats summary
+    let finalPrompt = `${justificationPrompt}\n\n`;
+    // Add both standard and detailed title if they differ
+    if (detailedTitle && detailedTitle !== postTitle) {
+      finalPrompt += `Item Title: "${postTitle}"\nDetailed Description: "${detailedTitle}"\n`;
+    } else {
+      finalPrompt += `Item: "${postTitle}"\n`;
+    }
+    
+    finalPrompt += `Value: ${numericValue}\n\nExplanation: ${explanation}\n\nAuction Data Summary: ${JSON.stringify(validatedStats, null, 2).substring(0, 1000)}...`; // Use validated stats summary
+    
     if (searchContext) {
       finalPrompt += `\n\nWeb Context:\n${searchContext}\n\nInstructions: ... (as before) ...`;
     }
@@ -562,7 +598,7 @@ async function processJustificationMetadata(postId, postTitle, value, skipMetada
 
     try {
       console.log('[Processor] Updating justification_html');
-      await updateWordPressMetadata(postId, 'justification_html', completeContent);
+      await wordpress.updateWordPressMetadata(postId, 'justification_html', completeContent);
       
       console.log('[Processor] Updating statistics');
       // Prepare stats for storage (limit display array, ensure clean JSON)
@@ -587,7 +623,7 @@ async function processJustificationMetadata(postId, postTitle, value, skipMetada
       const sanitizedStats = sanitizeObjectStrings(JSON.parse(JSON.stringify(statsForStorage)));
 
       // Stringify the sanitized statistics object before saving
-      await updateWordPressMetadata(postId, 'statistics', JSON.stringify(sanitizedStats)); 
+      await wordpress.updateWordPressMetadata(postId, 'statistics', JSON.stringify(sanitizedStats)); 
       console.log('[Processor] Statistics data stored');
 
       // Trigger HTML generation with the fresh stats
@@ -613,7 +649,7 @@ async function processJustificationMetadata(postId, postTitle, value, skipMetada
     try {
       // Ensure error object is stringified before saving
       const errorDataString = JSON.stringify({ message: error.message, stack: error.stack, timestamp: new Date().toISOString() });
-      await updateWordPressMetadata(postId, 'justification_error', errorDataString); 
+      await wordpress.updateWordPressMetadata(postId, 'justification_error', errorDataString); 
     } catch (errorStoreError) {
       console.error('[Processor] Error storing justification error:', errorStoreError);
     }

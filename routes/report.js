@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const wordpress = require('../services/wordpress/index');
-const { processMainImageWithGoogleVision } = require('../services/vision');
+const { processMainImageWithGoogleVision, initializeVisionClient } = require('../services/vision');
 const { processAllMetadata, processJustificationMetadata } = require('../services/metadataProcessor');
 
 // Moved from appraisal.js
@@ -78,6 +78,14 @@ router.post('/complete-appraisal-report', async (req, res) => {
 
     let visionResult = { success: false, message: 'Skipped', similarImagesCount: 0 };
     try {
+      // Make sure Vision client is initialized
+      try {
+        await initializeVisionClient();
+        console.log('[Report Route] Successfully initialized Vision client');
+      } catch (visionInitError) {
+        console.error(`[Report Route] Failed to initialize Vision client: ${visionInitError.message}`);
+      }
+      
       console.log('[Report Route] Processing main image with Vision');
       visionResult = await processMainImageWithGoogleVision(postId);
     } catch (error) {
