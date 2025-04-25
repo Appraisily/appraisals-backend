@@ -61,18 +61,17 @@ router.post('/generate-visualizations', async (req, res) => {
     
     console.log(`[Viz Route] Generating HTML visualizations for: "${postTitle}" using existing stats and Gemini`);
 
-    // Step 2: Extract and sanitize existing statistics
+    // Step 2: Extract statistics directly without sanitization
     let statisticsObj = {};
     const statisticsData = postData.acf?.statistics;
     if (typeof statisticsData === 'string' && statisticsData.trim() !== '') {
       try {
-        statisticsObj = jsonCleaner.cleanAndParse(statisticsData);
+        // Basic JSON parse for string data (minimum required)
+        statisticsObj = JSON.parse(statisticsData);
         console.log('[Viz Route] Successfully parsed existing statistics data from post');
       } catch (error) {
-        console.error('[Viz Route] Error parsing existing statistics data:', error);
-        // Decide if we should proceed with empty stats or throw error
-        // statisticsObj = {}; // Default to empty object on error
-         throw new Error(`Failed to parse existing statistics data: ${error.message}`);
+        console.error('[Viz Route] Error parsing statistics data:', error);
+        throw new Error(`Failed to parse statistics data: ${error.message}`);
       }
     } else if (typeof statisticsData === 'object' && statisticsData !== null) {
       statisticsObj = statisticsData;
@@ -80,13 +79,9 @@ router.post('/generate-visualizations', async (req, res) => {
         console.warn('[Viz Route] No valid existing statistics data found. Proceeding with empty stats.');
         statisticsObj = {}; // Proceed with empty stats object
     }
-    // Optional: Validate the parsed statistics object
-    let validateStatisticsData = (stats) => stats; // Placeholder
-    try {
-        const processor = require('../services/metadataProcessor');
-        if (processor.validateStatisticsData) { validateStatisticsData = processor.validateStatisticsData; }
-    } catch(e) { console.warn("Could not load validateStatisticsData"); }
-    const sanitizedStats = jsonCleaner.cleanAndParse(validateStatisticsData(statisticsObj)); // Clean validated/parsed stats
+    
+    // Use statistics directly without additional sanitization
+    const sanitizedStats = statisticsObj;
 
     // Step 3: Prepare Data Contexts
     console.log('[Viz Route] Preparing data contexts for templates');
@@ -433,9 +428,9 @@ router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
       });
     }
     
-    // Step 3a: Sanitize/Clean statistics data for storage
-    console.log('[Viz Route] Sanitizing statistics data');
-    const sanitizedStats = jsonCleaner.cleanAndParse(stats);
+    // Step 3a: Use statistics data directly (skipping sanitization)
+    console.log('[Viz Route] Using statistics data directly without sanitization');
+    const sanitizedStats = stats; // Use the raw stats directly
     
     // Step 3b: Prepare appraisal data object
     const appraisalData = {
@@ -607,7 +602,7 @@ router.post('/debug', async (req, res, next) => {
             if (rawStats) {
                 if (typeof rawStats === 'string') {
                     try {
-                        stats = jsonCleaner.cleanAndParse(rawStats);
+                        stats = JSON.parse(rawStats);
                         console.log('[Visualizations Debug] Parsed statistics data from input/ACF');
                     } catch (parseError) {
                         console.error('[Visualizations Debug] Failed to parse provided/ACF statistics data:', parseError.message);
@@ -637,7 +632,7 @@ router.post('/debug', async (req, res, next) => {
             if (statisticsData) {
                 if (typeof statisticsData === 'string') {
                     try {
-                        stats = jsonCleaner.cleanAndParse(statisticsData);
+                        stats = JSON.parse(statisticsData);
                     } catch (parseError) {
                          console.error('[Visualizations Debug] Failed to parse provided statistics data:', parseError.message);
                          stats = {}; 
