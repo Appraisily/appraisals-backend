@@ -86,7 +86,7 @@ router.post('/generate-visualizations', async (req, res) => {
         const processor = require('../services/metadataProcessor');
         if (processor.validateStatisticsData) { validateStatisticsData = processor.validateStatisticsData; }
     } catch(e) { console.warn("Could not load validateStatisticsData"); }
-    const sanitizedStats = jsonCleaner.cleanObject(validateStatisticsData(statisticsObj)); // Clean validated/parsed stats
+    const sanitizedStats = jsonCleaner.cleanAndParse(validateStatisticsData(statisticsObj)); // Clean validated/parsed stats
 
     // Step 3: Prepare Data Contexts
     console.log('[Viz Route] Preparing data contexts for templates');
@@ -435,7 +435,7 @@ router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
     
     // Step 3a: Sanitize/Clean statistics data for storage
     console.log('[Viz Route] Sanitizing statistics data');
-    const sanitizedStats = jsonCleaner.clean(stats);
+    const sanitizedStats = jsonCleaner.cleanAndParse(stats);
     
     // Step 3b: Prepare appraisal data object
     const appraisalData = {
