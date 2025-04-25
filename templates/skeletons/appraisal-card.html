@@ -782,15 +782,17 @@
 <script>
 // Basic Tab switching logic (can be moved to a separate JS file later)
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('[DEBUG AC Card] DOMContentLoaded event fired.'); // Log 0
     const card = document.querySelector('.appraisal-card[data-post-id="{{POST_ID}}"]'); // Scope to this specific card
     if (!card) {
-        console.error('[DEBUG] Appraisal card not found for ID: {{POST_ID}}');
+        console.error('[DEBUG AC Card] Appraisal card not found for ID: {{POST_ID}}');
         return;
     }
 
-    console.log('[DEBUG] Appraisal card found with ID: {{POST_ID}}');
-    
+    console.log('[DEBUG AC Card] Appraisal card found with ID: {{POST_ID}}'); // Log 1
+
     // Set up tab switching
+    console.log('[DEBUG AC Card] Setting up tab switching...'); // Log 2
     const tabButtons = card.querySelectorAll('.tabs-navigation .tab-button');
     const tabPanels = card.querySelectorAll('.tabs-content .tab-panel');
 
@@ -812,71 +814,91 @@ document.addEventListener('DOMContentLoaded', function() {
             });
         });
     });
-    
+
     // Add description expand/collapse functionality
+    console.log('[DEBUG AC Card] Setting up description toggle...'); // Log 3
     const descriptionToggle = document.getElementById('description-toggle-{{POST_ID}}');
     const description = document.getElementById('artwork-description-{{POST_ID}}');
-    
+
     if (descriptionToggle && description) {
         descriptionToggle.addEventListener('click', function(e) {
             e.preventDefault();
             description.classList.toggle('expanded');
             this.textContent = description.classList.contains('expanded') ? 'Read less' : 'Read more';
         });
+    } else {
+        console.warn('[DEBUG AC Card] Description toggle or description element not found.');
     }
-    
+
     // Initialize charts with robust loading
+    console.log('[DEBUG AC Card] Calling initializeChartsWithRetry()...'); // Log 4
     initializeChartsWithRetry();
 });
 
 // Robust chart initialization that handles race conditions
 function initializeChartsWithRetry(attemptCount = 0) {
+    console.log(`[DEBUG AC Card] initializeChartsWithRetry called (Attempt: ${attemptCount})`);
     const maxAttempts = 10;
     const retryDelay = 300; // milliseconds
     
     // Check if Chart.js is available (either global or via alias)
     if (typeof window.Chart !== 'undefined') {
-        console.log('[DEBUG] Chart.js found globally, initializing charts...');
+        console.log('[DEBUG AC Card] Chart.js found globally, setting alias and initializing...');
         window.AppraisalCardChart = window.Chart;
-        initializeCharts();
+        initCharts(); // Use renamed function to match enhanced-analytics
         return;
     }
     
     if (typeof window.AppraisalCardChart !== 'undefined') {
-        console.log('[DEBUG] AppraisalCardChart found, initializing charts...');
-        initializeCharts();
+        console.log('[DEBUG AC Card] AppraisalCardChart found, initializing...');
+        initCharts(); // Use renamed function to match enhanced-analytics
+        return;
+    }
+    
+    // Check for wordpress global variable
+    if (typeof wp !== 'undefined' && wp.charts && wp.charts.Chart) {
+        console.log('[DEBUG AC Card] WordPress Chart.js found, setting alias and initializing...');
+        window.AppraisalCardChart = wp.charts.Chart;
+        initCharts(); // Use renamed function to match enhanced-analytics
         return;
     }
     
     // Chart.js not available yet, retry if under max attempts
     if (attemptCount < maxAttempts) {
-        console.log(`[DEBUG] Chart.js not found, retrying... (${attemptCount + 1}/${maxAttempts})`);
+        console.log(`[DEBUG AC Card] Chart.js not found, setting timeout for retry... (${attemptCount + 1}/${maxAttempts})`);
         setTimeout(function() {
+            console.log(`[DEBUG AC Card] Executing retry attempt ${attemptCount + 1}`);
             initializeChartsWithRetry(attemptCount + 1);
         }, retryDelay);
     } else {
         // Last resort: try to load Chart.js ourselves
-        console.warn('[DEBUG] Chart.js not found after maximum attempts, loading directly...');
+        console.warn('[DEBUG AC Card] Chart.js not found after maximum attempts, loading directly...');
         const script = document.createElement('script');
         script.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';
         script.onload = function() {
-            console.log('[DEBUG] Chart.js loaded directly, initializing charts...');
+            console.log('[DEBUG AC Card] Chart.js loaded directly via CDN, initializing charts...');
             window.AppraisalCardChart = window.Chart;
-            initializeCharts();
+            initCharts(); // Use renamed function to match enhanced-analytics
         };
         script.onerror = function() {
-            console.error('[DEBUG] Failed to load Chart.js directly');
+            console.error('[DEBUG AC Card] Failed to load Chart.js directly via CDN');
         };
         document.head.appendChild(script);
     }
 }
 
-// Initialize all charts
-function initializeCharts() {
-    console.log('[DEBUG] Initializing charts...');
+// Also export the initialization function to global scope for WordPress to call it
+window.initAppraisalCharts = function() {
+    console.log('[DEBUG AC Card] initAppraisalCharts called from global scope');
+    initializeChartsWithRetry();
+};
+
+// Renamed from initializeCharts to initCharts to match enhanced-analytics
+function initCharts() {
+    console.log('[DEBUG AC Card] initCharts called.');
     const card = document.querySelector('.appraisal-card[data-post-id="{{POST_ID}}"]'); // Scope to this specific card
     if (!card) {
-        console.error('[DEBUG] Could not find card element during chart initialization for ID: {{POST_ID}}');
+        console.error('[DEBUG AC Card] Could not find card element during chart initialization for ID: {{POST_ID}}');
         return;
     }
 
@@ -890,82 +912,113 @@ function initializeCharts() {
         const metricsContainer = card.querySelector('.metrics-chart-container');
         const marketContainer = card.querySelector('.price-distribution-container');
         
-        // Initialize gauge chart
-        if (gaugeCanvas) {
-            initializeGaugeChart(gaugeCanvas);
-        }
-        
-        // Initialize metrics chart
-        if (metricsCanvas && metricsContainer) {
-            let metricsData;
-            const metricsDataRaw = metricsContainer.dataset.chartDataMetrics;
-            try {
-                if (metricsDataRaw && metricsDataRaw !== '{}') {
-                    metricsData = JSON.parse(metricsDataRaw);
+        // Use setTimeout to delay initialization similar to enhanced-analytics
+        setTimeout(function() {
+            console.log('[DEBUG AC Card] Initializing charts after slight delay...');
+            
+            // Initialize gauge chart
+            if (gaugeCanvas) {
+                console.log('[DEBUG AC Card] Attempting to initialize Gauge Chart...');
+                try {
+                    initializeGaugeChart(gaugeCanvas);
+                } catch (error) {
+                    console.error('[DEBUG AC Card] Error initializing gauge chart:', error);
                 }
-            } catch (e) {
-                console.error('[DEBUG] Error parsing metrics data:', e);
+            } else {
+                console.warn('[DEBUG AC Card] Gauge canvas not found (' + '{{CHART_ID_GAUGE}}' + ')');
             }
             
-            initializeMetricsChart(metricsCanvas, metricsData);
-        } else {
-            console.warn('[DEBUG] Metrics canvas or container not found');
-        }
-        
-        // Initialize market chart
-        if (marketCanvas && marketContainer) {
-            let marketData;
-            const marketDataRaw = marketContainer.dataset.chartDataMarket;
-            try {
-                if (marketDataRaw && marketDataRaw !== '{}') {
-                    marketData = JSON.parse(marketDataRaw);
+            // Initialize metrics chart
+            if (metricsCanvas && metricsContainer) {
+                console.log('[DEBUG AC Card] Attempting to initialize Metrics Chart...');
+                let metricsData;
+                const metricsDataRaw = metricsContainer.dataset.chartDataMetrics;
+                try {
+                    if (metricsDataRaw && metricsDataRaw !== '{}') {
+                        metricsData = JSON.parse(metricsDataRaw);
+                        initializeMetricsChart(metricsCanvas, metricsData);
+                    } else {
+                        console.warn('[DEBUG AC Card] Metrics chart data attribute is missing or empty.');
+                        initializeMetricsChart(metricsCanvas, null); // Use null to trigger default data
+                    }
+                } catch (e) {
+                    console.error('[DEBUG AC Card] Error parsing metrics data:', e, metricsDataRaw);
+                    initializeMetricsChart(metricsCanvas, null); // Use null to trigger default data
                 }
-            } catch (e) {
-                console.error('[DEBUG] Error parsing market data:', e);
+            } else {
+                console.warn('[DEBUG AC Card] Metrics canvas or container not found.');
             }
             
-            initializeMarketChart(marketCanvas, marketData);
-        } else {
-            console.warn('[DEBUG] Market canvas or container not found');
-        }
-        
-        console.log('[DEBUG] Charts initialized successfully');
+            // Initialize market chart
+            if (marketCanvas && marketContainer) {
+                console.log('[DEBUG AC Card] Attempting to initialize Market Chart...');
+                let marketData;
+                const marketDataRaw = marketContainer.dataset.chartDataMarket;
+                try {
+                    if (marketDataRaw && marketDataRaw !== '{}') {
+                        marketData = JSON.parse(marketDataRaw);
+                        initializeMarketChart(marketCanvas, marketData);
+                    } else {
+                        console.warn('[DEBUG AC Card] Market chart data attribute is missing or empty.');
+                        initializeMarketChart(marketCanvas, null); // Use null to trigger default data
+                    }
+                } catch (e) {
+                    console.error('[DEBUG AC Card] Error parsing market data:', e, marketDataRaw);
+                    initializeMarketChart(marketCanvas, null); // Use null to trigger default data
+                }
+            } else {
+                console.warn('[DEBUG AC Card] Market canvas or container not found.');
+            }
+            
+            console.log('[DEBUG AC Card] Chart initialization process completed within initCharts().');
+        }, 50); // Small 50ms delay like in enhanced-analytics
     } catch (e) {
-        console.error('[DEBUG] Error initializing charts:', e);
+        console.error('[DEBUG AC Card] Error during the main initCharts function:', e);
     }
 }
 
 // Initialize gauge chart
 function initializeGaugeChart(canvas) {
-    console.log('[DEBUG] Creating gauge chart for ID: {{POST_ID}}');
-    
+    console.log('[DEBUG AC Card] Creating gauge chart for ID: {{POST_ID}}');
+
     const container = canvas.closest('.gauge-container');
     const percentileEl = container ? container.querySelector('.percentile-value') : null;
     let percentile = 36; // Default from the image
-    
+
     if (percentileEl) {
         // Extract numeric value
         const percentileText = percentileEl.textContent.trim();
-        const matches = percentileText.match(/(\d+)/); // Fixed regex with \d instead of just d
-        if (matches && matches[1]) {
-            percentile = parseInt(matches[1]);
+        const matches = percentileText.match(/\d+/); // Correct regex to match digits
+        if (matches && matches[0]) { 
+            percentile = parseInt(matches[0]);
+            console.log('[DEBUG AC Card] Successfully parsed percentile:', percentile);
+        } else {
+            console.warn('[DEBUG AC Card] Could not parse percentile number from text:', percentileText);
         }
+    } else {
+        console.warn('[DEBUG AC Card] Percentile element not found in gauge container.');
     }
-    
-    console.log('[DEBUG] Gauge percentile for ID {{POST_ID}}:', percentile);
-    
+
+    console.log('[DEBUG AC Card] Gauge percentile value determined for ID {{POST_ID}}:', percentile);
+
     const ctx = canvas.getContext('2d');
-    
+
     // Create a gradient for the gauge
     function createGradient(ctx, colors) {
-        const gradient = ctx.createLinearGradient(0, 0, 0, 400);
+        const gradient = ctx.createLinearGradient(0, 0, 0, 170); // Adjust gradient height
         colors.forEach((color, index) => {
             gradient.addColorStop(index / (colors.length - 1), color);
         });
         return gradient;
     }
-    
+
     try {
+        // Ensure Chart is available
+        if (!window.AppraisalCardChart) {
+            console.error('[DEBUG AC Card] Chart library not available for gauge chart');
+            return;
+        }
+
         new window.AppraisalCardChart(ctx, {
             type: 'doughnut',
             data: {
@@ -991,26 +1044,28 @@ function initializeGaugeChart(canvas) {
                 animation: {
                     animateRotate: true,
                     animateScale: false,
-                    duration: 2000,
+                    duration: 1500, // Slightly faster
                     easing: 'easeOutQuart'
                 }
             }
         });
+        console.log('[DEBUG AC Card] Gauge chart instance created successfully.');
     } catch (error) {
-        console.error('[DEBUG] Error creating gauge chart:', error);
+        console.error('[DEBUG AC Card] Error creating gauge chart instance:', error);
     }
 }
 
-// Initialize metrics chart
+// Initialize metrics chart with simpler options
 function initializeMetricsChart(canvas, chartData) {
-    console.log('[DEBUG] Creating metrics chart with data:', chartData);
-    
+    console.log('[DEBUG AC Card] Creating metrics chart with data:', chartData);
+
     // Default data if not provided
-    if (!chartData || !chartData.datasets || !chartData.datasets[0] || !chartData.datasets[0].data) {
+    if (!chartData || !chartData.datasets || !chartData.datasets[0] || !chartData.datasets[0].data || chartData.datasets[0].data.length === 0) {
+        console.warn('[DEBUG AC Card] Using default data for metrics chart.');
         chartData = {
             labels: ['Market Demand', 'Rarity', 'Condition'],
             datasets: [{
-                data: [75, 80, 85], // Default values matching ACF
+                data: [75, 80, 85], // Default values
                 backgroundColor: [
                     'rgba(59, 130, 246, 0.8)', // Blue
                     'rgba(139, 92, 246, 0.8)', // Purple
@@ -1021,9 +1076,15 @@ function initializeMetricsChart(canvas, chartData) {
             }]
         };
     }
-    
+
     const ctx = canvas.getContext('2d');
     try {
+        // Ensure Chart is available
+        if (!window.AppraisalCardChart) {
+            console.error('[DEBUG AC Card] Chart library not available for metrics chart');
+            return;
+        }
+
         new window.AppraisalCardChart(ctx, {
             type: 'bar',
             data: chartData,
@@ -1031,7 +1092,7 @@ function initializeMetricsChart(canvas, chartData) {
                 indexAxis: 'y',
                 responsive: true,
                 maintainAspectRatio: true,
-                aspectRatio: 2,
+                aspectRatio: 1.5,
                 scales: {
                     x: {
                         beginAtZero: true,
@@ -1066,31 +1127,33 @@ function initializeMetricsChart(canvas, chartData) {
                 }
             }
         });
+        console.log('[DEBUG AC Card] Metrics chart instance created successfully.');
     } catch (error) {
-        console.error('[DEBUG] Error creating metrics chart:', error);
+        console.error('[DEBUG AC Card] Error creating metrics chart instance:', error);
     }
 }
 
-// Initialize market chart
+// Initialize market chart with simpler options
 function initializeMarketChart(canvas, chartData) {
-    console.log('[DEBUG] Creating market chart with data:', chartData);
-    
+    console.log('[DEBUG AC Card] Creating market chart with data:', chartData);
+
     // Default data if not provided or invalid
-    if (!chartData || !chartData.datasets) {
+    if (!chartData || !chartData.datasets || chartData.datasets.length === 0) {
+        console.warn('[DEBUG AC Card] Using default data for market chart.');
         // Get appraised value
         let value = 65000; // Default
-        const valueEl = document.querySelector('.value-amount');
+        const valueEl = document.querySelector('.appraisal-card[data-post-id="{{POST_ID}}"] .value-amount'); // Scope selector
         if (valueEl) {
             const valueMatch = valueEl.textContent.match(/[\d,]+/);
             if (valueMatch) {
                 value = parseInt(valueMatch[0].replace(/,/g, ''));
             }
         }
-        
+
         // Generate a bell curve distribution around the value
         const min = Math.floor(value * 0.7);
         const step = Math.floor((value * 0.6) / 5);
-        
+
         chartData = {
             labels: [
                 '$' + (min).toLocaleString(),
@@ -1113,16 +1176,22 @@ function initializeMarketChart(canvas, chartData) {
             }]
         };
     }
-    
+
     const ctx = canvas.getContext('2d');
     try {
+        // Ensure Chart is available
+        if (!window.AppraisalCardChart) {
+            console.error('[DEBUG AC Card] Chart library not available for market chart');
+            return;
+        }
+
         new window.AppraisalCardChart(ctx, {
             type: 'bar',
             data: chartData,
             options: {
                 responsive: true,
                 maintainAspectRatio: true,
-                aspectRatio: 2,
+                aspectRatio: 1.5,
                 scales: {
                     x: {
                         grid: {
@@ -1143,8 +1212,9 @@ function initializeMarketChart(canvas, chartData) {
                 }
             }
         });
+        console.log('[DEBUG AC Card] Market chart instance created successfully.');
     } catch (error) {
-        console.error('[DEBUG] Error creating market chart:', error);
+        console.error('[DEBUG AC Card] Error creating market chart instance:', error);
     }
 }
 </script> 
