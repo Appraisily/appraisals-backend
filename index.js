@@ -152,7 +152,7 @@ async function startServer() {
     const htmlRouter = require('./routes/html');
 
     // Use routers - organize by domain and API structure
-    app.use('/api/report', reportRouter); 
+    // app.use('/api/report', reportRouter);
     app.use('/api/visualizations', visualizationsRouter);
     app.use('/api/description', descriptionRouter);
     app.use('/api/utility', utilityRouter);
