@@ -5,12 +5,11 @@
  * from a more organized location in the src directory
  */
 
-// Import the template generators from the root templates directory
-const { generateEnhancedAnalytics } = require('../../templates/enhanced-analytics');
-const { generateAppraisalCard } = require('../../templates/appraisal-card');
+// This file previously imported the template generators from the root templates directory
+// but those implementations have been removed in favor of Gemini-based visualization.
 
-// Re-export them with clear naming
+// Export an empty object or appropriate defaults if needed
 module.exports = {
-  'enhanced-analytics': generateEnhancedAnalytics,
-  'appraisal-card': generateAppraisalCard
+  // No templates are exported from here anymore
+  // All visualization is now handled by the Gemini-based implementation
 }; 

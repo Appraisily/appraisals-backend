@@ -685,13 +685,8 @@ function prepareAppraisalCardData(appraisalData, statsData, chartIds, options = 
  */
 function fallbackEnhancedAnalyticsGeneration(statisticsData, options = {}) {
   try {
-    console.log('Using fallback enhanced analytics HTML generation');
-    
-    // Import original generation function
-    const { generateEnhancedAnalytics } = require('../templates/enhanced-analytics');
-    
-    // Generate HTML using the original function
-    return generateEnhancedAnalytics(statisticsData, options);
+    console.log('Fallback enhanced analytics generation requested but not available');
+    throw new Error('Fallback enhanced analytics generation not implemented - old template files have been removed');
   } catch (error) {
     console.error('Error in fallback enhanced analytics generation:', error);
     throw error;
@@ -707,13 +702,8 @@ function fallbackEnhancedAnalyticsGeneration(statisticsData, options = {}) {
  */
 function fallbackAppraisalCardGeneration(appraisalData, statisticsData, options = {}) {
   try {
-    console.log('Using fallback appraisal card HTML generation');
-    
-    // Import original generation function
-    const { generateAppraisalCard } = require('../templates/appraisal-card');
-    
-    // Generate HTML using the original function
-    return generateAppraisalCard(appraisalData, statisticsData, options);
+    console.log('Fallback appraisal card generation requested but not available');
+    throw new Error('Fallback appraisal card generation not implemented - old template files have been removed');
   } catch (error) {
     console.error('Error in fallback appraisal card generation:', error);
     throw error;
