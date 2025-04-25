@@ -318,7 +318,22 @@ router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
       });
     }
     
-    const postTitle = postData.title?.rendered || 'Untitled Appraisal';
+    let postTitle = postData.title?.rendered || 'Untitled Appraisal';
+    
+    // Check if we need to get the full post data to get the proper title
+    if (postTitle === 'Untitled Appraisal' || !postTitle) {
+      console.log('[Viz Route] Basic title not found, fetching complete post data to get proper title');
+      try {
+        const fullPostData = await wordpress.fetchPostData(postId);
+        if (fullPostData.title && fullPostData.title !== 'Untitled Appraisal') {
+          postTitle = fullPostData.title;
+          console.log(`[Viz Route] Retrieved proper title: "${postTitle}"`);
+        }
+      } catch (titleError) {
+        console.warn('[Viz Route] Could not retrieve better title:', titleError.message);
+      }
+    }
+    
     console.log(`[Viz Route] Processing ${postTitle} (ID: ${postId})`);
     
     // Apply new value if provided
@@ -332,16 +347,54 @@ router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
     const postDataWithImages = await wordpress.fetchPostData(postId);
     const images = postDataWithImages.images;
     
+    // Get the more complete title if available from the fetched post data
+    if (postTitle === 'Untitled Appraisal' && postDataWithImages.title && postDataWithImages.title !== 'Untitled Appraisal') {
+      postTitle = postDataWithImages.title;
+      console.log(`[Viz Route] Using more complete title from images fetch: "${postTitle}"`);
+    }
+    
     // Step 3: Get or Generate Statistics - UPDATED TO USE VALUER AGENT CLIENT
     console.log('[Viz Route] Fetching statistics from valuer-agent');
+    console.log(`[Viz Route] Using title: "${postTitle}" for valuer-agent search`);
     
     let stats;
     try {
       // Use the enhanced-statistics endpoint instead of /stats/{postId}
       const value = postData.acf?.value;
-      const title = postTitle;
       
-      const statsResponse = await valuerAgentClient.getEnhancedStatistics(title, value);
+      // Clean the title by decoding HTML entities and removing HTML tags
+      let cleanTitle = postTitle;
+      
+      // Decode HTML entities - Node.js compatible version
+      const decodeEntities = (text) => {
+        return text
+          .replace(/&amp;/g, '&')
+          .replace(/&lt;/g, '<')
+          .replace(/&gt;/g, '>')
+          .replace(/&quot;/g, '"')
+          .replace(/&#039;/g, "'")
+          .replace(/&#215;/g, 'x')
+          .replace(/&rsquo;/g, "'")
+          .replace(/&ldquo;/g, '"')
+          .replace(/&rdquo;/g, '"')
+          .replace(/&ndash;/g, '-')
+          .replace(/&mdash;/g, '—')
+          .replace(/&#8217;/g, "'")
+          .replace(/&#8220;/g, '"')
+          .replace(/&#8221;/g, '"')
+          .replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec));
+      };
+      
+      // Decode and strip HTML tags
+      cleanTitle = decodeEntities(cleanTitle).replace(/<[^>]*>?/gm, '');
+      
+      // Log the exact search parameters
+      console.log(`[Viz Route] Search parameters for valuer-agent:`, {
+        title: cleanTitle,
+        value: value
+      });
+      
+      const statsResponse = await valuerAgentClient.getEnhancedStatistics(cleanTitle, value);
       
       if (!statsResponse.success) {
         throw new Error(`Valuer-agent returned error: ${statsResponse.message || 'Unknown error'}`);
