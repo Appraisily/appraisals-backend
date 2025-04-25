@@ -1,29 +1,58 @@
-# Templates Directory
+# Appraisals HTML Template System
 
-This directory contains the HTML templates used in the appraisal generation process.
+This directory contains HTML templates with placeholders that are used by AI to generate dynamic content for appraisal cards and enhanced analytics displays.
 
 ## Directory Structure
 
-- `skeletons/` - HTML templates used by AI to generate content
-  - `appraisal-card.html` - HTML template for appraisal card display
-  - `enhanced-analytics.html` - HTML template for enhanced analytics visualization
-- `index.js` - Exports raw HTML templates for use by the application
+- `/templates/skeletons/` - Contains clean HTML skeletons with placeholders
+- `/static/css/` - Contains extracted CSS styles
+- `/static/js/` - Contains extracted JavaScript code
 
-## Template Usage
+## Workflow
 
-The templates in the `skeletons/` directory are raw HTML files sent directly to AI services without any preprocessing or parsing. This approach eliminates potential errors that could be introduced during template manipulation.
+1. **Backend → AI**:
+   - Backend sends a clean HTML skeleton template (from `/skeletons/`) to the AI
+   - These templates contain only the HTML structure with placeholders like `{{VARIABLE_NAME}}`
+   - No CSS or JavaScript is included in what's sent to the AI
 
-### Accessing Templates
+2. **AI → Backend**:
+   - AI returns the filled HTML with real data values inserted
+   - Still contains no CSS or JavaScript
 
-Templates should be accessed through the centralized interface in `templates/index.js`:
+3. **Backend Processing**:
+   - Backend receives the filled HTML from AI
+   - Uses `embedStylesAndScripts()` to re-embed CSS and JS into the HTML
+   - Creates a complete, self-contained HTML chunk
+
+4. **WordPress Storage**:
+   - Backend uploads the complete HTML chunk to WordPress
+   - Stored in ACF (Advanced Custom Fields) metadata fields
+   - For enhanced analytics: use `enhanced_analytics_html` field
+   - For appraisal cards: use `appraisal_card_html` field
+
+## API Usage
 
 ```javascript
-// Recommended way to import templates
-const templates = require('./templates');
+const templates = require('./templates/index');
 
-// Then use specific templates directly with AI services
-const htmlTemplate = templates['appraisal-card']; 
+// Get clean template to send to AI
+const cleanTemplate = templates.getCleanTemplate('enhanced-analytics');
+// ... send to AI service ...
+
+// When AI returns data, re-embed CSS and JS
+const aiFilledHtml = aiResponse.html;
+const completeHtml = templates.embedStylesAndScripts('enhanced-analytics', aiFilledHtml);
+
+// Save complete HTML to WordPress ACF field using your WordPress API
+// wp.saveACF('enhanced_analytics_html', completeHtml);
 ```
+
+## Important Notes
+
+- The backend is responsible for composing back the whole HTML with styles and scripts
+- The complete HTML is then uploaded to WordPress using ACF fields
+- Direct embedding is used (instead of external CSS/JS links) to keep everything in one self-contained chunk
+- This approach ensures the AI only needs to process the structural HTML, not styles or behavior
 
 ## Legacy JavaScript Files
 
