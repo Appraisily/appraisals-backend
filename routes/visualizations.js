@@ -269,29 +269,6 @@ router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
       console.log(`[Viz Route] Request options:`, options);
     }
     
-    // Update WordPress meta to indicate processing has started (if options provided)
-    if (options) {
-      try {
-        await wordpress.updatePostMeta(postId, {
-          'processing_status': 'Regenerating statistics and visualizations',
-          'last_processed': new Date().toISOString(),
-          'processing_history': JSON.stringify([
-            ...(JSON.parse((await wordpress.getPost(postId)).meta?.processing_history || '[]')),
-            {
-              step: 'regenerate_statistics',
-              status: 'processing',
-              timestamp: new Date().toISOString(),
-              user: options?.username || 'System',
-              message: 'Statistics and visualizations regeneration started'
-            }
-          ])
-        });
-      } catch (metaError) {
-        console.warn('[Viz Route] Warning: Could not update processing metadata:', metaError.message);
-        // Continue processing - this is not a fatal error
-      }
-    }
-
     // Step 1: Fetch the WP Post Data
     console.log('[Viz Route] Fetching WordPress post data for ID:', postId);
     let postData;
@@ -399,27 +376,6 @@ router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
     } catch (statsError) {
       console.error('[Viz Route] Error fetching statistics:', statsError);
       
-      // Update WordPress meta to indicate failure (if options provided)
-      if (options) {
-        try {
-          await wordpress.updatePostMeta(postId, {
-            'processing_status': 'Statistics regeneration failed',
-            'processing_history': JSON.stringify([
-              ...(JSON.parse(postData.meta?.processing_history || '[]')),
-              {
-                step: 'regenerate_statistics',
-                status: 'failed',
-                timestamp: new Date().toISOString(),
-                user: options?.username || 'System',
-                message: `Failed to fetch statistics: ${statsError.message}`
-              }
-            ])
-          });
-        } catch (metaError) {
-          console.warn('[Viz Route] Warning: Could not update failure metadata:', metaError.message);
-        }
-      }
-      
       return res.status(500).json({
         success: false,
         message: 'Failed to fetch statistics from valuer-agent',
@@ -493,23 +449,6 @@ router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
         statistics: JSON.stringify(sanitizedStats)
       });
       
-      // Update metadata to indicate success (if options provided)
-      if (options) {
-        await wordpress.updatePostMeta(postId, {
-          'processing_status': 'Statistics and visualizations regenerated successfully',
-          'processing_history': JSON.stringify([
-            ...(JSON.parse(postData.meta?.processing_history || '[]')),
-            {
-              step: 'regenerate_statistics',
-              status: 'completed',
-              timestamp: new Date().toISOString(),
-              user: options?.username || 'System',
-              message: 'Statistics and visualizations regenerated successfully'
-            }
-          ])
-        });
-      }
-      
       console.log('[Viz Route] WordPress post updated successfully');
       
       return res.json({
@@ -525,27 +464,6 @@ router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
       });
     } catch (updateError) {
       console.error('[Viz Route] Error updating WordPress post:', updateError);
-      
-      // Update metadata to indicate failure (if options provided)
-      if (options) {
-        try {
-          await wordpress.updatePostMeta(postId, {
-            'processing_status': 'Statistics and visualizations update failed',
-            'processing_history': JSON.stringify([
-              ...(JSON.parse(postData.meta?.processing_history || '[]')),
-              {
-                step: 'regenerate_statistics',
-                status: 'failed',
-                timestamp: new Date().toISOString(),
-                user: options?.username || 'System',
-                message: `Failed to update WordPress: ${updateError.message}`
-              }
-            ])
-          });
-        } catch (metaError) {
-          console.warn('[Viz Route] Warning: Could not update failure metadata:', metaError.message);
-        }
-      }
       
       return res.status(500).json({
         success: false,

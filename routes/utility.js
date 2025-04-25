@@ -99,9 +99,6 @@ router.post('/update-wordpress', async (req, res) => {
     }
     
     console.log('[Util Route] WordPress update complete');
-    await wordpress.updatePostMeta(postId, 'processing_history', [{
-      step: 'update_wordpress', timestamp: new Date().toISOString(), status: 'completed'
-    }]);
     
     return res.json({
       success: true,
