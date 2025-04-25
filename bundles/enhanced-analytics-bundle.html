@@ -1,0 +1,1789 @@
+<!-- Auto-generated bundle for enhanced-analytics -->
+<style>
+/* --- Shadcn/UI Inspired Styles for Enhanced Analytics --- */
+.enhanced-analytics-container {
+	--background: #ffffff; /* White background */
+	--foreground: #09090b; /* Dark text */
+	--card: #ffffff; /* Card background */
+	--card-foreground: #09090b; /* Card text */
+	--primary: #1a1a1a; /* Primary accent (dark gray) */
+	--primary-foreground: #fafafa; /* Text on primary */
+	--secondary: #f4f4f5; /* Light gray background */
+	--secondary-foreground: #1a1a1a;
+	--muted: #f4f4f5;
+	--muted-foreground: #71717a; /* Muted text (gray) */
+	--accent: #f4f4f5;
+	--accent-foreground: #1a1a1a;
+	--destructive: #ef4444; /* Red for negative/alerts */
+	--destructive-foreground: #fafafa;
+	--border: #e4e4e7; /* Light border */
+	--ring: #a1a1aa; /* Focus ring */
+	--radius: 0.5rem; /* Default border radius */
+    --font-sans: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    --chart-primary: #3b82f6; /* Blue for charts */
+    --chart-secondary: #a855f7; /* Purple for charts */
+    --chart-tertiary: #22c55e; /* Green for charts */
+    --chart-muted: #d1d5db; /* Gray for charts */
+
+    background-color: var(--background);
+    color: var(--foreground);
+    padding: 1.5rem;
+    max-width: 1200px; /* Adjust max-width */
+    margin: 1rem auto; /* Center */
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-family: var(--font-sans);
+}
+
+/* --- General Helper Classes (Scoped) --- */
+.enhanced-analytics-container .text-muted-foreground { color: var(--muted-foreground); }
+.enhanced-analytics-container .text-primary { color: var(--primary); }
+.enhanced-analytics-container .text-destructive { color: var(--destructive); }
+.enhanced-analytics-container .font-semibold { font-weight: 600; }
+.enhanced-analytics-container .font-bold { font-weight: 700; }
+.enhanced-analytics-container .text-lg { font-size: 1.125rem; line-height: 1.75rem; }
+.enhanced-analytics-container .text-sm { font-size: 0.875rem; line-height: 1.25rem; }
+.enhanced-analytics-container .text-xs { font-size: 0.75rem; line-height: 1rem; }
+.enhanced-analytics-container .mb-4 { margin-bottom: 1rem; }
+.enhanced-analytics-container .mb-6 { margin-bottom: 1.5rem; }
+.enhanced-analytics-container .mt-4 { margin-top: 1rem; }
+.enhanced-analytics-container .mt-2 { margin-top: 0.5rem; }
+
+/* --- Section Styles --- */
+.enhanced-analytics-container .analytics-section {
+    margin-bottom: 4rem; /* Increased from 2.5rem */
+}
+.enhanced-analytics-container .analytics-section:last-child {
+    margin-bottom: 0;
+}
+
+.enhanced-analytics-container .section-header {
+    margin-bottom: 1.5rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.enhanced-analytics-container .section-header h2,
+.enhanced-analytics-container .section-header h3 {
+    font-size: 1.5rem; /* 24px */
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+    color: var(--foreground);
+}
+.enhanced-analytics-container .section-header p.section-description {
+    color: var(--muted-foreground);
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+/* --- Card Styles --- */
+.enhanced-analytics-container .chart-card,
+.enhanced-analytics-container .metric-card,
+.enhanced-analytics-container .data-table-card,
+.enhanced-analytics-container .highlight-card,
+.enhanced-analytics-container .position-highlight-card {
+    background-color: var(--card);
+    color: var(--card-foreground);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.03);
+    padding: 1.5rem;
+}
+
+.enhanced-analytics-container .chart-card-header,
+.enhanced-analytics-container .metric-header,
+.enhanced-analytics-container .highlight-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.enhanced-analytics-container .chart-card-header h4,
+.enhanced-analytics-container .metric-header h4,
+.enhanced-analytics-container .highlight-header {
+    font-size: 1.1rem; /* 18px */
+    font-weight: 600;
+    margin: 0;
+    color: var(--card-foreground);
+}
+
+/* Remove bottom border/padding for headers inside metric cards */
+.enhanced-analytics-container .metric-card .metric-header {
+    padding-bottom: 0;
+    border-bottom: none;
+    margin-bottom: 0.75rem; /* Adjust spacing */
+}
+
+
+.enhanced-analytics-container .chart-content {
+    /* Container for chart canvas or other content */
+}
+
+/* --- Radar Chart Section --- */
+.enhanced-analytics-container .radar-chart-section .chart-card {
+    padding: 0; /* Remove padding if wrapper handles it */
+    overflow: hidden; /* Ensure canvas fits */
+}
+.enhanced-analytics-container .radar-wrapper {
+    position: relative;
+    padding: 1.5rem;
+    display: flex; /* Use flex to center? */
+    justify-content: center;
+    align-items: center;
+}
+.enhanced-analytics-container .radar-wrapper canvas {
+    max-width: 100%;
+    max-height: 400px; /* Limit height */
+    height: auto !important;
+}
+.enhanced-analytics-container .radar-metrics-legend {
+    background-color: var(--secondary);
+    padding: 0.75rem 1.5rem;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    font-size: 0.8rem;
+}
+.enhanced-analytics-container .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+.enhanced-analytics-container .legend-color {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    display: inline-block;
+}
+
+/* --- Metrics Grid (used for radar scores) --- */
+.enhanced-analytics-container .metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr); /* Fixed 3 columns per row */
+    gap: 1rem;
+    margin-top: 1.5rem; /* Spacing after radar chart */
+}
+
+.enhanced-analytics-container .metric-card {
+    padding: 1rem; /* Smaller padding for individual metrics */
+    text-align: center;
+}
+
+.enhanced-analytics-container .metric-card .metric-value {
+    font-size: 1.75rem; /* 28px */
+    font-weight: 700;
+    color: var(--primary);
+    margin-bottom: 0.25rem;
+    line-height: 1.2;
+}
+
+.enhanced-analytics-container .metric-card .metric-footer {
+    margin-top: 0.5rem;
+    padding-top: 0.5rem;
+    border-top: 1px solid var(--border);
+}
+
+.enhanced-analytics-container .metric-card .metric-description {
+    font-size: 0.75rem; /* 12px */
+    color: var(--muted-foreground);
+    line-height: 1.3;
+}
+
+
+/* --- Price History Section --- */
+.enhanced-analytics-container .price-history-section .chart-card-header {
+    position: relative; /* For badge positioning */
+}
+
+.enhanced-analytics-container .price-trend-badge {
+    font-size: 0.75rem;
+    font-weight: 500;
+    padding: 0.2rem 0.6rem;
+    border-radius: var(--radius);
+    position: absolute; /* Use absolute if needed */
+    top: 1rem;
+    right: 1rem;
+    /* Or keep inline: */
+    /* margin-left: auto; */ 
+}
+.enhanced-analytics-container .price-trend-badge.positive {
+    background-color: #dcfce7; /* Light green */
+    color: #15803d; /* Dark green */
+}
+.enhanced-analytics-container .price-trend-badge.negative {
+    background-color: #fee2e2; /* Light red */
+    color: #b91c1c; /* Dark red */
+}
+.enhanced-analytics-container .price-trend-badge.neutral {
+    background-color: var(--secondary);
+    color: var(--muted-foreground);
+}
+
+.enhanced-analytics-container .price-chart-wrapper canvas {
+    max-width: 100%;
+    height: auto !important;
+    max-height: 300px;
+}
+
+.enhanced-analytics-container .price-chart-legend {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    font-size: 0.8rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border);
+}
+
+.enhanced-analytics-container .price-highlights {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.enhanced-analytics-container .highlight-card {
+    padding: 1rem;
+    text-align: center;
+}
+
+.enhanced-analytics-container .highlight-card .highlight-header {
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--muted-foreground);
+    margin-bottom: 0.5rem;
+    padding-bottom: 0;
+    border-bottom: none;
+    justify-content: center;
+}
+
+.enhanced-analytics-container .highlight-card .highlight-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--foreground);
+}
+.enhanced-analytics-container .highlight-card .highlight-value.positive { color: #16a34a; }
+.enhanced-analytics-container .highlight-card .highlight-value.negative { color: var(--destructive); }
+.enhanced-analytics-container .highlight-card .highlight-value.neutral { color: var(--muted-foreground); }
+
+.enhanced-analytics-container .highlight-card .prediction-year {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--muted-foreground);
+    margin-left: 0.25rem;
+}
+
+
+/* --- Market Statistics Section --- */
+.enhanced-analytics-container .statistics-summary {
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: var(--foreground);
+}
+.enhanced-analytics-container .statistics-summary p {
+    margin: 0 0 0.75rem 0;
+}
+.enhanced-analytics-container .statistics-summary strong {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+/* Market Position Gauge - Adapting from original if needed */
+.enhanced-analytics-container .market-position-container {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    align-items: flex-start;
+}
+
+.enhanced-analytics-container .market-gauge-wrapper {
+    flex: 1 1 300px; /* Allow gauge to take space */
+    display: flex; /* Center content */
+    justify-content: center;
+    padding: 1rem 0; /* Add some padding */
+}
+
+.enhanced-analytics-container .gauge-container { /* Container within wrapper */
+    position: relative;
+    width: 220px; /* Fixed width for gauge */
+    text-align: center;
+}
+
+/* Basic Gauge CSS - Replace with JS lib drawing if possible */
+.enhanced-analytics-container .gauge {
+    width: 100%;
+    padding-top: 50%; /* Creates 2:1 aspect ratio for semi-circle */
+    background-color: var(--muted);
+    border-radius: 110px 110px 0 0;
+    position: relative;
+    overflow: hidden;
+}
+.enhanced-analytics-container .gauge-fill {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: var(--chart-primary); /* Gauge color */
+    transform-origin: center top;
+    transform: rotate(calc(1.8deg * var(--percentage, 0))); /* 180deg / 100% */
+    transition: transform 0.6s ease-out;
+}
+.enhanced-analytics-container .gauge-center {
+    position: absolute;
+    top: calc(100% - 10px);
+    left: 50%;
+    transform: translateX(-50%);
+    width: 20px;
+    height: 10px;
+    background-color: var(--card);
+    border-radius: 10px 10px 0 0;
+    z-index: 1;
+}
+.enhanced-analytics-container .gauge-needle {
+    position: absolute;
+    top: 10%;
+    left: calc(50% - 1px);
+    width: 2px;
+    height: 90%;
+    background-color: var(--foreground);
+    transform-origin: bottom center;
+    transform: rotate(calc(-90deg + var(--rotation, 0))); /* Center at 0% */
+    transition: transform 0.6s ease-out;
+    z-index: 2;
+}
+
+.enhanced-analytics-container .gauge-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.7rem;
+    color: var(--muted-foreground);
+    padding: 0 5px; /* Slight inset */
+    margin-top: 0.5rem;
+}
+
+.enhanced-analytics-container .gauge-value {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: var(--primary);
+    margin-top: 0.75rem;
+}
+.enhanced-analytics-container .gauge-description {
+    font-size: 0.8rem;
+    color: var(--muted-foreground);
+    margin-top: 0.25rem;
+}
+
+/* Position Highlights */
+.enhanced-analytics-container .market-position-highlights {
+    flex: 1 1 350px; /* Allow highlights to take space */
+    display: grid;
+    grid-template-columns: 1fr; /* Stack by default */
+    gap: 1rem;
+}
+
+@media (min-width: 768px) { /* Maybe 2 columns on medium screens */
+    .enhanced-analytics-container .market-position-highlights {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+@media (min-width: 1024px) { /* Or 3 columns on large screens */
+     .enhanced-analytics-container .market-position-highlights {
+         grid-template-columns: repeat(3, 1fr);
+     }
+}
+
+.enhanced-analytics-container .position-highlight-card {
+    padding: 1rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.enhanced-analytics-container .position-highlight-card .highlight-icon {
+    margin-bottom: 0.75rem;
+    color: var(--primary);
+    background-color: var(--secondary);
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.enhanced-analytics-container .position-highlight-card .highlight-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.enhanced-analytics-container .position-highlight-card h5 {
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin: 0 0 0.25rem 0;
+}
+
+.enhanced-analytics-container .position-highlight-card .highlight-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    margin-bottom: 0.25rem;
+}
+.enhanced-analytics-container .position-highlight-card .highlight-value.positive { color: #16a34a; }
+.enhanced-analytics-container .position-highlight-card .highlight-value.negative { color: var(--destructive); }
+.enhanced-analytics-container .position-highlight-card .highlight-value.neutral { color: var(--muted-foreground); }
+
+.enhanced-analytics-container .position-highlight-card p {
+    font-size: 0.75rem;
+    color: var(--muted-foreground);
+    margin: 0;
+    line-height: 1.3;
+}
+
+
+/* --- Item Metrics / Price Distribution Section --- */
+.enhanced-analytics-container .market-analysis-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Fixed 2-column layout */
+    gap: 1.5rem;
+    align-items: start; /* Align items to top */
+}
+
+/* Increase spacing between sections */
+.enhanced-analytics-container .analytics-section {
+    margin-bottom: 4rem; /* Increased from 2.5rem */
+}
+
+/* Added spacing for item metrics section specifically */
+.enhanced-analytics-container .item-metrics-distribution-section {
+    margin-top: 3rem; /* Add more space above this section */
+}
+
+/* Updated grid for stats metrics to make it more balanced */
+.enhanced-analytics-container .stats-metrics-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Two columns instead of stacked */
+    gap: 1.5rem;
+    margin-top: 0; /* Remove top margin to align with first row */
+}
+
+/* Make the price distribution card taller to balance height */
+.enhanced-analytics-container .distribution-card .modern-chart-container {
+    min-height: 240px; /* Increase min-height from 200px */
+}
+
+.enhanced-analytics-container .modern-chart-bars {
+    height: 190px; /* Increase height from 150px */
+}
+
+/* Histogram/Distribution Chart */
+.enhanced-analytics-container .distribution-card .modern-chart-container {
+    position: relative;
+    padding: 1rem 0.5rem 0.5rem 0.5rem; /* Padding for axis */
+    min-height: 200px; /* Ensure height - Overridden above? Check consistency */
+    background-color: var(--secondary);
+    border-radius: calc(var(--radius) - 4px);
+}
+.enhanced-analytics-container .modern-chart-bars {
+    display: flex;
+    align-items: flex-end;
+    height: 150px; /* Height of bars area - Overridden above? Check consistency */
+    border-bottom: 1px solid var(--border);
+}
+.enhanced-analytics-container .modern-bar-wrap {
+    flex-grow: 1;
+    position: relative;
+    margin: 0 1px;
+}
+.enhanced-analytics-container .modern-bar {
+    background-color: var(--chart-muted);
+    width: 100%;
+    transition: background-color 0.2s ease;
+}
+.enhanced-analytics-container .modern-bar.highlighted {
+    background-color: var(--chart-primary);
+}
+.enhanced-analytics-container .modern-bar-wrap:hover .bar-tooltip {
+    opacity: 1;
+}
+.enhanced-analytics-container .bar-tooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--foreground);
+    color: var(--background);
+    padding: 0.3rem 0.5rem;
+    border-radius: var(--radius);
+    font-size: 0.7rem;
+    white-space: nowrap;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    pointer-events: none;
+    z-index: 10;
+}
+
+.enhanced-analytics-container .chart-axis {
+    font-size: 0.7rem;
+    color: var(--muted-foreground);
+    display: flex;
+    justify-content: space-between;
+    padding-top: 0.25rem;
+}
+
+.enhanced-analytics-container .your-value-marker {
+    position: absolute;
+    bottom: 20px; /* Position above axis */
+    top: 20px; /* Limit height */
+    width: 2px;
+    transform: translateX(-50%);
+    z-index: 1;
+}
+.enhanced-analytics-container .marker-line {
+    width: 100%;
+    height: 100%;
+    background-color: var(--destructive); /* Red marker */
+}
+.enhanced-analytics-container .marker-label {
+    position: absolute;
+    top: -20px; /* Label above marker */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--destructive);
+    color: var(--destructive-foreground);
+    padding: 0.1rem 0.4rem;
+    font-size: 0.7rem;
+    font-weight: 500;
+    border-radius: var(--radius);
+    white-space: nowrap;
+}
+
+/* Improve badge styling */
+.enhanced-analytics-container .metric-footer .badge {
+    display: inline-block;
+    background-color: var(--secondary);
+    color: var(--foreground);
+    padding: 0.3rem 0.75rem; /* Increased padding */
+    font-size: 0.85rem; /* Slightly larger font */
+    border-radius: var(--radius);
+    margin-right: 0.5rem;
+    font-weight: 600; /* Make it bolder */
+}
+.enhanced-analytics-container .metric-footer .badge.secondary {
+     background-color: var(--accent);
+     color: var(--accent-foreground);
+}
+
+/* Confidence Level */
+.enhanced-analytics-container .confidence-display {
+    display: flex;
+    flex-direction: column; /* Stack dots and text */
+    align-items: center;
+    margin: 1rem 0;
+}
+.enhanced-analytics-container .confidence-indicator {
+    display: flex;
+    gap: 4px; /* Space between dots */
+    margin-bottom: 0.5rem;
+}
+.enhanced-analytics-container .confidence-indicator span {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background-color: var(--muted); /* Default empty */
+}
+/* Fill dots based on class */
+.enhanced-analytics-container .confidence-indicator.low span:nth-child(-n+1),
+.enhanced-analytics-container .confidence-indicator.medium span:nth-child(-n+2),
+.enhanced-analytics-container .confidence-indicator.high span:nth-child(-n+3),
+.enhanced-analytics-container .confidence-indicator.very-high span:nth-child(-n+4) {
+    background-color: var(--chart-primary);
+}
+.enhanced-analytics-container .confidence-value {
+    font-size: 0.9rem;
+    font-weight: 500;
+}
+
+/* --- Data Table --- */
+.enhanced-analytics-container .advanced-data-table-card .chart-card-header {
+    flex-wrap: wrap; /* Allow controls to wrap */
+    gap: 1rem;
+}
+
+.enhanced-analytics-container .data-table-controls {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin-left: auto; /* Push to right */
+}
+
+.enhanced-analytics-container .search-filter input {
+    padding: 0.4rem 0.75rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+}
+
+.enhanced-analytics-container .filter-controls button {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background-color: var(--card);
+    cursor: pointer;
+    transition: background-color 0.2s ease, color 0.2s ease;
+}
+.enhanced-analytics-container .filter-controls button:hover {
+    background-color: var(--accent);
+}
+.enhanced-analytics-container .filter-controls button.active {
+    background-color: var(--primary);
+    color: var(--primary-foreground);
+    border-color: var(--primary);
+}
+
+.enhanced-analytics-container .sales-table-container {
+    overflow-x: auto; /* Horizontal scroll on small screens */
+    margin-top: 1rem;
+}
+
+.enhanced-analytics-container .sales-table {
+    width: 100%;
+    min-width: 600px; /* Prevent excessive squishing */
+    border-collapse: collapse;
+    font-size: 0.875rem;
+}
+
+.enhanced-analytics-container .sales-table th,
+.enhanced-analytics-container .sales-table td {
+    padding: 0.75rem 1rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap; /* Prevent text wrapping */
+}
+
+.enhanced-analytics-container .sales-table th {
+    background-color: var(--secondary);
+    color: var(--muted-foreground);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    font-size: 0.75rem;
+    cursor: pointer;
+}
+
+.enhanced-analytics-container .sales-table th .sort-icon {
+    opacity: 0.5;
+    margin-left: 4px;
+    display: inline-block;
+}
+.enhanced-analytics-container .sales-table th.sorted-asc .sort-icon,
+.enhanced-analytics-container .sales-table th.sorted-desc .sort-icon {
+    opacity: 1;
+}
+/* Add specific up/down icon styles if needed */
+
+.enhanced-analytics-container .sales-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.enhanced-analytics-container .sales-table tbody tr:hover {
+    background-color: var(--accent);
+}
+
+.enhanced-analytics-container .sales-table td .diff-positive { color: #16a34a; }
+.enhanced-analytics-container .sales-table td .diff-negative { color: var(--destructive); }
+
+/* Table Footer Pagination */
+.enhanced-analytics-container .table-footer {
+    display: flex;
+    justify-content: flex-end;
+    align-items: center;
+    padding-top: 1rem;
+    margin-top: 1rem;
+    border-top: 1px solid var(--border);
+    font-size: 0.85rem;
+}
+
+.enhanced-analytics-container .pagination-info {
+    margin: 0 1rem;
+    color: var(--muted-foreground);
+}
+
+.enhanced-analytics-container .pagination-btn {
+    padding: 0.3rem 0.8rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background-color: var(--card);
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+.enhanced-analytics-container .pagination-btn:hover {
+    background-color: var(--accent);
+}
+.enhanced-analytics-container .pagination-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* --- Responsive Adjustments --- */
+@media (max-width: 768px) {
+    .enhanced-analytics-container {
+        padding: 1rem;
+    }
+    .enhanced-analytics-container .chart-card,
+    .enhanced-analytics-container .metric-card,
+    .enhanced-analytics-container .data-table-card {
+        padding: 1rem;
+    }
+     .enhanced-analytics-container .market-position-container {
+        flex-direction: column;
+        align-items: center; /* Center gauge when stacked */
+    }
+    .enhanced-analytics-container .market-gauge-wrapper {
+        width: 100%;
+    }
+    .enhanced-analytics-container .market-position-highlights {
+         grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); /* Adjust grid for smaller cards */
+    }
+    .enhanced-analytics-container .stats-metrics-grid {
+        grid-template-columns: 1fr; /* Stack stat metrics */
+    }
+    .enhanced-analytics-container .metrics-grid {
+        grid-template-columns: repeat(2, 1fr); /* 2 columns on medium screens */
+    }
+}
+
+@media (max-width: 640px) {
+    .enhanced-analytics-container .section-header h2,
+    .enhanced-analytics-container .section-header h3 {
+        font-size: 1.3rem;
+    }
+    .enhanced-analytics-container .metrics-grid {
+        grid-template-columns: 1fr; /* 1 column on small screens */
+    }
+    .enhanced-analytics-container .data-table-controls {
+        flex-direction: column;
+        align-items: stretch;
+        margin-left: 0;
+        width: 100%;
+    }
+    .enhanced-analytics-container .filter-controls {
+        display: flex;
+        gap: 0.5rem;
+        justify-content: center;
+    }
+    .enhanced-analytics-container .table-footer {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+} 
+</style>
+
+<div class="enhanced-analytics-container">
+  <!-- {{AI_GENERATED_HTML_GOES_HERE}} -->
+</div>
+
+<script>
+/* Combined JS for enhanced-analytics */
+
+
+/* Begin charts/radar-chart.js */
+/**
+ * Radar Chart Module
+ * 
+ * Handles the initialization and configuration of radar charts for Enhanced Analytics
+ */
+
+/**
+ * Initialize a radar chart with the given data
+ * 
+ * @param {string} canvasId - The HTML ID of the canvas element
+ * @param {HTMLElement} container - The container element for the chart
+ * @param {string} postId - The post ID for logging purposes
+ * @returns {Object|null} The chart instance or null if initialization failed
+ */
+function initRadarChart(canvasId, container, postId) {
+    console.log(`[DEBUG EA Card ${postId}] Initializing radar chart: ${canvasId}`);
+    
+    // Input validation
+    if (!canvasId || !container) {
+        console.error(`[DEBUG EA Card ${postId}] Missing required parameters for radar chart`);
+        return null;
+    }
+
+    const radarCanvas = document.getElementById(canvasId);
+    const radarWrapper = container.querySelector(".radar-wrapper");
+    
+    if (!radarCanvas) {
+        console.error(`[DEBUG EA Card ${postId}] Radar chart canvas not found: ${canvasId}`);
+        return null;
+    }
+    
+    if (!radarWrapper || !radarWrapper.dataset.chartDataRadar) {
+        console.error(`[DEBUG EA Card ${postId}] Radar chart data not found`);
+        return null;
+    }
+    
+    // Destroy existing chart if any
+    if (window.EnhancedAnalyticsChart && window.EnhancedAnalyticsChart.getChart(canvasId)) {
+        console.log(`[DEBUG EA Card ${postId}] Destroying existing radar chart`);
+        window.EnhancedAnalyticsChart.getChart(canvasId).destroy();
+    }
+    
+    try {
+        // Parse chart data
+        const radarData = JSON.parse(radarWrapper.dataset.chartDataRadar);
+        
+        // Create chart with optimal configuration
+        const chart = new window.EnhancedAnalyticsChart(radarCanvas, { 
+            type: "radar",
+            data: radarData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    r: {
+                        beginAtZero: true,
+                        max: 100,
+                        pointLabels: { font: { size: 11 } },
+                        ticks: { backdropColor: 'rgba(255,255,255,0.7)', stepSize: 20 }, // Adjust step size
+                        grid: { color: 'rgba(0,0,0,0.1)' }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }, // Hide default legend, using manual one
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.dataset.label + ': ' + context.parsed.r + '%';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        console.log(`[DEBUG EA Card ${postId}] Radar chart initialized successfully`);
+        return chart;
+    } catch (error) {
+        console.error(`[DEBUG EA Card ${postId}] Error initializing radar chart:`, error);
+        return null;
+    }
+}
+
+
+/* End charts/radar-chart.js */
+
+
+/* Begin charts/price-history-chart.js */
+/**
+ * Price History Chart Module
+ * 
+ * Handles the initialization and configuration of price history line charts
+ */
+
+/**
+ * Format currency value with proper symbol
+ * 
+ * @param {number} value - The currency value to format
+ * @param {string} currency - The currency code (USD, EUR, GBP, etc.)
+ * @returns {string} Formatted currency string
+ */
+function formatCurrencyValue(value, currency = 'USD') {
+    if (typeof value !== 'number') return value;
+    try {
+        const formatter = new Intl.NumberFormat('en-US', { 
+            style: 'currency', 
+            currency: currency,
+            minimumFractionDigits: 0, 
+            maximumFractionDigits: 0 
+        });
+        
+        // Handle currency symbol replacements
+        if (currency === 'EUR') return formatter.format(value).replace('$', '€');
+        if (currency === 'GBP') return formatter.format(value).replace('$', '£');
+        if (currency === 'AUD') return formatter.format(value).replace('$', 'A$');
+        if (currency === 'CAD') return formatter.format(value).replace('$', 'CA$');
+        if (currency === 'PHP') return formatter.format(value).replace('$', '₱');
+        
+        return formatter.format(value);
+    } catch (e) {
+        // Fallback for invalid currency codes
+        return currency + value.toLocaleString();
+    }
+}
+
+/**
+ * Initialize a price history chart with the given data
+ * 
+ * @param {string} canvasId - The HTML ID of the canvas element
+ * @param {HTMLElement} container - The container element for the chart
+ * @param {string} postId - The post ID for logging purposes
+ * @param {string} currency - The default currency for formatting (defaults to EUR)
+ * @returns {Object|null} The chart instance or null if initialization failed
+ */
+function initPriceHistoryChart(canvasId, container, postId, currency = 'EUR') {
+    console.log(`[DEBUG EA Card ${postId}] Initializing price history chart: ${canvasId}`);
+    
+    // Input validation
+    if (!canvasId || !container) {
+        console.error(`[DEBUG EA Card ${postId}] Missing required parameters for price history chart`);
+        return null;
+    }
+    
+    const priceCanvas = document.getElementById(canvasId);
+    const wrapper = container.querySelector(".price-chart-wrapper");
+    
+    if (!priceCanvas) {
+        console.error(`[DEBUG EA Card ${postId}] Price history chart canvas not found: ${canvasId}`);
+        return null;
+    }
+    
+    if (!wrapper || !wrapper.dataset.chartDataHistory) {
+        console.error(`[DEBUG EA Card ${postId}] Price history chart data not found`);
+        return null;
+    }
+    
+    // Destroy existing chart if any
+    if (window.EnhancedAnalyticsChart && window.EnhancedAnalyticsChart.getChart(canvasId)) {
+        console.log(`[DEBUG EA Card ${postId}] Destroying existing price history chart`);
+        window.EnhancedAnalyticsChart.getChart(canvasId).destroy();
+    }
+    
+    try {
+        // Parse chart data
+        const chartData = JSON.parse(wrapper.dataset.chartDataHistory);
+        
+        // Create chart with optimal configuration
+        const chart = new window.EnhancedAnalyticsChart(priceCanvas, { 
+            type: 'line',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        grid: { color: 'rgba(0, 0, 0, 0.1)' },
+                        ticks: {
+                            callback: function(value) {
+                                return formatCurrencyValue(value, currency);
+                            }
+                        }
+                    },
+                    x: {
+                        grid: { display: false }
+                    }
+                },
+                plugins: {
+                    legend: { display: false }, // Legend handled manually
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                let label = context.dataset.label || '';
+                                if (label) label += ': ';
+                                if (context.parsed.y !== null) {
+                                    if (context.dataset.label === 'Market Index') {
+                                        label += context.parsed.y;
+                                    } else {
+                                        label += formatCurrencyValue(context.parsed.y, currency);
+                                    }
+                                }
+                                return label;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+        
+        console.log(`[DEBUG EA Card ${postId}] Price history chart initialized successfully`);
+        return chart;
+    } catch (error) {
+        console.error(`[DEBUG EA Card ${postId}] Error initializing price history chart:`, error);
+        return null;
+    }
+}
+
+
+/* End charts/price-history-chart.js */
+
+
+/* Begin utils/formatting.js */
+/**
+ * Formatting Utilities for Enhanced Analytics
+ * 
+ * Common formatting functions used across chart modules
+ */
+
+/**
+ * Format currency value with proper symbol
+ * 
+ * @param {number} value - The currency value to format
+ * @param {string} currency - The currency code (USD, EUR, GBP, etc.)
+ * @param {string} locale - The locale to use for formatting (default: en-US)
+ * @returns {string} Formatted currency string
+ */
+function formatCurrency(value, currency = 'USD', locale = 'en-US') {
+    if (typeof value !== 'number' || isNaN(value)) return value;
+    
+    try {
+        return new Intl.NumberFormat(locale, {
+            style: 'currency',
+            currency: currency,
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0
+        }).format(value);
+    } catch (e) {
+        // Fallback for invalid currency codes
+        const prefix = currency === 'EUR' ? '€' : 
+                      currency === 'GBP' ? '£' : 
+                      currency === 'CAD' ? 'CA$' : 
+                      currency === 'AUD' ? 'A$' : 
+                      currency === 'PHP' ? '₱' : '$';
+        return prefix + Math.round(value).toLocaleString(locale);
+    }
+}
+
+/**
+ * Format date into localized string
+ * 
+ * @param {string} dateString - The date string to format
+ * @param {string} locale - The locale to use for formatting (default: en-US)
+ * @returns {string} Formatted date string
+ */
+function formatDate(dateString, locale = 'en-US') {
+    if (!dateString || dateString === 'Current') return 'Current';
+    
+    try {
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) return dateString;
+        
+        return date.toLocaleDateString(locale, { 
+            year: 'numeric', 
+            month: 'numeric', 
+            day: 'numeric' 
+        });
+    } catch (e) {
+        return dateString; // Return original on error
+    }
+}
+
+/**
+ * Format percentage values
+ * 
+ * @param {number} value - The percentage value to format
+ * @param {boolean} includeSign - Whether to include +/- sign
+ * @returns {string} Formatted percentage string
+ */
+function formatPercentage(value, includeSign = true) {
+    if (typeof value !== 'number' || isNaN(value)) return value;
+    
+    const formatted = value.toFixed(1) + '%';
+    if (includeSign && value > 0) return '+' + formatted;
+    return formatted;
+}
+
+/**
+ * Truncate text with ellipsis if too long
+ * 
+ * @param {string} text - The text to truncate
+ * @param {number} maxLength - Maximum length before truncation
+ * @returns {string} Truncated text with ellipsis if needed
+ */
+function truncateText(text, maxLength = 30) {
+    if (!text || text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
+}
+
+
+/* End utils/formatting.js */
+
+
+/* Begin utils/chart-validator.js */
+/**
+ * Chart Validation Utility
+ * 
+ * Provides non-interruptive validation for charts, collecting issues into a report
+ * rather than stopping or changing the process flow.
+ */
+
+/**
+ * ValidationReport class to collect validation results
+ */
+class ValidationReport {
+    constructor() {
+        this.issues = [];
+        this.chartStatuses = {};
+        this.startTime = Date.now();
+        this.finishTime = null;
+        this.totalCharts = 0;
+        this.successfulCharts = 0;
+    }
+
+    /**
+     * Add an issue to the report
+     * 
+     * @param {string} chartId - ID of the chart with an issue
+     * @param {string} chartType - Type of chart (radar, line, etc.)
+     * @param {string} severity - Issue severity (error, warning, info)
+     * @param {string} message - Description of the issue
+     * @param {Object} details - Additional details about the issue
+     */
+    addIssue(chartId, chartType, severity, message, details = {}) {
+        this.issues.push({
+            chartId,
+            chartType,
+            severity,
+            message,
+            timestamp: new Date().toISOString(),
+            details
+        });
+    }
+
+    /**
+     * Set chart status
+     * 
+     * @param {string} chartId - ID of the chart
+     * @param {string} status - Status (success, error, partial)
+     * @param {object} metadata - Additional information about the chart
+     */
+    setChartStatus(chartId, status, metadata = {}) {
+        this.chartStatuses[chartId] = {
+            status,
+            metadata,
+            timestamp: new Date().toISOString()
+        };
+        
+        this.totalCharts++;
+        if (status === 'success') {
+            this.successfulCharts++;
+        }
+    }
+
+    /**
+     * Complete the report and calculate final metrics
+     */
+    finalize() {
+        this.finishTime = Date.now();
+        this.duration = this.finishTime - this.startTime;
+        this.successRate = this.totalCharts ? (this.successfulCharts / this.totalCharts) * 100 : 0;
+        
+        // Sort issues by severity
+        this.issues.sort((a, b) => {
+            const severityOrder = { error: 0, warning: 1, info: 2 };
+            return severityOrder[a.severity] - severityOrder[b.severity];
+        });
+    }
+
+    /**
+     * Get a summary of the validation report
+     * 
+     * @returns {Object} Summary of validation results
+     */
+    getSummary() {
+        if (!this.finishTime) {
+            this.finalize();
+        }
+        
+        return {
+            totalCharts: this.totalCharts,
+            successfulCharts: this.successfulCharts,
+            issueCount: this.issues.length,
+            successRate: this.successRate.toFixed(1) + '%',
+            duration: this.duration + 'ms',
+            hasCriticalIssues: this.issues.some(issue => issue.severity === 'error'),
+            topIssues: this.issues.slice(0, 3).map(issue => issue.message)
+        };
+    }
+
+    /**
+     * Get full details of the validation report
+     * 
+     * @returns {Object} Complete validation report
+     */
+    getFullReport() {
+        if (!this.finishTime) {
+            this.finalize();
+        }
+        
+        return {
+            summary: this.getSummary(),
+            issues: this.issues,
+            chartStatuses: this.chartStatuses,
+            timestamp: new Date().toISOString()
+        };
+    }
+
+    /**
+     * Log the report to the console
+     * 
+     * @param {boolean} verbose - Whether to log the full report or just the summary
+     */
+    logToConsole(verbose = false) {
+        const summary = this.getSummary();
+        
+        console.group('Chart Validation Report');
+        console.log(`Success Rate: ${summary.successRate} (${summary.successfulCharts}/${summary.totalCharts})`);
+        console.log(`Duration: ${summary.duration}`);
+        
+        if (summary.issueCount > 0) {
+            console.group(`Issues Found: ${summary.issueCount}`);
+            
+            if (verbose) {
+                this.issues.forEach((issue, index) => {
+                    console.group(`Issue #${index + 1}: ${issue.chartId} (${issue.chartType})`);
+                    console.log(`Severity: ${issue.severity}`);
+                    console.log(`Message: ${issue.message}`);
+                    if (Object.keys(issue.details).length > 0) {
+                        console.log('Details:', issue.details);
+                    }
+                    console.groupEnd();
+                });
+            } else {
+                // Group issues by severity
+                const errorCount = this.issues.filter(i => i.severity === 'error').length;
+                const warningCount = this.issues.filter(i => i.severity === 'warning').length;
+                const infoCount = this.issues.filter(i => i.severity === 'info').length;
+                
+                console.log(`Errors: ${errorCount}, Warnings: ${warningCount}, Info: ${infoCount}`);
+                console.log('Top Issues:');
+                summary.topIssues.forEach(issue => console.log(`- ${issue}`));
+            }
+            
+            console.groupEnd();
+        } else {
+            console.log('No issues found!');
+        }
+        
+        console.groupEnd();
+    }
+}
+
+/**
+ * Validate a radar chart
+ * 
+ * @param {string} canvasId - ID of the chart canvas
+ * @param {Object} chart - Chart.js instance
+ * @param {ValidationReport} report - Validation report to update
+ */
+function validateRadarChart(canvasId, chart, report) {
+    if (!chart) {
+        report.addIssue(canvasId, 'radar', 'error', 'Chart instance not found', { canvasId });
+        report.setChartStatus(canvasId, 'error', { reason: 'missing-instance' });
+        return;
+    }
+
+    const issues = [];
+    const metadata = {
+        datasets: chart.data.datasets?.length || 0,
+        labels: chart.data.labels?.length || 0
+    };
+
+    // Check for empty data
+    if (!chart.data.datasets || chart.data.datasets.length === 0) {
+        issues.push({ severity: 'error', message: 'No datasets found in chart' });
+    } else {
+        // Check each dataset
+        chart.data.datasets.forEach((dataset, idx) => {
+            if (!dataset.data || dataset.data.length === 0) {
+                issues.push({ 
+                    severity: 'error', 
+                    message: `Dataset ${idx} has no data`,
+                    details: { datasetLabel: dataset.label || `Dataset ${idx}` }
+                });
+            } else if (dataset.data.some(v => v === null || v === undefined)) {
+                issues.push({ 
+                    severity: 'warning', 
+                    message: `Dataset ${idx} has missing data points`,
+                    details: { datasetLabel: dataset.label || `Dataset ${idx}` }
+                });
+            }
+        });
+    }
+
+    // Check for labels
+    if (!chart.data.labels || chart.data.labels.length === 0) {
+        issues.push({ severity: 'error', message: 'No labels found in chart' });
+    }
+
+    // Check canvas size (might indicate rendering issues)
+    const canvas = document.getElementById(canvasId);
+    if (canvas) {
+        if (canvas.width < 50 || canvas.height < 50) {
+            issues.push({ 
+                severity: 'warning', 
+                message: 'Chart canvas is very small',
+                details: { width: canvas.width, height: canvas.height }
+            });
+        }
+    } else {
+        issues.push({ severity: 'error', message: 'Chart canvas element not found in DOM' });
+    }
+
+    // Add all issues to the report
+    issues.forEach(issue => {
+        report.addIssue(
+            canvasId, 
+            'radar', 
+            issue.severity, 
+            issue.message, 
+            issue.details || {}
+        );
+    });
+
+    // Set chart status
+    const errorIssues = issues.filter(i => i.severity === 'error');
+    const warningIssues = issues.filter(i => i.severity === 'warning');
+    
+    if (errorIssues.length > 0) {
+        report.setChartStatus(canvasId, 'error', metadata);
+    } else if (warningIssues.length > 0) {
+        report.setChartStatus(canvasId, 'partial', metadata);
+    } else {
+        report.setChartStatus(canvasId, 'success', metadata);
+    }
+}
+
+/**
+ * Validate a line chart (price history)
+ * 
+ * @param {string} canvasId - ID of the chart canvas
+ * @param {Object} chart - Chart.js instance
+ * @param {ValidationReport} report - Validation report to update
+ */
+function validateLineChart(canvasId, chart, report) {
+    if (!chart) {
+        report.addIssue(canvasId, 'line', 'error', 'Chart instance not found', { canvasId });
+        report.setChartStatus(canvasId, 'error', { reason: 'missing-instance' });
+        return;
+    }
+
+    const issues = [];
+    const metadata = {
+        datasets: chart.data.datasets?.length || 0,
+        labels: chart.data.labels?.length || 0
+    };
+
+    // Check for empty data
+    if (!chart.data.datasets || chart.data.datasets.length === 0) {
+        issues.push({ severity: 'error', message: 'No datasets found in chart' });
+    } else {
+        // Check each dataset
+        chart.data.datasets.forEach((dataset, idx) => {
+            if (!dataset.data || dataset.data.length === 0) {
+                issues.push({ 
+                    severity: 'error', 
+                    message: `Dataset ${idx} has no data`,
+                    details: { datasetLabel: dataset.label || `Dataset ${idx}` }
+                });
+            } else {
+                // For line charts, null values are allowed for gaps, but check if all are null
+                const allNull = dataset.data.every(v => v === null);
+                const hasData = dataset.data.some(v => v !== null && v !== undefined);
+                
+                if (allNull) {
+                    issues.push({ 
+                        severity: 'error', 
+                        message: `Dataset ${idx} has only null values`,
+                        details: { datasetLabel: dataset.label || `Dataset ${idx}` }
+                    });
+                } else if (!hasData) {
+                    issues.push({ 
+                        severity: 'error', 
+                        message: `Dataset ${idx} has no valid data points`,
+                        details: { datasetLabel: dataset.label || `Dataset ${idx}` }
+                    });
+                }
+            }
+        });
+    }
+
+    // Check for labels
+    if (!chart.data.labels || chart.data.labels.length === 0) {
+        issues.push({ severity: 'error', message: 'No labels found in chart' });
+    }
+
+    // Check if special "Your Item" dataset exists (specific to price history chart)
+    const hasYourItemDataset = chart.data.datasets.some(dataset => 
+        dataset.label && dataset.label.includes('Your Item')
+    );
+    
+    if (!hasYourItemDataset) {
+        issues.push({ 
+            severity: 'warning', 
+            message: 'Missing "Your Item" dataset in price history chart'
+        });
+    }
+
+    // Add all issues to the report
+    issues.forEach(issue => {
+        report.addIssue(
+            canvasId, 
+            'line', 
+            issue.severity, 
+            issue.message, 
+            issue.details || {}
+        );
+    });
+
+    // Set chart status
+    const errorIssues = issues.filter(i => i.severity === 'error');
+    const warningIssues = issues.filter(i => i.severity === 'warning');
+    
+    if (errorIssues.length > 0) {
+        report.setChartStatus(canvasId, 'error', metadata);
+    } else if (warningIssues.length > 0) {
+        report.setChartStatus(canvasId, 'partial', metadata);
+    } else {
+        report.setChartStatus(canvasId, 'success', metadata);
+    }
+}
+
+/**
+ * Validate charts on a page or container
+ * 
+ * @param {HTMLElement} container - Container to validate charts within (or document if not provided)
+ * @param {boolean} verbose - Whether to log verbose report to console
+ * @returns {ValidationReport} Validation report object
+ */
+function validateCharts(container = document, verbose = false) {
+    console.log('Starting chart validation (non-interruptive)...');
+    const report = new ValidationReport();
+    
+    // Get all canvases
+    const canvases = container.querySelectorAll('canvas[id]');
+    console.log(`Found ${canvases.length} chart canvases to validate`);
+    
+    // Validate each canvas
+    canvases.forEach(canvas => {
+        const canvasId = canvas.id;
+        
+        // Skip non-chart canvases
+        if (!canvasId.includes('chart')) {
+            return;
+        }
+
+        // Get chart instance
+        const chart = window.EnhancedAnalyticsChart && 
+                     window.EnhancedAnalyticsChart.getChart ? 
+                     window.EnhancedAnalyticsChart.getChart(canvasId) : null;
+        
+        // Determine chart type
+        let chartType = chart ? chart.config.type : 'unknown';
+        
+        // Use canvas ID as fallback to determine type
+        if (!chart || chartType === 'unknown') {
+            if (canvasId.includes('radar')) chartType = 'radar';
+            else if (canvasId.includes('price')) chartType = 'line';
+            else if (canvasId.includes('histogram') || canvasId.includes('distribution')) chartType = 'bar';
+        }
+        
+        // Validate based on chart type
+        try {
+            if (chartType === 'radar') {
+                validateRadarChart(canvasId, chart, report);
+            } else if (chartType === 'line') {
+                validateLineChart(canvasId, chart, report);
+            } else {
+                report.addIssue(
+                    canvasId, 
+                    chartType, 
+                    'info', 
+                    `Validation not implemented for chart type: ${chartType}`
+                );
+                report.setChartStatus(canvasId, 'unknown', { chartType });
+            }
+        } catch (error) {
+            // Make sure validation errors don't interrupt the process
+            report.addIssue(
+                canvasId, 
+                chartType, 
+                'error', 
+                'Error during chart validation', 
+                { error: error.message, stack: error.stack }
+            );
+            report.setChartStatus(canvasId, 'error', { reason: 'validation-error' });
+        }
+    });
+    
+    // Generate and log report
+    report.finalize();
+    
+    if (verbose) {
+        report.logToConsole(true);
+    } else {
+        report.logToConsole(false);
+    }
+    
+    return report;
+}
+
+
+/* End utils/chart-validator.js */
+
+
+// Enhanced Analytics Main Entry Point
+// This file has been refactored to use a modular approach for maintenance and reliability
+
+document.addEventListener("DOMContentLoaded", function() {
+    console.log('[DEBUG EA] DOMContentLoaded event fired.');
+    // Find all enhanced analytics containers on the page (usually just one)
+    const eaContainers = document.querySelectorAll('.enhanced-analytics-container');
+    console.log(`[DEBUG EA] Found ${eaContainers.length} enhanced analytics containers.`);
+
+    eaContainers.forEach(container => {
+        // Use a data attribute on the container to find the postId if needed
+        // For now, assuming {{POST_ID}} is globally replaced or handled if multiple instances exist.
+        const postId = '{{POST_ID}}'; // Keep using placeholder for now
+        console.log(`[DEBUG EA Card ${postId}] Processing container.`);
+
+        // Check if already initialized
+        if (container.dataset.eaInitialized === 'true') {
+            console.log(`[DEBUG EA Card ${postId}] Already initialized, skipping.`);
+            return; 
+        }
+        container.dataset.eaInitialized = 'true'; // Mark as initialized
+
+        // Initialize charts with robust loading mechanism
+        initializeEnhancedAnalyticsChartsWithRetry(postId, container);
+    });
+});
+
+// Robust chart initialization that handles race conditions
+function initializeEnhancedAnalyticsChartsWithRetry(postId, container, attemptCount = 0) {
+    console.log(`[DEBUG EA Card ${postId}] initializeEnhancedAnalyticsChartsWithRetry called (Attempt: ${attemptCount})`);
+    const maxAttempts = 10;
+    const retryDelay = 300; // milliseconds
+
+    // Define Chart.js alias if not already globally defined
+    if (!window.EnhancedAnalyticsChart) {
+         if (typeof window.Chart !== 'undefined') {
+            console.log('[DEBUG EA Card] Chart.js found globally, setting alias.');
+            window.EnhancedAnalyticsChart = window.Chart;
+        } else if (typeof wp !== 'undefined' && wp.charts && wp.charts.Chart) {
+            console.log('[DEBUG EA Card] WordPress Chart.js found, setting alias.');
+            window.EnhancedAnalyticsChart = wp.charts.Chart;
+        }
+    }
+    
+    // If Chart.js is available (via alias), initialize
+    if (typeof window.EnhancedAnalyticsChart !== 'undefined') {
+        console.log('[DEBUG EA Card] EnhancedAnalyticsChart alias found, initializing...');
+        initEnhancedAnalyticsCharts(postId, container);
+        return;
+    }
+
+    // Chart.js not available yet, retry
+    if (attemptCount < maxAttempts) {
+        console.log(`[DEBUG EA Card ${postId}] Chart library not ready, setting timeout for retry... (${attemptCount + 1}/${maxAttempts})`);
+        setTimeout(function() {
+            console.log(`[DEBUG EA Card ${postId}] Executing retry attempt ${attemptCount + 1}`);
+            initializeEnhancedAnalyticsChartsWithRetry(postId, container, attemptCount + 1);
+        }, retryDelay);
+    } else {
+        console.error(`[DEBUG EA Card ${postId}] Chart.js library not found after maximum attempts. Charts cannot be initialized.`);
+    }
+}
+
+// Initialize all charts and components for Enhanced Analytics
+function initEnhancedAnalyticsCharts(postId, container) {
+    console.log(`[DEBUG EA Card ${postId}] Initializing Enhanced Analytics charts and components...`);
+    if (!container) {
+        console.error(`[DEBUG EA Card ${postId}] Container not found in initEnhancedAnalyticsCharts.`);
+        return;
+    }
+
+    // Add section visibility handling based on data attributes
+    function checkSectionVisibility(selector) {
+        var section = container.querySelector(selector);
+        if (section && section.hasAttribute('style') && section.getAttribute('style').includes('display:none')) {
+            console.log(`[DEBUG EA Card ${postId}] ${selector} section is hidden by template condition`);
+            return false;
+        }
+        return !!section; // Return true only if section exists and is visible
+    }
+    
+    var isRadarVisible = checkSectionVisibility('.radar-chart-section');
+    var isPriceHistoryVisible = checkSectionVisibility('.price-history-section');
+    var isStatsVisible = checkSectionVisibility('.statistics-section');
+    var isItemMetricsVisible = checkSectionVisibility('.item-metrics-distribution-section');
+    var isTableVisible = checkSectionVisibility('.data-table-section');
+
+    // Create an object to store chart instances
+    const chartInstances = {};
+
+    // Initialize Radar Chart (using modular component)
+    if (isRadarVisible) {
+        const radarCanvasId = `ea-radar-chart-${postId}`;
+        // Use the modular chart initialization function
+        try {
+            // This would normally be imported from the module
+            chartInstances.radar = initRadarChart(radarCanvasId, container, postId);
+        } catch (error) {
+            console.error(`[DEBUG EA Card ${postId}] Error initializing radar chart:`, error);
+        }
+    }
+
+    // Initialize Price History Chart (using modular component)
+    if (isPriceHistoryVisible) {
+        const priceCanvasId = `ea-price-chart-${postId}`;
+        // Use the modular chart initialization function
+        try {
+            // This would normally be imported from the module
+            // Get currency from the page data if possible
+            const currencyElement = container.querySelector('.price-highlights .highlight-value');
+            const currency = currencyElement ? 
+                (currencyElement.textContent.trim().charAt(0) === '€' ? 'EUR' : 
+                 currencyElement.textContent.trim().charAt(0) === '£' ? 'GBP' : 'USD') : 'EUR';
+            
+            chartInstances.priceHistory = initPriceHistoryChart(priceCanvasId, container, postId, currency);
+        } catch (error) {
+            console.error(`[DEBUG EA Card ${postId}] Error initializing price history chart:`, error);
+        }
+    }
+
+    // Initialize Statistics components
+    if (isStatsVisible || isItemMetricsVisible || isTableVisible) {
+        // Delay initialization slightly
+        setTimeout(function() {
+            console.log(`[DEBUG EA Card ${postId}] Initializing statistics components after delay...`);
+            try {
+                if (isItemMetricsVisible) initEaHistogramTooltips(postId, container); 
+                if (isTableVisible) setupEaSalesTable(postId, container);
+                if (isStatsVisible) initEaConfidenceIndicator(postId, container);
+            } catch (error) {
+                console.error(`[DEBUG EA Card ${postId}] Error initializing statistics components:`, error);
+            }
+        }, 100); 
+    } else {
+        console.log(`[DEBUG EA Card ${postId}] Statistics/Table sections hidden, skipping component initialization.`);
+    }
+
+    // Run non-interruptive validation after a delay to allow all charts to render
+    setTimeout(function() {
+        try {
+            // This would normally be imported from the module
+            const validationReport = validateCharts(container);
+            
+            // Store validation report on the container for future reference
+            container.eaValidationReport = validationReport;
+            
+            // Add a small indicator in the corner that shows validation status
+            if (validationReport.issues.length > 0) {
+                const errorCount = validationReport.issues.filter(i => i.severity === 'error').length;
+                const warningCount = validationReport.issues.filter(i => i.severity === 'warning').length;
+                
+                if (errorCount > 0 || warningCount > 0) {
+                    const statusIndicator = document.createElement('div');
+                    statusIndicator.style.position = 'absolute';
+                    statusIndicator.style.top = '5px';
+                    statusIndicator.style.right = '5px';
+                    statusIndicator.style.padding = '3px 6px';
+                    statusIndicator.style.borderRadius = '3px';
+                    statusIndicator.style.fontSize = '10px';
+                    statusIndicator.style.fontWeight = 'bold';
+                    statusIndicator.style.cursor = 'pointer';
+                    statusIndicator.style.zIndex = '100';
+                    
+                    if (errorCount > 0) {
+                        statusIndicator.style.backgroundColor = '#fee2e2';
+                        statusIndicator.style.color = '#b91c1c';
+                        statusIndicator.textContent = `${errorCount} Error${errorCount > 1 ? 's' : ''}`;
+                    } else {
+                        statusIndicator.style.backgroundColor = '#fef3c7';
+                        statusIndicator.style.color = '#92400e';
+                        statusIndicator.textContent = `${warningCount} Warning${warningCount > 1 ? 's' : ''}`;
+                    }
+                    
+                    statusIndicator.title = 'Click to see validation report';
+                    statusIndicator.onclick = function() {
+                        console.group('Chart Validation Issues');
+                        validationReport.logToConsole(true);
+                        console.groupEnd();
+                        alert(`Chart Validation Report: ${errorCount} errors, ${warningCount} warnings. See console for details.`);
+                    };
+                    
+                    container.style.position = 'relative';
+                    container.appendChild(statusIndicator);
+                }
+            }
+        } catch (error) {
+            console.error(`[DEBUG EA Card ${postId}] Error running chart validation:`, error);
+            // Validation errors don't interrupt the process
+        }
+    }, 1000);
+}
+
+// Setup histogram hover interactions
+function initEaHistogramTooltips(postId, container) {
+     const bars = container.querySelectorAll('.modern-bar-wrap');
+     bars.forEach(function(bar) {
+        bar.addEventListener('mouseenter', function() { 
+            const tooltip = this.querySelector('.bar-tooltip');
+            if(tooltip) tooltip.style.opacity = '1';
+         });
+        bar.addEventListener('mouseleave', function() { 
+            const tooltip = this.querySelector('.bar-tooltip');
+            if(tooltip) tooltip.style.opacity = '0';
+         });
+    });
+    console.log(`[DEBUG EA Card ${postId}] Histogram tooltip interactions setup complete`);
+}
+
+// Initialize confidence indicator visuals
+function initEaConfidenceIndicator(postId, container) {
+    const confidenceDisplays = container.querySelectorAll(".confidence-display");
+    confidenceDisplays.forEach(function(display) { 
+        const indicator = display.querySelector(".confidence-indicator");
+        const value = display.querySelector(".confidence-value");
+        if (indicator && value) {
+            const confidenceText = value.textContent.trim().toLowerCase();
+            let className = '';
+            if (confidenceText.includes('very high')) className = 'very-high';
+            else if (confidenceText.includes('high')) className = 'high';
+            else if (confidenceText.includes('medium')) className = 'medium';
+            else if (confidenceText.includes('low')) className = 'low';
+            if (className) indicator.className = 'confidence-indicator ' + className;
+        }
+    });
+    console.log(`[DEBUG EA Card ${postId}] Confidence indicators initialized.`);
+}
+
+function validateLineChart(canvasId, chart, report) {
+    if (!chart) {
+        report.addIssue(canvasId, 'line', 'error', 'Chart instance not found');
+        report.setChartStatus(canvasId, 'error', { reason: 'missing-instance' });
+        return;
+    }
+
+    const issues = [];
+    
+    // Basic validation checks
+    if (!chart.data.datasets || chart.data.datasets.length === 0) {
+        issues.push({ severity: 'error', message: 'No datasets found in chart' });
+    }
+    
+    if (!chart.data.labels || chart.data.labels.length === 0) {
+        issues.push({ severity: 'error', message: 'No labels found in chart' });
+    }
+    
+    // Add all issues to the report
+    issues.forEach(issue => {
+        report.addIssue(canvasId, 'line', issue.severity, issue.message);
+    });
+
+    // Set chart status
+    if (issues.some(i => i.severity === 'error')) {
+        report.setChartStatus(canvasId, 'error');
+    } else if (issues.some(i => i.severity === 'warning')) {
+        report.setChartStatus(canvasId, 'partial');
+    } else {
+        report.setChartStatus(canvasId, 'success');
+    }
+} 
+</script>
