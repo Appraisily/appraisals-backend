@@ -5,7 +5,6 @@ const wordpress = require('../services/wordpress');
 const config = require('../config');
 const fs = require('fs').promises;
 const path = require('path');
-const templates = require('../src/templates');
 const { jsonCleaner } = require('../services/utils/jsonCleaner');
 const { populateHtmlTemplate } = require('../services/geminiService');
 const { updateHtmlFields } = require('../services/wordpress');
@@ -648,14 +647,39 @@ router.post('/debug', async (req, res, next) => {
             fetchedImages = { main: { url: inputAppraisalData?.featured_image || '' } }; 
         }
 
+        // Read Skeleton HTML Files directly for the debug route
+        console.log('[Visualizations Debug] Reading skeleton HTML files');
+        const skeletonPathAnalytics = path.join(__dirname, '../templates/skeletons/enhanced-analytics.html');
+        const skeletonPathCard = path.join(__dirname, '../templates/skeletons/appraisal-card.html');
+        const skeletonHtmlAnalytics = await fs.readFile(skeletonPathAnalytics, 'utf8');
+        const skeletonHtmlCard = await fs.readFile(skeletonPathCard, 'utf8');
+
+        // Prepare the data for Gemini
         const analyticsContext = prepareDataContextForEnhancedAnalytics(stats, appraisal, fetchedImages);
         const cardContext = prepareDataContextForAppraisalCard(stats, appraisal, fetchedImages);
 
+        // Create a combined data object with all necessary information for AI
+        const rawDataForAI = {
+          statistics: stats,
+          appraisal: {
+            ...appraisal.acf,
+            postId: postId || 0,
+            title: appraisal.title?.rendered || 'Debug Appraisal',
+            value: appraisal.acf?.value || 1000
+          },
+          images: fetchedImages,
+          metaInfo: {
+            currentDate: new Date().toISOString(),
+            generationTimestamp: Date.now()
+          }
+        };
+
+        // Generate templates using Gemini
         console.log('[Visualizations Debug] Generating Enhanced Analytics HTML');
-        const enhancedAnalyticsHtml = await templates.populateWithGemini('enhanced-analytics.html', analyticsContext);
+        const enhancedAnalyticsHtml = await populateHtmlTemplate(skeletonHtmlAnalytics, rawDataForAI);
 
         console.log('[Visualizations Debug] Generating Appraisal Card HTML');
-        const appraisalCardHtml = await templates.populateWithGemini('appraisal-card.html', cardContext);
+        const appraisalCardHtml = await populateHtmlTemplate(skeletonHtmlCard, rawDataForAI);
 
         let savedToWordPress = false;
         if (!skipSaving && postId) {

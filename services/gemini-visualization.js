@@ -9,7 +9,31 @@ const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const secretClient = new SecretManagerServiceClient();
 const fs = require('fs');
 const path = require('path');
-const templates = require('../templates');
+
+// Import the skeleton templates directly instead of using the templates module
+const skeletonDir = path.join(__dirname, '..', 'templates', 'skeletons');
+let enhancedAnalyticsTemplate, appraisalCardTemplate;
+
+try {
+  enhancedAnalyticsTemplate = fs.readFileSync(path.join(skeletonDir, 'enhanced-analytics.html'), 'utf8');
+  appraisalCardTemplate = fs.readFileSync(path.join(skeletonDir, 'appraisal-card.html'), 'utf8');
+  console.log('Loaded skeleton templates successfully');
+} catch (error) {
+  console.error('Error loading skeleton templates:', error);
+  // Create minimal fallback templates if the files don't exist
+  enhancedAnalyticsTemplate = `
+    <div class="enhanced-analytics">
+      <h2>Enhanced Analytics</h2>
+      <p>Template file not found. This is a fallback template.</p>
+    </div>
+  `;
+  appraisalCardTemplate = `
+    <div class="appraisal-card">
+      <h2>Appraisal Card</h2>
+      <p>Template file not found. This is a fallback template.</p>
+    </div>
+  `;
+}
 
 // Will store the API key once retrieved
 let geminiApiKey = null;
@@ -79,7 +103,7 @@ async function generateEnhancedAnalyticsWithGemini(statisticsData, options = {})
     const data = prepareEnhancedAnalyticsData(statisticsData, chartIds, options);
     
     // Get the skeleton template from the templates module
-    const skeletonTemplate = templates['enhanced-analytics'];
+    const skeletonTemplate = enhancedAnalyticsTemplate;
     if (!skeletonTemplate) {
       throw new Error('Enhanced analytics skeleton template not found');
     }
@@ -192,7 +216,7 @@ async function generateAppraisalCardWithGemini(appraisalData, statisticsData, op
     const data = prepareAppraisalCardData(appraisalData, statisticsData, chartIds, options);
     
     // Get the skeleton template from the templates module
-    const skeletonTemplate = templates['appraisal-card'];
+    const skeletonTemplate = appraisalCardTemplate;
     if (!skeletonTemplate) {
       throw new Error('Appraisal card skeleton template not found');
     }

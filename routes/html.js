@@ -1,15 +1,17 @@
 /**
  * HTML generation routes
- * Handles server-side generation of HTML components
+ * Handles server-side generation of HTML components using Gemini AI
  */
 
 const express = require('express');
 const router = express.Router();
-const { generateEnhancedAnalytics } = require('../templates/enhanced-analytics');
-const { generateAppraisalCard } = require('../templates/appraisal-card');
+const { 
+  generateEnhancedAnalyticsWithGemini,
+  generateAppraisalCardWithGemini
+} = require('../services/gemini-visualization');
 
 /**
- * Generate HTML for a specific visualization type
+ * Generate HTML for a specific visualization type using Gemini AI
  * 
  * @route POST /api/html/generate
  * @param {string} visualizationType - Type of visualization (enhanced-analytics or appraisal-card)
@@ -40,7 +42,8 @@ router.post('/generate', async (req, res) => {
           });
         }
         
-        htmlContent = generateEnhancedAnalytics(statistics, options || {});
+        // Use Gemini-based function for enhanced analytics
+        htmlContent = await generateEnhancedAnalyticsWithGemini(statistics, options || {});
         break;
         
       case 'appraisal-card':
@@ -51,7 +54,8 @@ router.post('/generate', async (req, res) => {
           });
         }
         
-        htmlContent = generateAppraisalCard(appraisal, statistics || {}, options || {});
+        // Use Gemini-based function for appraisal card
+        htmlContent = await generateAppraisalCardWithGemini(appraisal, statistics || {}, options || {});
         break;
         
       default:
@@ -76,7 +80,7 @@ router.post('/generate', async (req, res) => {
 });
 
 /**
- * Process statistics data and add generated HTML
+ * Process statistics data and add generated HTML using Gemini AI
  * 
  * @route POST /api/html/process-statistics
  * @param {Object} statistics - The statistics data to process
@@ -97,12 +101,12 @@ router.post('/process-statistics', async (req, res) => {
     // Create a deep copy of the statistics to avoid modifying the original
     const processedData = JSON.parse(JSON.stringify(statistics));
     
-    // Generate HTML for enhanced analytics
-    processedData.enhanced_analytics_html = generateEnhancedAnalytics(statistics);
+    // Use Gemini to generate HTML for enhanced analytics
+    processedData.enhanced_analytics_html = await generateEnhancedAnalyticsWithGemini(statistics);
     
-    // Generate HTML for appraisal card if appraisal data is provided
+    // Use Gemini to generate HTML for appraisal card if appraisal data is provided
     if (appraisal) {
-      processedData.appraisal_card_html = generateAppraisalCard(appraisal, statistics);
+      processedData.appraisal_card_html = await generateAppraisalCardWithGemini(appraisal, statistics);
     }
     
     return res.json({
