@@ -1009,9 +1009,11 @@ if (!window.appraisalCardInitialized['{{POST_ID}}']) {
 
         if (percentileEl) {
             const percentileText = percentileEl.textContent.trim();
+            // Improved regex to extract number from text with ordinal suffix (e.g., "52nd", "1st")
             const matches = percentileText.match(/\d+/); 
             if (matches && matches[0]) { 
                 percentile = parseInt(matches[0]);
+                console.log(`[DEBUG AC Card ${postId}] Parsed percentile: ${percentile}`);
             } else {
                 console.warn(`[DEBUG AC Card ${postId}] Could not parse percentile number from text:`, percentileText);
             }
