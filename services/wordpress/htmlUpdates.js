@@ -17,14 +17,34 @@ const {
  * Updates the HTML visualization fields in WordPress
  * 
  * @param {number|string} postId - WordPress post ID
- * @param {Object} appraisalData - The appraisal data
- * @param {Object} statisticsData - The statistics data
+ * @param {Object|string} appraisalData - The appraisal data or object containing enhanced_analytics_html, appraisal_card_html
+ * @param {Object} statisticsData - The statistics data (optional if first param has the HTML fields)
  * @returns {Promise<boolean>} - Success status
  */
 async function updateHtmlFields(postId, appraisalData, statisticsData) {
   try {
     console.log(`Generating and updating HTML fields for post ${postId}`);
     
+    // Handle case where appraisalData contains the HTML content directly
+    if (appraisalData && (appraisalData.enhanced_analytics_html || appraisalData.appraisal_card_html)) {
+      console.log('Using pre-generated HTML content provided in parameters');
+      
+      // Update the WordPress post with the provided HTML content
+      await client.updatePost(postId, {
+        acf: {
+          enhanced_analytics_html: appraisalData.enhanced_analytics_html,
+          appraisal_card_html: appraisalData.appraisal_card_html,
+          statistics: appraisalData.statistics || statisticsData
+        }
+      });
+      
+      console.log(`Successfully updated HTML fields for post ${postId} with provided content`);
+      await updateNotes(postId, 'Updated enhanced_analytics_html and appraisal_card_html fields with provided HTML');
+      
+      return true;
+    }
+    
+    // Standard flow - generate HTML content
     // Clean and ensure statisticsData is a valid object
     let cleanedStats = statisticsData;
     if (typeof statisticsData === 'string') {
