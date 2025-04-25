@@ -1183,8 +1183,8 @@ function initCharts() {
         setTimeout(function() {
             console.log('[DEBUG] Initializing statistics components after delay...');
             try {
-                // Initialize histogram
-                setupHistogram();
+                // Initialize histogram interactions (tooltip display only)
+                initHistogramTooltips();
                 // Initialize data table with sorting and filtering
                 setupSalesTable();
                 // Initialize confidence indicator visuals
@@ -1198,8 +1198,8 @@ function initCharts() {
     }
 }
 
-// Setup histogram hover interactions
-function setupHistogram() {
+// Setup histogram hover interactions for tooltips only (no bar generation)
+function initHistogramTooltips() {
     var bars = document.querySelectorAll('.modern-bar-wrap');
     bars.forEach(function(bar) {
         bar.addEventListener('mouseenter', function() {
@@ -1212,7 +1212,7 @@ function setupHistogram() {
             if (tooltip) tooltip.style.opacity = '0';
         });
     });
-    console.log("[DEBUG] Histogram interactions setup complete");
+    console.log("[DEBUG] Histogram tooltip interactions setup complete");
 }
 
 // Initialize confidence indicator visuals
