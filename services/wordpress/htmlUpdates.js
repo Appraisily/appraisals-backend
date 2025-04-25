@@ -4,8 +4,6 @@
  */
 
 const client = require('./client');
-const { generateEnhancedAnalytics } = require('../../templates/enhanced-analytics');
-const { generateAppraisalCard } = require('../../templates/appraisal-card');
 const { updateNotes } = require('./updates');
 const { cleanAndParseJSON } = require('../utils/jsonCleaner');
 const { 
@@ -61,21 +59,21 @@ async function updateHtmlFields(postId, appraisalData, statisticsData) {
     let enhancedAnalyticsHtml, appraisalCardHtml;
     
     try {
-      // Try generating with Gemini first
       console.log('Generating enhanced analytics with Gemini');
       enhancedAnalyticsHtml = await generateEnhancedAnalyticsWithGemini(cleanedStats);
     } catch (error) {
-      console.error('Error generating enhanced analytics with Gemini, falling back to template:', error);
-      enhancedAnalyticsHtml = generateEnhancedAnalytics(cleanedStats);
+      console.error('Error generating enhanced analytics with Gemini:', error);
+      // Re-throw error if Gemini generation fails, no fallback
+      throw error;
     }
     
     try {
-      // Try generating with Gemini first
       console.log('Generating appraisal card with Gemini');
       appraisalCardHtml = await generateAppraisalCardWithGemini(appraisalData, cleanedStats);
     } catch (error) {
-      console.error('Error generating appraisal card with Gemini, falling back to template:', error);
-      appraisalCardHtml = generateAppraisalCard(appraisalData, cleanedStats);
+      console.error('Error generating appraisal card with Gemini:', error);
+      // Re-throw error if Gemini generation fails, no fallback
+      throw error;
     }
     
     // Update the WordPress post
@@ -117,12 +115,12 @@ async function updateEnhancedAnalyticsHtml(postId, statisticsData) {
     let enhancedAnalyticsHtml;
     
     try {
-      // Try generating with Gemini first
       console.log('Generating enhanced analytics with Gemini');
       enhancedAnalyticsHtml = await generateEnhancedAnalyticsWithGemini(statisticsData);
     } catch (error) {
-      console.error('Error generating enhanced analytics with Gemini, falling back to template:', error);
-      enhancedAnalyticsHtml = generateEnhancedAnalytics(statisticsData);
+      console.error('Error generating enhanced analytics with Gemini:', error);
+      // Re-throw error if Gemini generation fails, no fallback
+      throw error;
     }
     
     // Update the WordPress post
@@ -164,12 +162,12 @@ async function updateAppraisalCardHtml(postId, appraisalData, statisticsData) {
     let appraisalCardHtml;
     
     try {
-      // Try generating with Gemini first
       console.log('Generating appraisal card with Gemini');
       appraisalCardHtml = await generateAppraisalCardWithGemini(appraisalData, statisticsData);
     } catch (error) {
-      console.error('Error generating appraisal card with Gemini, falling back to template:', error);
-      appraisalCardHtml = generateAppraisalCard(appraisalData, statisticsData);
+      console.error('Error generating appraisal card with Gemini:', error);
+      // Re-throw error if Gemini generation fails, no fallback
+      throw error;
     }
     
     // Update the WordPress post

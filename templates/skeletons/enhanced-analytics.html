@@ -1011,14 +1011,16 @@ function initializeChartsWithRetry(attemptCount = 0) {
     }
 }
 
-// Initialize all charts
+// Initialize all charts and components
 function initCharts() {
+    console.log('[DEBUG] Initializing charts and components...');
+    
     // Add section visibility handling based on data attributes
     function checkSectionVisibility(selector) {
         var section = document.querySelector(selector);
         if (section && section.hasAttribute('style') &&
             section.getAttribute('style').includes('display:none')) {
-            console.log(selector + " section is hidden by template condition");
+            console.log('[DEBUG] ' + selector + " section is hidden by template condition");
             return false;
         }
         return true;
@@ -1028,7 +1030,7 @@ function initCharts() {
     var isPriceHistoryVisible = checkSectionVisibility('.price-history-section');
     var isStatsVisible = checkSectionVisibility('.statistics-section');
 
-    // Initialize Radar Chart
+    // Initialize Radar Chart (runs immediately if visible)
     if (isRadarVisible) {
         try {
             var radarWrapper = document.querySelector(".radar-wrapper");
@@ -1051,17 +1053,17 @@ function initCharts() {
                             }
                         }
                     });
-                    console.log("Radar chart initialized successfully");
+                    console.log("[DEBUG] Radar chart initialized successfully");
                 }
             } else {
-                console.warn("Radar chart wrapper or data not found");
+                console.warn("[DEBUG] Radar chart wrapper or data not found");
             }
         } catch (error) {
-            console.error("Error initializing radar chart:", error);
+            console.error("[DEBUG] Error initializing radar chart:", error);
         }
     }
 
-    // Initialize price history chart
+    // Initialize price history chart (runs immediately if visible)
     if (isPriceHistoryVisible) {
         try {
             var wrapper = document.querySelector(".price-chart-wrapper");
@@ -1118,29 +1120,35 @@ function initCharts() {
                             }
                         }
                     });
-                    console.log("Price history chart initialized successfully");
+                    console.log("[DEBUG] Price history chart initialized successfully");
                 }
             } else {
-                console.warn("Price history chart data not found");
+                console.warn("[DEBUG] Price history chart data not found");
             }
         } catch (error) {
-            console.error("Error initializing price history chart:", error);
+            console.error("[DEBUG] Error initializing price history chart:", error);
         }
     }
 
-    // Initialize other components
+    // Initialize statistics components with a slight delay
     if (isStatsVisible) {
-        try {
-            // Initialize histogram
-            setupHistogram();
-            // Initialize data table with sorting and filtering
-            setupSalesTable();
-        } catch (error) {
-            console.error("Error initializing statistics components:", error);
-        }
+        // Delay initialization of histogram and table to ensure DOM is fully ready
+        setTimeout(function() {
+            console.log('[DEBUG] Initializing statistics components after delay...');
+            try {
+                // Initialize histogram
+                setupHistogram();
+                // Initialize data table with sorting and filtering
+                setupSalesTable();
+                // Initialize confidence indicator visuals
+                initConfidenceIndicator();
+            } catch (error) {
+                console.error("[DEBUG] Error initializing statistics components:", error);
+            }
+        }, 100); // 100ms delay
+    } else {
+        console.log('[DEBUG] Statistics section is hidden, skipping component initialization.');
     }
-
-    console.log("Charts and components initialized successfully");
 }
 
 // Setup histogram hover interactions
@@ -1157,66 +1165,237 @@ function setupHistogram() {
             if (tooltip) tooltip.style.opacity = '0';
         });
     });
-    console.log("Histogram interactions setup complete");
+    console.log("[DEBUG] Histogram interactions setup complete");
+}
+
+// Initialize confidence indicator visuals
+function initConfidenceIndicator() {
+    var confidenceDisplays = document.querySelectorAll(".confidence-display");
+    confidenceDisplays.forEach(function(display) {
+        var indicator = display.querySelector(".confidence-indicator");
+        var value = display.querySelector(".confidence-value");
+
+        if (indicator && value) {
+            var confidenceText = value.textContent.trim().toLowerCase();
+            var className = '';
+
+            if (confidenceText.includes('very high')) {
+                className = 'very-high';
+            } else if (confidenceText.includes('high')) {
+                className = 'high';
+            } else if (confidenceText.includes('medium')) {
+                className = 'medium';
+            } else if (confidenceText.includes('low')) {
+                className = 'low';
+            }
+
+            if (className) {
+                indicator.className = 'confidence-indicator ' + className;
+                console.log("[DEBUG] Confidence indicator class set to: " + className);
+            }
+        }
+    });
 }
 
 // Setup sales table sorting and filtering
 function setupSalesTable() {
-    var salesTable = document.querySelector('.sales-table');
+    var salesTable = document.querySelector('.sales-table.advanced-table');
     if (!salesTable) {
-        console.warn("Sales table not found");
+        console.warn("[DEBUG] Sales table not found");
         return;
     }
 
-    var postId = salesTable.id.split('-')[1] || '{{POST_ID}}';
+    var postId = salesTable.id.split('-')[1] || '{{POST_ID}}'; // Get post ID from table ID
     
+    const tableCard = salesTable.closest('.advanced-data-table-card');
+    const salesDataJson = tableCard ? tableCard.dataset.salesData : null;
+    let salesData = [];
+
+    // Parse the data from the data attribute
+    if (salesDataJson) {
+        try {
+            salesData = JSON.parse(salesDataJson);
+            console.log(`[DEBUG] Successfully parsed ${salesData.length} sales records from data attribute.`);
+        } catch (e) {
+            console.error("[DEBUG] Error parsing sales data JSON:", e);
+            return; // Cannot proceed without data
+        }
+    } else {
+        console.warn('[DEBUG] data-sales-data attribute not found on table card.');
+        return; // Cannot proceed without data
+    }
+
     const tbody = salesTable.querySelector('tbody');
-    if (!tbody) {
-        console.warn("Table body not found");
-        return;
-    }
-
-    // Get rows AFTER they have been populated
-    let tableRows = Array.from(tbody.querySelectorAll('tr'));
+    const paginationControls = document.getElementById('pagination-' + postId);
+    const searchInput = document.getElementById('searchResults-' + postId);
     
-    if (tableRows.length === 0) {
-        console.log("No data to paginate");
+    if (!tbody || !paginationControls || !searchInput) {
+        console.warn('[DEBUG] Table body, pagination, or search input not found for table:', salesTable.id);
         return;
     }
-
+    
+    // Clear any server-rendered rows before populating
+    tbody.innerHTML = '';
+    
     const rowsPerPage = 5; // Default rows per page
     let currentPage = 1;
-    let filteredRows = tableRows; // Start with all rows
+    let filteredData = [...salesData]; // Use a copy for filtering/sorting
     let sortColumn = null;
     let sortDirection = 'asc';
 
-    // Add click handlers to sortable headers
-    var sortableHeaders = salesTable.querySelectorAll('th.sortable');
-    sortableHeaders.forEach(function(header) {
-        header.addEventListener('click', function() {
-            var sortBy = this.getAttribute('data-sort');
-            sortColumn = sortBy;
-            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
-            
-            // Update header appearance
-            sortableHeaders.forEach(th => {
-                th.classList.remove('sorted-asc', 'sorted-desc');
-            });
-            header.classList.add(sortDirection === 'asc' ? 'sorted-asc' : 'sorted-desc');
-            
-            sortTable();
+    // Function to format currency
+    function formatCurrency(value, currency = 'USD') {
+        if (typeof value !== 'number') return value; // Return as is if not a number
+        const formatter = new Intl.NumberFormat('en-US', {
+            style: 'currency',
+            currency: currency,
+            minimumFractionDigits: 0,
+            maximumFractionDigits: 0,
         });
-    });
-    
-    // Add search functionality
-    var searchInput = document.getElementById('searchResults-' + postId);
-    if (searchInput) {
-        searchInput.addEventListener('input', filterTable);
+        if (currency === 'GBP') return formatter.format(value).replace('$', '£');
+        if (currency === 'EUR') return formatter.format(value).replace('$', '€');
+        if (currency === 'AUD') return formatter.format(value).replace('$', 'A$');
+        if (currency === 'PHP') return formatter.format(value).replace('$', '₱');
+        return formatter.format(value);
     }
     
-    // Add pagination handlers
-    var paginationControls = document.getElementById('pagination-' + postId);
-    if (paginationControls) {
+    // Function to format date
+    function formatDate(dateString) {
+        if (!dateString || dateString === 'Current') return 'Current';
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return dateString;
+            return date.toLocaleDateString('en-US', { year: 'numeric', month: 'numeric', day: 'numeric' });
+        } catch (e) {
+            console.error("[DEBUG] Error formatting date:", dateString, e);
+            return dateString;
+        }
+    }
+
+    // Table display function (renders rows from data)
+    function displayTablePage() {
+        const start = (currentPage - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+        const paginatedData = filteredData.slice(start, end);
+        
+        // Clear table body
+        tbody.innerHTML = '';
+        
+        // Add rows for current page
+        paginatedData.forEach(sale => {
+            var row = document.createElement("tr");
+            if (sale.is_current) row.classList.add("highlight-row");
+            
+            const formattedPrice = formatCurrency(sale.price, sale.currency || 'USD');
+            const formattedDate = formatDate(sale.date);
+            let diffClass = '';
+            if (sale.diff && typeof sale.diff === 'string') {
+                if (sale.diff.includes('+') && parseFloat(sale.diff) !== 0) diffClass = 'diff-positive';
+                else if (sale.diff.includes('-')) diffClass = 'diff-negative';
+            }
+
+            row.innerHTML = 
+                `<td>${sale.title || "-"}</td>
+                 <td>${sale.house || "-"}</td>
+                 <td>${formattedDate}</td>
+                 <td>${formattedPrice}</td>
+                 <td class="${diffClass}">${sale.diff || "-"}</td>`;
+            tbody.appendChild(row);
+        });
+        
+        // Update pagination info
+        const pageStartSpan = paginationControls.querySelector('.page-start');
+        const pageEndSpan = paginationControls.querySelector('.page-end');
+        const totalItemsSpan = paginationControls.querySelector('.total-items');
+        
+        if (pageStartSpan && pageEndSpan && totalItemsSpan) {
+            pageStartSpan.textContent = filteredData.length > 0 ? start + 1 : 0;
+            pageEndSpan.textContent = Math.min(end, filteredData.length);
+            totalItemsSpan.textContent = filteredData.length;
+        }
+        
+        // Update button states
+        paginationControls.querySelector('[data-page="prev"]').disabled = currentPage === 1;
+        paginationControls.querySelector('[data-page="next"]').disabled = end >= filteredData.length;
+    }
+    
+    // Table filtering function
+    function filterTable() {
+        const searchTerm = searchInput.value.toLowerCase();
+        filteredData = salesData.filter(sale => {
+            return Object.values(sale).some(value => 
+                String(value).toLowerCase().includes(searchTerm)
+            );
+        });
+        currentPage = 1;
+        sortTable(); // Re-sort and display
+    }
+    
+    // Table sorting function
+    function sortTable() {
+        if (!sortColumn) {
+            displayTablePage();
+            return;
+        }
+        
+        const sortMultiplier = sortDirection === 'asc' ? 1 : -1;
+        
+        filteredData.sort((a, b) => {
+            let valA = a[sortColumn];
+            let valB = b[sortColumn];
+            let comparison = 0;
+            
+            switch (sortColumn) {
+                case 'price':
+                    valA = typeof valA === 'number' ? valA : parseFloat(String(valA).replace(/[^0-9.-]/g, '')) || 0;
+                    valB = typeof valB === 'number' ? valB : parseFloat(String(valB).replace(/[^0-9.-]/g, '')) || 0;
+                    comparison = valA - valB;
+                    break;
+                case 'date':
+                    valA = valA === 'Current' ? new Date() : new Date(valA);
+                    valB = valB === 'Current' ? new Date() : new Date(valB);
+                    if (!isNaN(valA) && !isNaN(valB)) comparison = valA - valB;
+                    else comparison = String(a[sortColumn]).localeCompare(String(b[sortColumn]));
+                    break;
+                case 'diff':
+                    valA = parseFloat(String(valA).replace(/[^0-9.-]/g, '')) || 0;
+                    valB = parseFloat(String(valB).replace(/[^0-9.-]/g, '')) || 0;
+                    if (!isNaN(valA) && !isNaN(valB)) comparison = valA - valB;
+                    else comparison = String(a[sortColumn]).localeCompare(String(b[sortColumn]));
+                    break;
+                default:
+                    comparison = String(valA).localeCompare(String(valB));
+            }
+            
+            return comparison * sortMultiplier;
+        });
+        
+        displayTablePage();
+    }
+
+    // Add event listeners only once
+    if (!salesTable.dataset.listenersAttached) {
+        var sortableHeaders = salesTable.querySelectorAll('th.sortable');
+        sortableHeaders.forEach(function(header) {
+            header.addEventListener('click', function() {
+                const newSortColumn = this.getAttribute('data-sort');
+                if (sortColumn === newSortColumn) {
+                    sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+                } else {
+                    sortColumn = newSortColumn;
+                    sortDirection = 'asc';
+                }
+                // Update header classes
+                sortableHeaders.forEach(th => th.classList.remove('sorted-asc', 'sorted-desc'));
+                this.classList.add(sortDirection === 'asc' ? 'sorted-asc' : 'sorted-desc');
+                
+                currentPage = 1;
+                sortTable();
+            });
+        });
+        
+        searchInput.addEventListener('input', filterTable);
+        
         paginationControls.querySelector('[data-page="prev"]').addEventListener('click', function() {
             if (currentPage > 1) {
                 currentPage--;
@@ -1225,130 +1404,19 @@ function setupSalesTable() {
         });
         
         paginationControls.querySelector('[data-page="next"]').addEventListener('click', function() {
-            const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+            const totalPages = Math.ceil(filteredData.length / rowsPerPage);
             if (currentPage < totalPages) {
                 currentPage++;
                 displayTablePage();
             }
         });
+        
+        salesTable.dataset.listenersAttached = 'true';
+        console.log('[DEBUG] Sales table listeners attached.');
     }
     
     // Initial table display
     displayTablePage();
-    
-    // Table display function
-    function displayTablePage() {
-        const start = (currentPage - 1) * rowsPerPage;
-        const end = start + rowsPerPage;
-        const paginatedRows = filteredRows.slice(start, end);
-        
-        // Clear table body
-        tbody.innerHTML = '';
-        
-        // Add rows for current page
-        paginatedRows.forEach(row => tbody.appendChild(row));
-        
-        // Update pagination info
-        if (paginationControls) {
-            const pageStartSpan = paginationControls.querySelector('.page-start');
-            const pageEndSpan = paginationControls.querySelector('.page-end');
-            const totalItemsSpan = paginationControls.querySelector('.total-items');
-            
-            if (pageStartSpan && pageEndSpan && totalItemsSpan) {
-                pageStartSpan.textContent = filteredRows.length > 0 ? start + 1 : 0;
-                pageEndSpan.textContent = Math.min(end, filteredRows.length);
-                totalItemsSpan.textContent = filteredRows.length;
-            }
-            
-            // Update button states
-            paginationControls.querySelector('[data-page="prev"]').disabled = currentPage === 1;
-            paginationControls.querySelector('[data-page="next"]').disabled = end >= filteredRows.length;
-        }
-    }
-    
-    // Table filtering function
-    function filterTable() {
-        const searchTerm = searchInput.value.toLowerCase();
-        filteredRows = tableRows.filter(row => {
-            return Array.from(row.cells).some(cell => 
-                cell.textContent.toLowerCase().includes(searchTerm)
-            );
-        });
-        
-        currentPage = 1; // Reset to first page after filtering
-        sortTable(); // Re-sort filtered results
-    }
-    
-    // Table sorting function
-    function sortTable() {
-        if (!sortColumn) {
-            displayTablePage(); // No sorting, just display
-            return;
-        }
-        
-        const columnIndex = Array.from(salesTable.querySelectorAll('th')).findIndex(th => 
-            th.getAttribute('data-sort') === sortColumn
-        );
-        
-        if (columnIndex === -1) {
-            displayTablePage();
-            return;
-        }
-        
-        // Sort rows based on column data
-        filteredRows.sort((a, b) => {
-            const cellA = a.cells[columnIndex].textContent.trim();
-            const cellB = b.cells[columnIndex].textContent.trim();
-            
-            let comparison = 0;
-            
-            switch (sortColumn) {
-                case 'price':
-                    // Clean currency symbols and commas, then parse
-                    const numA = parseFloat(cellA.replace(/[^0-9.-]/g, ''));
-                    const numB = parseFloat(cellB.replace(/[^0-9.-]/g, ''));
-                    if (!isNaN(numA) && !isNaN(numB)) {
-                        comparison = numA - numB;
-                    } else {
-                        comparison = cellA.localeCompare(cellB);
-                    }
-                    break;
-                    
-                case 'date':
-                    // Handle dates with special case for 'Current'
-                    const dateA = cellA === 'Current' ? new Date() : new Date(cellA);
-                    const dateB = cellB === 'Current' ? new Date() : new Date(cellB);
-                    if (!isNaN(dateA) && !isNaN(dateB)) {
-                        comparison = dateA - dateB;
-                    } else {
-                        comparison = cellA.localeCompare(cellB);
-                    }
-                    break;
-                    
-                case 'diff':
-                    // Sort by numeric difference value
-                    const diffA = parseFloat(cellA.replace(/[^0-9.-]/g, ''));
-                    const diffB = parseFloat(cellB.replace(/[^0-9.-]/g, ''));
-                    if (!isNaN(diffA) && !isNaN(diffB)) {
-                        comparison = diffA - diffB;
-                    } else if (cellA === '-' && cellB !== '-') {
-                        comparison = 1;
-                    } else if (cellA !== '-' && cellB === '-') {
-                        comparison = -1;
-                    } else {
-                        comparison = cellA.localeCompare(cellB);
-                    }
-                    break;
-                    
-                default:
-                    // Default string comparison for text columns
-                    comparison = cellA.localeCompare(cellB);
-            }
-            
-            return sortDirection === 'asc' ? comparison : -comparison;
-        });
-        
-        displayTablePage();
-    }
 }
+
 </script> 
