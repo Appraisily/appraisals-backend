@@ -7,11 +7,9 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const { SecretManagerServiceClient } = require('@google-cloud/secret-manager');
 const secretClient = new SecretManagerServiceClient();
-const {
-  ENHANCED_ANALYTICS_TEMPLATE,
-  ENHANCED_ANALYTICS_SCRIPTS,
-  APPRAISAL_CARD_TEMPLATE
-} = require('../templates/gemini-templates');
+const fs = require('fs');
+const path = require('path');
+const templates = require('../templates');
 
 // Will store the API key once retrieved
 let geminiApiKey = null;
@@ -80,19 +78,13 @@ async function generateEnhancedAnalyticsWithGemini(statisticsData, options = {})
     // Prepare data values with defaults
     const data = prepareEnhancedAnalyticsData(statisticsData, chartIds, options);
     
-    // Read the actual skeleton template file
-    const fs = require('fs');
-    const path = require('path');
-    const skeletonTemplatePath = path.join(__dirname, '../templates/skeletons/enhanced-analytics.html');
-    
-    // Check if file exists
-    if (!fs.existsSync(skeletonTemplatePath)) {
-      console.error(`Skeleton template not found at: ${skeletonTemplatePath}`);
+    // Get the skeleton template from the templates module
+    const skeletonTemplate = templates['enhanced-analytics'];
+    if (!skeletonTemplate) {
       throw new Error('Enhanced analytics skeleton template not found');
     }
     
-    const skeletonTemplate = fs.readFileSync(skeletonTemplatePath, 'utf8');
-    console.log(`Successfully read skeleton template (${skeletonTemplate.length} bytes)`);
+    console.log(`Successfully loaded skeleton template (${skeletonTemplate.length} bytes)`);
     
     // Create prompt for Gemini
     const prompt = `
@@ -145,71 +137,22 @@ Pay very careful attention to the price history section. You should:
 Final output should be the complete, working HTML visualization with all placeholders replaced.
     `;
     
-    // Request completion from Gemini
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
+    // Generate content with Gemini
+    const genResult = await model.generateContent(prompt);
+    const response = await genResult.response;
     const generatedHtml = response.text();
     
-    // DEBUG: Log the prompt and data to file
-    try {
-      const fs = require('fs');
-      const path = require('path');
-      
-      // Define log directory path
-      const logDir = path.join(__dirname, '../logs');
-      
-      // Create logs directory if it doesn't exist
-      try {
-        if (!fs.existsSync(logDir)) {
-          fs.mkdirSync(logDir, { recursive: true });
-          console.log(`Created logs directory at ${logDir}`);
-        }
-      } catch (mkdirError) {
-        console.error('Error creating logs directory:', mkdirError);
-        // Continue anyway, we'll try to write to the file
-      }
-      
-      // Create log filename with timestamp
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-      const logFilePath = path.join(logDir, `gemini-prompt-${timestamp}.log`);
-      
-      // Format debug info
-      const debugInfo = {
-        timestamp: new Date().toISOString(),
-        originalStatistics: statisticsData,
-        preparedData: data,
-        prompt: prompt,
-        options: options
-      };
-      
-      // Write to file
-      try {
-        fs.writeFileSync(
-          logFilePath, 
-          JSON.stringify(debugInfo, null, 2),
-          'utf8'
-        );
-        console.log(`DEBUG: Gemini prompt and data logged to ${logFilePath}`);
-      } catch (writeError) {
-        console.error('Error writing Gemini debug log to file:', writeError);
-      }
-    } catch (logError) {
-      console.error('Error in Gemini debug logging process:', logError);
-      // Continue execution even if logging fails
-    }
-    
+    // Check if generation was successful
     if (!generatedHtml || generatedHtml.length < 100) {
-      throw new Error('Generated HTML is too short or empty');
+      console.error('Invalid or empty response from Gemini:', generatedHtml);
+      throw new Error('Failed to generate enhanced analytics HTML: Empty or invalid response');
     }
     
-    console.log('Successfully generated enhanced analytics HTML with Gemini');
+    console.log(`Generated enhanced analytics HTML (${generatedHtml.length} bytes)`);
     return generatedHtml;
   } catch (error) {
     console.error('Error generating enhanced analytics with Gemini:', error);
-    
-    // Fallback to basic HTML generation with templates
-    console.log('Using fallback enhanced analytics HTML generation');
-    return fallbackEnhancedAnalyticsGeneration(statisticsData, options);
+    throw error;
   }
 }
 
@@ -226,13 +169,8 @@ async function generateAppraisalCardWithGemini(appraisalData, statisticsData, op
     
     // Validate input data
     if (!appraisalData) {
-      console.warn('No appraisal data provided');
-      appraisalData = {}; // Use empty object, Gemini will handle fallbacks
-    }
-    
-    if (!statisticsData) {
-      console.warn('No statistics data provided for appraisal card');
-      statisticsData = {}; // Use empty object, Gemini will handle fallbacks
+      console.warn('No appraisal data provided for appraisal card');
+      return '';
     }
     
     // Initialize Gemini client if needed
@@ -250,60 +188,96 @@ async function generateAppraisalCardWithGemini(appraisalData, statisticsData, op
       market: 'market-chart-' + generateUniqueId()
     };
     
-    // Prepare data values with defaults
-    const data = prepareAppraisalCardData(appraisalData, statisticsData, chartIds);
+    // Prepare data context for the appraisal card
+    const data = prepareAppraisalCardData(appraisalData, statisticsData, chartIds, options);
+    
+    // Get the skeleton template from the templates module
+    const skeletonTemplate = templates['appraisal-card'];
+    if (!skeletonTemplate) {
+      throw new Error('Appraisal card skeleton template not found');
+    }
+    
+    console.log(`Successfully loaded skeleton template (${skeletonTemplate.length} bytes)`);
     
     // Create prompt for Gemini
     const prompt = `
-You are a highly skilled HTML/JavaScript developer. Your task is to create an interactive appraisal card 
-for an art appraisal application. I'll provide you with a template and data values.
+You are a skilled HTML/JavaScript developer specializing in data visualization.
+Your task is to create an appraisal card for an artwork or collectible item.
 
-Please replace all placeholders in the template (indicated by {{name}}) with the corresponding values from the data.
+Please replace all placeholders in the template (indicated by {{VARIABLE_NAME}}) with the corresponding values from the data.
 Your response should include ONLY the fully realized HTML with CSS and JavaScript, no explanations.
 
-Important guidelines:
-1. If data is missing, use sensible defaults rather than showing empty values
-2. Keep all CSS and JavaScript functionality intact
-3. Format currency values appropriately with $ and commas
-4. Generate unique IDs for chart elements to avoid DOM conflicts
-5. Handle all edge cases gracefully
+IMPORTANT GUIDELINES:
+1. Maintain the exact HTML structure of the template
+2. Replace all {{PLACEHOLDER}} variables with values from the data object
+3. For any missing data points, use appropriate fallbacks or placeholders
+4. Pay special attention to chart data attributes which must be correctly formatted JSON
+5. Make sure the tab structure and interactions work correctly
+6. Ensure all IDs are unique by using the provided chart IDs
 
-Here's the template:
+Here's the EXACT skeleton template to use:
 \`\`\`html
-${APPRAISAL_CARD_TEMPLATE}
+${skeletonTemplate}
 \`\`\`
 
-And here's the data to insert (some values may be missing):
+Here's the data to insert (map data properties to template variables):
 \`\`\`json
 ${JSON.stringify(data, null, 2)}
 \`\`\`
 
-For the details table, generate rows from the artwork fields. For example:
-\`<tr><th>Creator</th><td>Pablo Picasso</td></tr>\`
+DATA MAPPING GUIDE (convert these data properties to template variables):
+- data.post_id → {{POST_ID}}
+- data.current_date → {{CURRENT_DATE}}
+- data.formatted_value → {{VALUE_FORMATTED}}
+- data.artwork_image_url → {{ARTWORK_IMAGE_URL}}
+- data.artwork_title → {{ARTWORK_TITLE}}
+- data.artwork_creator → {{ARTWORK_CREATOR}}
+- data.object_type → {{OBJECT_TYPE}}
+- data.period_age → {{PERIOD_AGE}}
+- data.medium → {{MEDIUM}}
+- data.condition → {{CONDITION}}
+- data.percentile → {{PERCENTILE}}
+- data.price_trend → {{PRICE_TREND}}
+- data.trend_class → {{TREND_CLASS}}
+- data.metrics_chart_data_json → {{METRICS_CHART_DATA_JSON}}
+- data.market_chart_data_json → {{MARKET_CHART_DATA_JSON}}
+- data.analysis_text → {{ANALYSIS_TEXT}}
+- data.market_demand_score → {{MARKET_DEMAND_SCORE}}
+- data.rarity_score → {{RARITY_SCORE}}
+- data.condition_score → {{CONDITION_SCORE}}
+- data.historical_significance → {{HISTORICAL_SIGNIFICANCE}}
+- data.provenance_strength → {{PROVENANCE_STRENGTH}}
+- data.investment_potential → {{INVESTMENT_POTENTIAL}}
+- data.chart_id_gauge → {{CHART_ID_GAUGE}}
+- data.chart_id_metrics → {{CHART_ID_METRICS}}
+- data.chart_id_market → {{CHART_ID_MARKET}}
+- data.details_table_html → {{DETAILS_TABLE_HTML}}
+- data.appraiser_name → {{APPRAISER_NAME}}
+- data.full_report_url → {{FULL_REPORT_URL}}
+- data.artwork_description → {{ARTWORK_DESCRIPTION}}
 
-For featured image, use the provided HTML or fallback to placeholder.
+Pay special attention to the tab navigation system. Ensure that all data-tab attributes and corresponding panel IDs match correctly.
+Verify that all chart canvas elements have the correct IDs.
 
-For styling classes, apply 'positive' class when values are increasing, 'negative' when decreasing.
-
-Final output should be the complete, working HTML visualization.
+Final output should be the complete, working HTML visualization with all placeholders replaced.
     `;
     
-    // Request completion from Gemini
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
+    // Generate content with Gemini
+    const genResult = await model.generateContent(prompt);
+    const response = await genResult.response;
     const generatedHtml = response.text();
     
+    // Check if generation was successful
     if (!generatedHtml || generatedHtml.length < 100) {
-      throw new Error('Generated HTML is too short or empty');
+      console.error('Invalid or empty response from Gemini:', generatedHtml);
+      throw new Error('Failed to generate appraisal card HTML: Empty or invalid response');
     }
     
-    console.log('Successfully generated appraisal card HTML with Gemini');
+    console.log(`Generated appraisal card HTML (${generatedHtml.length} bytes)`);
     return generatedHtml;
   } catch (error) {
     console.error('Error generating appraisal card with Gemini:', error);
-    
-    // Fallback to basic HTML generation with templates
-    console.log('Using fallback appraisal card HTML generation');
+    // Fall back to the original appraisal card generation
     return fallbackAppraisalCardGeneration(appraisalData, statisticsData, options);
   }
 }
@@ -580,7 +554,7 @@ function prepareEnhancedAnalyticsData(statsData, chartIds, options = {}) {
  * @param {Object} chartIds - Unique chart IDs
  * @returns {Object} - Prepared data for template
  */
-function prepareAppraisalCardData(appraisalData, statsData, chartIds) {
+function prepareAppraisalCardData(appraisalData, statsData, chartIds, options = {}) {
   // Default values for when data is missing
   const defaults = {
     title: 'Untitled Artwork',
@@ -760,7 +734,8 @@ function numberWithCommas(number) {
  * @returns {string} - Random ID string
  */
 function generateUniqueId() {
-  return Math.random().toString(36).substring(2, 15);
+  return Math.random().toString(36).substring(2, 15) + 
+         Math.random().toString(36).substring(2, 15);
 }
 
 /**

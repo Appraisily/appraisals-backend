@@ -965,9 +965,54 @@
 <!-- NOTE: Ensure table sorting/pagination/filtering JavaScript is loaded separately in WordPress -->
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    // Chart.js is now loaded globally, initialize charts directly
-    initCharts();
+    // Initialize charts with robust loading mechanism
+    initializeChartsWithRetry();
+});
+
+// Robust chart initialization that handles race conditions
+function initializeChartsWithRetry(attemptCount = 0) {
+    const maxAttempts = 10;
+    const retryDelay = 300; // milliseconds
     
+    // Check if Chart.js is available (either global or via alias)
+    if (typeof window.Chart !== 'undefined') {
+        console.log('[DEBUG] Chart.js found globally, initializing charts...');
+        window.AppraisalCardChart = window.Chart;
+        initCharts();
+        return;
+    }
+    
+    if (typeof window.AppraisalCardChart !== 'undefined') {
+        console.log('[DEBUG] AppraisalCardChart found, initializing charts...');
+        initCharts();
+        return;
+    }
+    
+    // Chart.js not available yet, retry if under max attempts
+    if (attemptCount < maxAttempts) {
+        console.log(`[DEBUG] Chart.js not found, retrying... (${attemptCount + 1}/${maxAttempts})`);
+        setTimeout(function() {
+            initializeChartsWithRetry(attemptCount + 1);
+        }, retryDelay);
+    } else {
+        // Last resort: try to load Chart.js ourselves
+        console.warn('[DEBUG] Chart.js not found after maximum attempts, loading directly...');
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';
+        script.onload = function() {
+            console.log('[DEBUG] Chart.js loaded directly, initializing charts...');
+            window.AppraisalCardChart = window.Chart;
+            initCharts();
+        };
+        script.onerror = function() {
+            console.error('[DEBUG] Failed to load Chart.js directly');
+        };
+        document.head.appendChild(script);
+    }
+}
+
+// Initialize all charts
+function initCharts() {
     // Add section visibility handling based on data attributes
     function checkSectionVisibility(selector) {
         var section = document.querySelector(selector);
@@ -979,47 +1024,331 @@ document.addEventListener("DOMContentLoaded", function() {
         return true;
     }
     
-    function initCharts() {
-        var isRadarVisible = checkSectionVisibility('.radar-chart-section');
-        var isPriceHistoryVisible = checkSectionVisibility('.price-history-section');
-        var isStatsVisible = checkSectionVisibility('.statistics-section');
+    var isRadarVisible = checkSectionVisibility('.radar-chart-section');
+    var isPriceHistoryVisible = checkSectionVisibility('.price-history-section');
+    var isStatsVisible = checkSectionVisibility('.statistics-section');
 
-        // Initialize Radar Chart
-        if (isRadarVisible) {
+    // Initialize Radar Chart
+    if (isRadarVisible) {
+        try {
             var radarWrapper = document.querySelector(".radar-wrapper");
             if (radarWrapper && radarWrapper.dataset.chartDataRadar) {
-                try {
-                    var radarData = JSON.parse(radarWrapper.dataset.chartDataRadar);
-                    var radarCanvas = radarWrapper.querySelector("canvas");
-                    if (radarCanvas) {
-                        new window.AppraisalCardChart(radarCanvas, {
-                            type: "radar",
-                            data: radarData,
-                            options: {
-                                responsive: true,
-                                maintainAspectRatio: false,
-                                scales: {
-                                    r: {
-                                        beginAtZero: true,
-                                        max: 100,
-                                        ticks: { backdropColor: 'rgba(255,255,255,0.7)' }
-                                    }
+                var radarData = JSON.parse(radarWrapper.dataset.chartDataRadar);
+                var radarCanvas = radarWrapper.querySelector("canvas");
+                if (radarCanvas) {
+                    new window.AppraisalCardChart(radarCanvas, {
+                        type: "radar",
+                        data: radarData,
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                r: {
+                                    beginAtZero: true,
+                                    max: 100,
+                                    ticks: { backdropColor: 'rgba(255,255,255,0.7)' }
                                 }
                             }
-                        });
-                        console.log("Radar chart initialized successfully");
-                    }
-                } catch (e) {
-                    console.error("Error initializing radar chart:", e);
+                        }
+                    });
+                    console.log("Radar chart initialized successfully");
                 }
             } else {
                 console.warn("Radar chart wrapper or data not found");
             }
-        } else {
-            console.log("Skipping radar chart initialization as section is hidden");
+        } catch (error) {
+            console.error("Error initializing radar chart:", error);
         }
-
-        // Rest of function implementation unchanged
     }
-});
+
+    // Initialize price history chart
+    if (isPriceHistoryVisible) {
+        try {
+            var wrapper = document.querySelector(".price-chart-wrapper");
+            if (wrapper && wrapper.dataset.chartDataHistory) {
+                var chartData = JSON.parse(wrapper.dataset.chartDataHistory);
+                var canvas = wrapper.querySelector("canvas");
+                if (canvas) {
+                    new window.AppraisalCardChart(canvas, {
+                        type: 'line',
+                        data: chartData,
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            scales: {
+                                y: {
+                                    beginAtZero: false,
+                                    grid: {
+                                        color: 'rgba(0, 0, 0, 0.1)'
+                                    },
+                                    ticks: {
+                                        callback: function(value) {
+                                            return '$' + value.toLocaleString();
+                                        }
+                                    }
+                                },
+                                x: {
+                                    grid: {
+                                        display: false
+                                    }
+                                }
+                            },
+                            plugins: {
+                                legend: {
+                                    position: 'bottom'
+                                },
+                                tooltip: {
+                                    callbacks: {
+                                        label: function(context) {
+                                            let label = context.dataset.label || '';
+                                            if (label) {
+                                                label += ': ';
+                                            }
+                                            if (context.parsed.y !== null) {
+                                                if (context.dataset.label === 'Market Index') {
+                                                    label += context.parsed.y;
+                                                } else {
+                                                    label += '$' + context.parsed.y.toLocaleString();
+                                                }
+                                            }
+                                            return label;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    });
+                    console.log("Price history chart initialized successfully");
+                }
+            } else {
+                console.warn("Price history chart data not found");
+            }
+        } catch (error) {
+            console.error("Error initializing price history chart:", error);
+        }
+    }
+
+    // Initialize other components
+    if (isStatsVisible) {
+        try {
+            // Initialize histogram
+            setupHistogram();
+            // Initialize data table with sorting and filtering
+            setupSalesTable();
+        } catch (error) {
+            console.error("Error initializing statistics components:", error);
+        }
+    }
+
+    console.log("Charts and components initialized successfully");
+}
+
+// Setup histogram hover interactions
+function setupHistogram() {
+    var bars = document.querySelectorAll('.modern-bar-wrap');
+    bars.forEach(function(bar) {
+        bar.addEventListener('mouseenter', function() {
+            var tooltip = this.querySelector('.bar-tooltip');
+            if (tooltip) tooltip.style.opacity = '1';
+        });
+        
+        bar.addEventListener('mouseleave', function() {
+            var tooltip = this.querySelector('.bar-tooltip');
+            if (tooltip) tooltip.style.opacity = '0';
+        });
+    });
+    console.log("Histogram interactions setup complete");
+}
+
+// Setup sales table sorting and filtering
+function setupSalesTable() {
+    var salesTable = document.querySelector('.sales-table');
+    if (!salesTable) {
+        console.warn("Sales table not found");
+        return;
+    }
+
+    var postId = salesTable.id.split('-')[1] || '{{POST_ID}}';
+    
+    const tbody = salesTable.querySelector('tbody');
+    if (!tbody) {
+        console.warn("Table body not found");
+        return;
+    }
+
+    // Get rows AFTER they have been populated
+    let tableRows = Array.from(tbody.querySelectorAll('tr'));
+    
+    if (tableRows.length === 0) {
+        console.log("No data to paginate");
+        return;
+    }
+
+    const rowsPerPage = 5; // Default rows per page
+    let currentPage = 1;
+    let filteredRows = tableRows; // Start with all rows
+    let sortColumn = null;
+    let sortDirection = 'asc';
+
+    // Add click handlers to sortable headers
+    var sortableHeaders = salesTable.querySelectorAll('th.sortable');
+    sortableHeaders.forEach(function(header) {
+        header.addEventListener('click', function() {
+            var sortBy = this.getAttribute('data-sort');
+            sortColumn = sortBy;
+            sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+            
+            // Update header appearance
+            sortableHeaders.forEach(th => {
+                th.classList.remove('sorted-asc', 'sorted-desc');
+            });
+            header.classList.add(sortDirection === 'asc' ? 'sorted-asc' : 'sorted-desc');
+            
+            sortTable();
+        });
+    });
+    
+    // Add search functionality
+    var searchInput = document.getElementById('searchResults-' + postId);
+    if (searchInput) {
+        searchInput.addEventListener('input', filterTable);
+    }
+    
+    // Add pagination handlers
+    var paginationControls = document.getElementById('pagination-' + postId);
+    if (paginationControls) {
+        paginationControls.querySelector('[data-page="prev"]').addEventListener('click', function() {
+            if (currentPage > 1) {
+                currentPage--;
+                displayTablePage();
+            }
+        });
+        
+        paginationControls.querySelector('[data-page="next"]').addEventListener('click', function() {
+            const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
+            if (currentPage < totalPages) {
+                currentPage++;
+                displayTablePage();
+            }
+        });
+    }
+    
+    // Initial table display
+    displayTablePage();
+    
+    // Table display function
+    function displayTablePage() {
+        const start = (currentPage - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+        const paginatedRows = filteredRows.slice(start, end);
+        
+        // Clear table body
+        tbody.innerHTML = '';
+        
+        // Add rows for current page
+        paginatedRows.forEach(row => tbody.appendChild(row));
+        
+        // Update pagination info
+        if (paginationControls) {
+            const pageStartSpan = paginationControls.querySelector('.page-start');
+            const pageEndSpan = paginationControls.querySelector('.page-end');
+            const totalItemsSpan = paginationControls.querySelector('.total-items');
+            
+            if (pageStartSpan && pageEndSpan && totalItemsSpan) {
+                pageStartSpan.textContent = filteredRows.length > 0 ? start + 1 : 0;
+                pageEndSpan.textContent = Math.min(end, filteredRows.length);
+                totalItemsSpan.textContent = filteredRows.length;
+            }
+            
+            // Update button states
+            paginationControls.querySelector('[data-page="prev"]').disabled = currentPage === 1;
+            paginationControls.querySelector('[data-page="next"]').disabled = end >= filteredRows.length;
+        }
+    }
+    
+    // Table filtering function
+    function filterTable() {
+        const searchTerm = searchInput.value.toLowerCase();
+        filteredRows = tableRows.filter(row => {
+            return Array.from(row.cells).some(cell => 
+                cell.textContent.toLowerCase().includes(searchTerm)
+            );
+        });
+        
+        currentPage = 1; // Reset to first page after filtering
+        sortTable(); // Re-sort filtered results
+    }
+    
+    // Table sorting function
+    function sortTable() {
+        if (!sortColumn) {
+            displayTablePage(); // No sorting, just display
+            return;
+        }
+        
+        const columnIndex = Array.from(salesTable.querySelectorAll('th')).findIndex(th => 
+            th.getAttribute('data-sort') === sortColumn
+        );
+        
+        if (columnIndex === -1) {
+            displayTablePage();
+            return;
+        }
+        
+        // Sort rows based on column data
+        filteredRows.sort((a, b) => {
+            const cellA = a.cells[columnIndex].textContent.trim();
+            const cellB = b.cells[columnIndex].textContent.trim();
+            
+            let comparison = 0;
+            
+            switch (sortColumn) {
+                case 'price':
+                    // Clean currency symbols and commas, then parse
+                    const numA = parseFloat(cellA.replace(/[^0-9.-]/g, ''));
+                    const numB = parseFloat(cellB.replace(/[^0-9.-]/g, ''));
+                    if (!isNaN(numA) && !isNaN(numB)) {
+                        comparison = numA - numB;
+                    } else {
+                        comparison = cellA.localeCompare(cellB);
+                    }
+                    break;
+                    
+                case 'date':
+                    // Handle dates with special case for 'Current'
+                    const dateA = cellA === 'Current' ? new Date() : new Date(cellA);
+                    const dateB = cellB === 'Current' ? new Date() : new Date(cellB);
+                    if (!isNaN(dateA) && !isNaN(dateB)) {
+                        comparison = dateA - dateB;
+                    } else {
+                        comparison = cellA.localeCompare(cellB);
+                    }
+                    break;
+                    
+                case 'diff':
+                    // Sort by numeric difference value
+                    const diffA = parseFloat(cellA.replace(/[^0-9.-]/g, ''));
+                    const diffB = parseFloat(cellB.replace(/[^0-9.-]/g, ''));
+                    if (!isNaN(diffA) && !isNaN(diffB)) {
+                        comparison = diffA - diffB;
+                    } else if (cellA === '-' && cellB !== '-') {
+                        comparison = 1;
+                    } else if (cellA !== '-' && cellB === '-') {
+                        comparison = -1;
+                    } else {
+                        comparison = cellA.localeCompare(cellB);
+                    }
+                    break;
+                    
+                default:
+                    // Default string comparison for text columns
+                    comparison = cellA.localeCompare(cellB);
+            }
+            
+            return sortDirection === 'asc' ? comparison : -comparison;
+        });
+        
+        displayTablePage();
+    }
+}
 </script> 

@@ -825,15 +825,61 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
     
-    // Initialize charts directly - Chart.js is loaded globally
-    initializeCharts();
+    // Initialize charts with robust loading
+    initializeChartsWithRetry();
 });
+
+// Robust chart initialization that handles race conditions
+function initializeChartsWithRetry(attemptCount = 0) {
+    const maxAttempts = 10;
+    const retryDelay = 300; // milliseconds
+    
+    // Check if Chart.js is available (either global or via alias)
+    if (typeof window.Chart !== 'undefined') {
+        console.log('[DEBUG] Chart.js found globally, initializing charts...');
+        window.AppraisalCardChart = window.Chart;
+        initializeCharts();
+        return;
+    }
+    
+    if (typeof window.AppraisalCardChart !== 'undefined') {
+        console.log('[DEBUG] AppraisalCardChart found, initializing charts...');
+        initializeCharts();
+        return;
+    }
+    
+    // Chart.js not available yet, retry if under max attempts
+    if (attemptCount < maxAttempts) {
+        console.log(`[DEBUG] Chart.js not found, retrying... (${attemptCount + 1}/${maxAttempts})`);
+        setTimeout(function() {
+            initializeChartsWithRetry(attemptCount + 1);
+        }, retryDelay);
+    } else {
+        // Last resort: try to load Chart.js ourselves
+        console.warn('[DEBUG] Chart.js not found after maximum attempts, loading directly...');
+        const script = document.createElement('script');
+        script.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';
+        script.onload = function() {
+            console.log('[DEBUG] Chart.js loaded directly, initializing charts...');
+            window.AppraisalCardChart = window.Chart;
+            initializeCharts();
+        };
+        script.onerror = function() {
+            console.error('[DEBUG] Failed to load Chart.js directly');
+        };
+        document.head.appendChild(script);
+    }
+}
 
 // Initialize all charts
 function initializeCharts() {
     console.log('[DEBUG] Initializing charts...');
-    const card = document.querySelector('.appraisal-card[data-post-id="{{POST_ID}}"]');
-    
+    const card = document.querySelector('.appraisal-card[data-post-id="{{POST_ID}}"]'); // Scope to this specific card
+    if (!card) {
+        console.error('[DEBUG] Could not find card element during chart initialization for ID: {{POST_ID}}');
+        return;
+    }
+
     try {
         // Get DOM elements
         const gaugeCanvas = document.getElementById('{{CHART_ID_GAUGE}}');
@@ -891,7 +937,7 @@ function initializeCharts() {
 
 // Initialize gauge chart
 function initializeGaugeChart(canvas) {
-    console.log('[DEBUG] Creating gauge chart');
+    console.log('[DEBUG] Creating gauge chart for ID: {{POST_ID}}');
     
     const container = canvas.closest('.gauge-container');
     const percentileEl = container ? container.querySelector('.percentile-value') : null;
@@ -900,13 +946,13 @@ function initializeGaugeChart(canvas) {
     if (percentileEl) {
         // Extract numeric value
         const percentileText = percentileEl.textContent.trim();
-        const matches = percentileText.match(/(\d+)/);
+        const matches = percentileText.match(/(\d+)/); // Fixed regex with \d instead of just d
         if (matches && matches[1]) {
             percentile = parseInt(matches[1]);
         }
     }
     
-    console.log('[DEBUG] Gauge percentile:', percentile);
+    console.log('[DEBUG] Gauge percentile for ID {{POST_ID}}:', percentile);
     
     const ctx = canvas.getContext('2d');
     
@@ -919,36 +965,40 @@ function initializeGaugeChart(canvas) {
         return gradient;
     }
     
-    new window.AppraisalCardChart(ctx, {
-        type: 'doughnut',
-        data: {
-            datasets: [{
-                data: [percentile, 100 - percentile],
-                backgroundColor: [
-                    createGradient(ctx, ['#3b82f6', '#1d4ed8']), // Blue gradient
-                    '#e5e7eb' // Light gray
-                ],
-                borderWidth: 0,
-                circumference: 180,
-                rotation: 270
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            cutout: '75%',
-            plugins: {
-                legend: { display: false },
-                tooltip: { enabled: false }
+    try {
+        new window.AppraisalCardChart(ctx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [percentile, 100 - percentile],
+                    backgroundColor: [
+                        createGradient(ctx, ['#3b82f6', '#1d4ed8']), // Blue gradient
+                        '#e5e7eb' // Light gray
+                    ],
+                    borderWidth: 0,
+                    circumference: 180,
+                    rotation: 270
+                }]
             },
-            animation: {
-                animateRotate: true,
-                animateScale: false,
-                duration: 2000,
-                easing: 'easeOutQuart'
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '75%',
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { enabled: false }
+                },
+                animation: {
+                    animateRotate: true,
+                    animateScale: false,
+                    duration: 2000,
+                    easing: 'easeOutQuart'
+                }
             }
-        }
-    });
+        });
+    } catch (error) {
+        console.error('[DEBUG] Error creating gauge chart:', error);
+    }
 }
 
 // Initialize metrics chart
@@ -973,48 +1023,52 @@ function initializeMetricsChart(canvas, chartData) {
     }
     
     const ctx = canvas.getContext('2d');
-    new window.AppraisalCardChart(ctx, {
-        type: 'bar',
-        data: chartData,
-        options: {
-            indexAxis: 'y',
-            responsive: true,
-            maintainAspectRatio: true,
-            aspectRatio: 2,
-            scales: {
-                x: {
-                    beginAtZero: true,
-                    max: 100,
-                    grid: {
-                        display: true,
-                        color: 'rgba(0, 0, 0, 0.05)'
+    try {
+        new window.AppraisalCardChart(ctx, {
+            type: 'bar',
+            data: chartData,
+            options: {
+                indexAxis: 'y',
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: 2,
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        max: 100,
+                        grid: {
+                            display: true,
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        },
+                        ticks: {
+                            callback: function(value) {
+                                return value + '%';
+                            }
+                        }
                     },
-                    ticks: {
-                        callback: function(value) {
-                            return value + '%';
+                    y: {
+                        grid: {
+                            display: false
                         }
                     }
                 },
-                y: {
-                    grid: {
+                plugins: {
+                    legend: {
                         display: false
-                    }
-                }
-            },
-            plugins: {
-                legend: {
-                    display: false
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            return context.parsed.x + '%';
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.x + '%';
+                            }
                         }
                     }
                 }
             }
-        }
-    });
+        });
+    } catch (error) {
+        console.error('[DEBUG] Error creating metrics chart:', error);
+    }
 }
 
 // Initialize market chart
@@ -1061,32 +1115,36 @@ function initializeMarketChart(canvas, chartData) {
     }
     
     const ctx = canvas.getContext('2d');
-    new window.AppraisalCardChart(ctx, {
-        type: 'bar',
-        data: chartData,
-        options: {
-            responsive: true,
-            maintainAspectRatio: true,
-            aspectRatio: 2,
-            scales: {
-                x: {
-                    grid: {
-                        display: false
+    try {
+        new window.AppraisalCardChart(ctx, {
+            type: 'bar',
+            data: chartData,
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                aspectRatio: 2,
+                scales: {
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.05)'
+                        }
                     }
                 },
-                y: {
-                    beginAtZero: true,
-                    grid: {
-                        color: 'rgba(0, 0, 0, 0.05)'
+                plugins: {
+                    legend: {
+                        display: false
                     }
                 }
-            },
-            plugins: {
-                legend: {
-                    display: false
-                }
             }
-        }
-    });
+        });
+    } catch (error) {
+        console.error('[DEBUG] Error creating market chart:', error);
+    }
 }
 </script> 
