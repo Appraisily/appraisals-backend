@@ -146,42 +146,42 @@
             </div>
 
             <!-- Second row has 2 cards side by side -->
-            <div class="metric-card">
-                <div class="metric-header"><h4>Market Averages</h4><span class="price-trend-badge {{TREND_CLASS}}">{{PRICE_TREND}} annual</span></div>
-                <div class="metric-values">
-                    <div class="metric-value-row"><span class="metric-label">Mean</span><span class="metric-value font-semibold">{{AVG_PRICE_FORMATTED}}</span></div>
-                    <div class="metric-value-row"><span class="metric-label">Median</span><span class="metric-value font-semibold">{{MEDIAN_PRICE_FORMATTED}}</span></div>
-                </div>
-                <div class="metric-footer"><div class="metric-description text-xs">Based on {{COUNT}} comparable items</div></div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-header"><h4>Price Range & Variation</h4></div>
-                <div class="price-range-display">
-                    <div class="price-range-value text-sm">{{PRICE_MIN_FORMATTED}} - {{PRICE_MAX_FORMATTED}}</div>
-                    <div class="price-range-bar" style="--target-position: {{TARGET_POSITION}}%"></div> <!-- Use CSS var -->
-                </div>
-                <div class="metric-footer"><span class="badge">CV: {{COEFFICIENT_VARIATION}}%</span><span class="badge secondary">SD: {{STD_DEV_FORMATTED}}</span></div>
-            </div>
+                 <div class="metric-card">
+                     <div class="metric-header"><h4>Market Averages</h4><span class="price-trend-badge {{TREND_CLASS}}">{{PRICE_TREND}} annual</span></div>
+                     <div class="metric-values">
+                         <div class="metric-value-row"><span class="metric-label">Mean</span><span class="metric-value font-semibold">{{AVG_PRICE_FORMATTED}}</span></div>
+                         <div class="metric-value-row"><span class="metric-label">Median</span><span class="metric-value font-semibold">{{MEDIAN_PRICE_FORMATTED}}</span></div>
+                     </div>
+                     <div class="metric-footer"><div class="metric-description text-xs">Based on {{COUNT}} comparable items</div></div>
+                 </div>
+                 <div class="metric-card">
+                     <div class="metric-header"><h4>Price Range & Variation</h4></div>
+                     <div class="price-range-display">
+                         <div class="price-range-value text-sm">{{PRICE_MIN_FORMATTED}} - {{PRICE_MAX_FORMATTED}}</div>
+                         <div class="price-range-bar" style="--target-position: {{TARGET_POSITION}}%"></div> <!-- Use CSS var -->
+                     </div>
+                     <div class="metric-footer"><span class="badge">CV: {{COEFFICIENT_VARIATION}}%</span><span class="badge secondary">SD: {{STD_DEV_FORMATTED}}</span></div>
+                 </div>
             
             <!-- Third row has 2 cards side by side -->
-            <div class="metric-card highlighted">
-                <div class="metric-header"><h4>Investment Potential</h4></div>
-                <div class="investment-rating-display">
-                    <div class="investment-rating"><span class="rating-value">{{INVESTMENT_POTENTIAL}}%</span><span class="rating-label text-muted-foreground">Potential</span></div>
-                    <div class="investment-scale"><div class="scale-bar" style="--fill-width: {{INVESTMENT_POTENTIAL}}%"></div></div>
-                </div>
-                <div class="metric-footer"><div class="metric-description text-xs">Based on market trends and item characteristics</div></div>
-            </div>
-            <div class="metric-card">
-                <div class="metric-header"><h4>Market Confidence</h4></div>
-                <div class="confidence-display">
-                    <div class="confidence-indicator {{CONFIDENCE_LEVEL_CLASS}}">
-                        <span></span><span></span><span></span><span></span>
-                    </div>
-                    <div class="confidence-value">{{CONFIDENCE_LEVEL}}</div>
-                </div>
-                <div class="metric-footer"><div class="metric-description text-xs">Based on sample size and data consistency</div></div>
-            </div>
+                 <div class="metric-card highlighted">
+                     <div class="metric-header"><h4>Investment Potential</h4></div>
+                     <div class="investment-rating-display">
+                         <div class="investment-rating"><span class="rating-value">{{INVESTMENT_POTENTIAL}}%</span><span class="rating-label text-muted-foreground">Potential</span></div>
+                         <div class="investment-scale"><div class="scale-bar" style="--fill-width: {{INVESTMENT_POTENTIAL}}%"></div></div>
+                     </div>
+                     <div class="metric-footer"><div class="metric-description text-xs">Based on market trends and item characteristics</div></div>
+                 </div>
+                 <div class="metric-card">
+                     <div class="metric-header"><h4>Market Confidence</h4></div>
+                     <div class="confidence-display">
+                         <div class="confidence-indicator {{CONFIDENCE_LEVEL_CLASS}}">
+                             <span></span><span></span><span></span><span></span>
+                         </div>
+                         <div class="confidence-value">{{CONFIDENCE_LEVEL}}</div>
+                     </div>
+                     <div class="metric-footer"><div class="metric-description text-xs">Based on sample size and data consistency</div></div>
+             </div>
         </div>
     </div>
 
