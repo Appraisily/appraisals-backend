@@ -371,11 +371,13 @@
     font-size: 0.85rem;
 }
 .appraisal-card .artwork-details-table tr {
-    /* Use flex for layout */
-    display: flex;
-    justify-content: space-between;
-    padding: 0.6rem 0; /* Adjusted vertical padding slightly */
+    /* Use grid instead of flex for better alignment */
+    display: grid;
+    grid-template-columns: minmax(180px, 30%) 1fr; /* Fixed width for labels */
+    gap: 1.5rem; /* Consistent spacing between label and value */
+    padding: 0.6rem 0;
     border-bottom: 1px dashed var(--border);
+    align-items: flex-start; /* Align to top */
 }
 .appraisal-card .artwork-details-table tr:last-child {
     border-bottom: none;
@@ -383,27 +385,17 @@
 
 .appraisal-card .artwork-details-table td {
     padding: 0; /* Remove default padding */
-    border-bottom: none; /* Remove default border */
-    vertical-align: top; /* Align text to top */
+    line-height: 1.5; /* Consistent line height */
 }
 
 .appraisal-card .artwork-details-table td:first-child { /* Label */
     color: var(--muted-foreground);
-    padding-right: 1rem;
-    white-space: nowrap; /* Keep label on one line */
-    flex-shrink: 0; /* Prevent label shrinking */
     font-weight: 500; /* Make label slightly bolder */
-    width: 20%; /* Set consistent width for labels */
-    min-width: 120px; /* Ensure minimum width */
+    text-align: left;
 }
 .appraisal-card .artwork-details-table td:last-child { /* Value */
     font-weight: 500;
-    text-align: left !important; /* Ensure left alignment */
-    flex-grow: 1; /* Allow value to take remaining space */
-    /* Allow value text to wrap */
-    white-space: normal;
-    padding-left: 0.5rem; /* Add some padding between label and value */
-    line-height: 1.5; /* Improve line spacing for readability */
+    text-align: left;
 }
 
 /* Specifically handle the Title row for better display of long text */
@@ -595,6 +587,42 @@
     max-height: none; /* Allow full height */
     padding-right: 0.5rem; /* Add some right padding */
 }
+
+/* Add collapsible description styles */
+.appraisal-card .artwork-description-container {
+    margin: 1rem 0 1.5rem;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background-color: var(--secondary);
+    padding: 1rem;
+}
+
+.appraisal-card .artwork-description {
+    font-size: 0.85rem;
+    color: var(--card-foreground);
+    line-height: 1.5;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+    max-height: 4.5em; /* Show only ~3 lines initially */
+}
+
+.appraisal-card .artwork-description.expanded {
+    max-height: 1000px; /* Arbitrary large height */
+}
+
+.appraisal-card .description-toggle {
+    display: inline-block;
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    color: var(--primary);
+    cursor: pointer;
+    font-weight: 600;
+    text-decoration: none;
+}
+
+.appraisal-card .description-toggle:hover {
+    text-decoration: underline;
+}
 </style>
 
 <!-- templates/skeletons/appraisal-card.html -->
@@ -628,15 +656,17 @@
   <div class="card-body">
     <div class="dual-layout">
       <div class="artwork-showcase">
+        <div class="artwork-image">
+          <img src="{{ARTWORK_IMAGE_URL}}" alt="{{ARTWORK_TITLE}}">
+        </div>
         <div class="artwork-info">
-          <h2 class="artwork-title">Street Scene with Horse-Drawn Carriage</h2>
-          <p class="artwork-creator">Giuseppe De Nittis (1846-1884)</p>
-          <p class="artwork-description">This impressionistic work captures a bustling urban setting with pedestrians and a carriage traversing wet cobblestones. The composition leads the viewer's gaze along the street, framed by bare trees. Loose brushwork and a muted palette of grays and browns, with splashes of red and yellow, suggest early morning or late afternoon light.</p>
+          <h2 class="artwork-title">{{ARTWORK_TITLE}}</h2>
+          <p class="artwork-creator">{{ARTWORK_CREATOR}}</p>
           <div class="artwork-details">
-            <div class="detail-item"><span class="detail-label">Object Type</span><span class="detail-value">Oil Painting on Panel</span></div>
-            <div class="detail-item"><span class="detail-label">Period/Age</span><span class="detail-value">Late 19th Century</span></div>
-            <div class="detail-item"><span class="detail-label">Medium</span><span class="detail-value">Oil on panel</span></div>
-            <div class="detail-item"><span class="detail-label">Condition</span><span class="detail-value">Good, minor wear</span></div>
+            <div class="detail-item"><span class="detail-label">Object Type</span><span class="detail-value">{{OBJECT_TYPE}}</span></div>
+            <div class="detail-item"><span class="detail-label">Period/Age</span><span class="detail-value">{{PERIOD_AGE}}</span></div>
+            <div class="detail-item"><span class="detail-label">Medium</span><span class="detail-value">{{MEDIUM}}</span></div>
+            <div class="detail-item"><span class="detail-label">Condition</span><span class="detail-value">{{CONDITION}}</span></div>
           </div>
         </div>
       </div>
@@ -655,6 +685,14 @@
           <span class="trend-value {{TREND_CLASS}}">{{PRICE_TREND}} Annual Change</span>
         </div>
       </div>
+    </div>
+    
+    <!-- Add collapsible description here, before metrics -->
+    <div class="artwork-description-container">
+      <div class="artwork-description" id="artwork-description-{{POST_ID}}">
+        {{ARTWORK_DESCRIPTION}}
+      </div>
+      <a href="#" class="description-toggle" id="description-toggle-{{POST_ID}}">Read more</a>
     </div>
     
     <div class="metrics-grid">
@@ -679,17 +717,11 @@
   
   <div class="card-tabs">
     <div class="tabs-navigation">
-      <button class="tab-button active" data-tab="summary">Summary</button>
-      <button class="tab-button" data-tab="details">Details</button>
+      <button class="tab-button active" data-tab="details">Details</button>
+      <button class="tab-button" data-tab="summary">Summary</button>
     </div>
     <div class="tabs-content">
-      <div id="summary" class="tab-panel active">
-        <h2 class="tab-title">Artwork Details</h2>
-        <div class="artwork-details-table">
-          <table><tbody>{{DETAILS_TABLE_HTML}}</tbody></table> <!-- Expects generated <tr><td>...</td></tr> -->
-        </div>
-      </div>
-      <div id="details" class="tab-panel">
+      <div id="details" class="tab-panel active">
         <div class="market-analysis">
           <p class="analysis-text">{{ANALYSIS_TEXT}}</p>
           <div class="metrics-details">
@@ -725,6 +757,12 @@
                  <p>Future value growth outlook</p>
              </div>
           </div>
+        </div>
+      </div>
+      <div id="summary" class="tab-panel">
+        <h2 class="tab-title">Artwork Details</h2>
+        <div class="artwork-details-table">
+          <table><tbody>{{DETAILS_TABLE_HTML}}</tbody></table> <!-- Expects generated <tr><td>...</td></tr> -->
         </div>
       </div>
     </div>
@@ -775,43 +813,26 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Load Chart.js if needed and initialize charts
-    loadChartJsAndInitialize();
+    // Add description expand/collapse functionality
+    const descriptionToggle = document.getElementById('description-toggle-{{POST_ID}}');
+    const description = document.getElementById('artwork-description-{{POST_ID}}');
     
-    // Helper function to load Chart.js and initialize charts
-    function loadChartJsAndInitialize() {
-        if (typeof window.Chart !== 'undefined') {
-            // Chart.js already loaded globally
-            window.AppraisalCardChart = window.Chart;
-            initializeCharts();
-            return;
-        }
-        
-        if (typeof window.AppraisalCardChart !== 'undefined') {
-            // AppraisalCardChart already available
-            initializeCharts();
-            return;
-        }
-        
-        // Need to load Chart.js
-        console.log('[DEBUG] Loading Chart.js...');
-        const script = document.createElement('script');
-        script.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';
-        script.onload = function() {
-            console.log('[DEBUG] Chart.js loaded successfully');
-            window.AppraisalCardChart = window.Chart;
-            initializeCharts();
-        };
-        script.onerror = function(error) {
-            console.error('[DEBUG] Failed to load Chart.js:', error);
-        };
-        document.head.appendChild(script);
+    if (descriptionToggle && description) {
+        descriptionToggle.addEventListener('click', function(e) {
+            e.preventDefault();
+            description.classList.toggle('expanded');
+            this.textContent = description.classList.contains('expanded') ? 'Read less' : 'Read more';
+        });
     }
+    
+    // Initialize charts directly - Chart.js is loaded globally
+    initializeCharts();
 });
 
 // Initialize all charts
 function initializeCharts() {
     console.log('[DEBUG] Initializing charts...');
+    const card = document.querySelector('.appraisal-card[data-post-id="{{POST_ID}}"]');
     
     try {
         // Get DOM elements
@@ -819,12 +840,9 @@ function initializeCharts() {
         const metricsCanvas = document.getElementById('{{CHART_ID_METRICS}}');
         const marketCanvas = document.getElementById('{{CHART_ID_MARKET}}');
         
-        // Get chart data
+        // Get chart data containers
         const metricsContainer = card.querySelector('.metrics-chart-container');
         const marketContainer = card.querySelector('.price-distribution-container');
-        
-        const metricsDataRaw = metricsContainer.dataset.chartDataMetrics;
-        const marketDataRaw = marketContainer.dataset.chartDataMarket;
         
         // Initialize gauge chart
         if (gaugeCanvas) {
@@ -832,8 +850,9 @@ function initializeCharts() {
         }
         
         // Initialize metrics chart
-        if (metricsCanvas) {
+        if (metricsCanvas && metricsContainer) {
             let metricsData;
+            const metricsDataRaw = metricsContainer.dataset.chartDataMetrics;
             try {
                 if (metricsDataRaw && metricsDataRaw !== '{}') {
                     metricsData = JSON.parse(metricsDataRaw);
@@ -843,11 +862,14 @@ function initializeCharts() {
             }
             
             initializeMetricsChart(metricsCanvas, metricsData);
+        } else {
+            console.warn('[DEBUG] Metrics canvas or container not found');
         }
         
         // Initialize market chart
-        if (marketCanvas) {
+        if (marketCanvas && marketContainer) {
             let marketData;
+            const marketDataRaw = marketContainer.dataset.chartDataMarket;
             try {
                 if (marketDataRaw && marketDataRaw !== '{}') {
                     marketData = JSON.parse(marketDataRaw);
@@ -857,6 +879,8 @@ function initializeCharts() {
             }
             
             initializeMarketChart(marketCanvas, marketData);
+        } else {
+            console.warn('[DEBUG] Market canvas or container not found');
         }
         
         console.log('[DEBUG] Charts initialized successfully');
