@@ -26,7 +26,7 @@ async function getPrompt(custom_post_type_name) {
 
 function buildContextualPrompt(prompt, context, searchResults = null) {
   let contextualPrompt = prompt;
-  
+
   // Incorporate detailed title if available
   if (context.detailedTitle) {
     // Only add the detailed title at the beginning of the prompt

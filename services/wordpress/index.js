@@ -204,6 +204,7 @@ module.exports = {
   updatePostACFFields,
   updateNotes,
   updatePostMeta,
+  updateWordPressMetadata,
   // HTML updates
   updateHtmlFields,
   updateEnhancedAnalyticsHtml,
