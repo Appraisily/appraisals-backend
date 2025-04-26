@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs').promises;
 const wordpress = require('./wordpress/index');
 const valuerAgentClient = require('./valuerAgentClient');
-const templatesModule = require('./templates'); // Assuming templates service exists
+const templatesModule = require('../templates'); // Changed from './templates' to '../templates'
 const { populateHtmlTemplate } = require('./geminiService'); // Assuming Gemini service exists
 const { updateHtmlFields } = require('./wordpress/htmlUpdates');
 
