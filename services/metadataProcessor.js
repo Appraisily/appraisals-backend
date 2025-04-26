@@ -9,7 +9,6 @@ const { getPrompt, buildContextualPrompt } = require('./utils/promptUtils');
 const { PROMPT_PROCESSING_ORDER } = require('./constants/reportStructure');
 const { performContextualSearch, searchGoogle, formatSearchResults } = require('./serper');
 const { justifyValue, getEnhancedStatistics } = require('./valuerAgentClient');
-const { updateWordPressMetadata } = wordpress; // Import directly from WordPress service
 
 // --- Helper Functions Moved from metadata.js ---
 
@@ -463,68 +462,20 @@ async function processJustificationMetadata(postId, postTitle, value, skipMetada
     
     // Use the detailed title for valuation if available
     const titleForValuation = detailedTitle || postTitle;
-    console.log(`[Processor] Calling valuer agent /api/justify with title: "${titleForValuation}"`);
     
-    const valuerResponse = await justifyValue(titleForValuation, numericValue);
-    console.log(`[Processor] Valuer agent /api/justify success: ${valuerResponse.success}`);
-    
-    let { explanation, auctionResults, allSearchResults, success } = valuerResponse;
-
-    // --- (Handle potential use of allSearchResults if auctionResults is empty) ---
-    if ((!auctionResults || auctionResults.length === 0) && allSearchResults?.length > 0) {
-        let uniqueItems = new Set();
-        allSearchResults.forEach(result => {
-          if (result.data && Array.isArray(result.data)) {
-            result.data.forEach(item => uniqueItems.add(`${item.title}|${item.house}|${item.date}|${item.price}`));
-          }
-        });
-        if (uniqueItems.size > 0) {
-            console.log(`[Processor] Using ${uniqueItems.size} unique items from allSearchResults as fallback`);
-            const flattened = [];
-            allSearchResults.forEach(r => r.data?.forEach(item => flattened.push(item)));
-            flattened.sort((a, b) => Math.abs(a.price - numericValue) - Math.abs(b.price - numericValue));
-            auctionResults = flattened.slice(0, 20);
-            valuerResponse.auctionResults = auctionResults; // Update for raw data storage
-        }
-    }
-    // --- End Fallback --- 
-
-    if (skipMetadataGeneration) {
-      console.log('[Processor] Skipping full metadata generation (testing mode)');
-      return { field: 'justification_html', status: 'success', testing: true /* ... other test data */ };
-    }
-
-    if (!success) {
-      console.warn('[Processor] Valuer agent /api/justify reported success: false.');
-      // Potentially throw error if justification is mandatory
-    }
-
-    const isConsistent = verifyResultsConsistency(postTitle, auctionResults);
-    if (!isConsistent) {
-      console.warn(`[Processor] Warning: Auction results inconsistent with "${postTitle}"`);
-      await wordpress.updateWordPressMetadata(postId, 'consistency_warning', `Auction results may not be relevant.`);
-    }
-
-    try {
-      console.log('[Processor] Storing raw valuer agent data');
-      // Stringify the raw valuerResponse object before saving
-      await wordpress.updateWordPressMetadata(postId, 'valuer_agent_data', JSON.stringify(valuerResponse)); 
-    } catch (rawDataError) {
-      console.error('[Processor] Error storing raw valuer agent data:', rawDataError);
-    }
-
-    if (!auctionResults || auctionResults.length === 0) {
-      console.warn('[Processor] No auction results returned or derived.');
-    }
-
-    let statistics;
+    // Skip the /api/justify call and go directly to the enhanced-statistics endpoint
+    console.log('[Processor] Requesting enhanced statistics (skipping separate justify call)');
     let enhancedStats = null;
-    let auctionTableHtml;
-
+    let statistics = null;
+    let auctionTableHtml = '';
+    let auctionResults = [];
+    let explanation = '';
+    
     try {
-      console.log('[Processor] Requesting enhanced statistics');
       const statsResponse = await getEnhancedStatistics(
-        postTitle, numericValue, 20,
+        titleForValuation, 
+        numericValue, 
+        20,
         Math.floor(numericValue * 0.6),
         Math.ceil(numericValue * 1.6)
       );
@@ -534,21 +485,42 @@ async function processJustificationMetadata(postId, postTitle, value, skipMetada
         enhancedStats = statsResponse.statistics;
         auctionTableHtml = generateEnhancedAuctionTableHtml(enhancedStats);
         statistics = { enhancedStats }; 
+        auctionResults = enhancedStats.comparable_sales || [];
+        
+        // Generate a basic explanation if available from the statistics
+        if (enhancedStats.average_price && enhancedStats.median_price) {
+          explanation = `This item has been valued based on ${enhancedStats.count || 0} comparable sales. ` +
+            `The average price of similar items is $${numberWithCommas(enhancedStats.average_price)} ` +
+            `and the median price is $${numberWithCommas(enhancedStats.median_price)}.`;
+        } else {
+          explanation = "This appraisal is based on an analysis of comparable auction results and market data.";
+        }
       } else {
         console.warn('[Processor] Enhanced statistics failed, falling back to local calculation:', statsResponse.message);
-        const fallbackResult = generateAuctionTableHtml(auctionResults, numericValue);
+        const fallbackResult = generateAuctionTableHtml([], numericValue);
         auctionTableHtml = fallbackResult.tableHtml;
-        // Use the locally calculated stats
-        statistics = fallbackResult.statistics; 
+        statistics = fallbackResult.statistics;
+        explanation = "This appraisal is based on an analysis of comparable auction results and market data.";
       }
     } catch (statsError) {
       console.error('[Processor] Error getting enhanced statistics, falling back:', statsError);
-      const fallbackResult = generateAuctionTableHtml(auctionResults, numericValue);
+      const fallbackResult = generateAuctionTableHtml([], numericValue);
       auctionTableHtml = fallbackResult.tableHtml;
-      // Use the locally calculated stats
-      statistics = fallbackResult.statistics; 
+      statistics = fallbackResult.statistics;
+      explanation = "This appraisal is based on an analysis of comparable auction results and market data.";
     }
     
+    if (skipMetadataGeneration) {
+      console.log('[Processor] Skipping full metadata generation (testing mode)');
+      return { field: 'justification_html', status: 'success', testing: true /* ... other test data */ };
+    }
+
+    const isConsistent = verifyResultsConsistency(postTitle, auctionResults);
+    if (!isConsistent) {
+      console.warn(`[Processor] Warning: Auction results inconsistent with "${postTitle}"`);
+      await wordpress.updateWordPressMetadata(postId, 'consistency_warning', `Auction results may not be relevant.`);
+    }
+
     // Use the stats object whether it came from enhanced endpoint or local calculation
     const currentStats = statistics.enhancedStats || statistics;
     const validatedStats = validateStatisticsData(currentStats);
