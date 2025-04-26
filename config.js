@@ -29,7 +29,8 @@ const config = {
   GOOGLE_VISION_CREDENTIALS: process.env.GOOGLE_VISION_CREDENTIALS,
   
   // PDF Generation
-  GOOGLE_DOCS_CREDENTIALS: process.env.GOOGLE_DOCS_CREDENTIALS,
+  // GOOGLE_DOCS_CREDENTIALS_SECRET_NAME: process.env.GOOGLE_DOCS_CREDENTIALS_SECRET_NAME || 'google-docs-credentials', // Removed - hardcoding secret name
+  GOOGLE_DOCS_CREDENTIALS: null, // Will be loaded by initSecrets
   GOOGLE_DOCS_TEMPLATE_ID: process.env.GOOGLE_DOCS_TEMPLATE_ID,
   GOOGLE_DRIVE_FOLDER_ID: process.env.GOOGLE_DRIVE_FOLDER_ID,
   
@@ -64,22 +65,41 @@ const config = {
   // Function to initialize secrets from Secret Manager
   initSecrets: async function() {
     try {
-      console.log('Loading WordPress credentials from Secret Manager...');
-      
+      console.log('Loading credentials from Secret Manager...');
+
       // Get WordPress username from Secret Manager
       this.WORDPRESS_USERNAME = await this.getSecret(this.WORDPRESS_USERNAME_SECRET);
       console.log('WordPress username loaded from Secret Manager');
-      
+
       // Get WordPress password from Secret Manager
       this.WORDPRESS_APP_PASSWORD = await this.getSecret(this.WORDPRESS_PASSWORD_SECRET);
       console.log('WordPress app password loaded from Secret Manager');
-      
+
+      // Get Google Docs credentials
+      // Removed check for GOOGLE_DOCS_CREDENTIALS_SECRET_NAME
+      const googleDocsSecretName = 'GOOGLE_DOCS_CREDENTIALS'; // Hardcoded secret name
+      console.log(`Loading Google Docs credentials from secret: ${googleDocsSecretName}...`);
+      this.GOOGLE_DOCS_CREDENTIALS = await this.getSecret(googleDocsSecretName);
+      console.log('Google Docs credentials loaded from Secret Manager.');
+
+      // Add fetching for other secrets here if needed...
+      // Example: Fetch OpenAI API Key
+      // if (process.env.OPENAI_API_KEY_SECRET_NAME) {
+      //   this.OPENAI_API_KEY = await this.getSecret(process.env.OPENAI_API_KEY_SECRET_NAME);
+      //   console.log('OpenAI API Key loaded from Secret Manager.');
+      // } else if (!this.OPENAI_API_KEY) { // Check if already set via env var
+      //   console.warn('OpenAI API Key not configured via environment variable or Secret Manager name.');
+      // }
+
+
+      console.log('Secret loading process finished.');
       return true;
     } catch (error) {
-      console.error('Failed to load secrets from Secret Manager:', error);
-      // Fall back to environment variables if Secret Manager fails
-      console.log('Falling back to environment variables for WordPress credentials');
-      return false;
+      console.error('Failed to load one or more secrets from Secret Manager:', error);
+      // Decide how to handle failure - currently throwing will stop the app
+      throw new Error(`Failed to initialize secrets: ${error.message}`);
+      // Note: The previous fallback logic for WP creds using env vars is removed
+      // by throwing the error here if any secret fails.
     }
   }
 };

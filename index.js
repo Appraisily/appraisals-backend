@@ -81,7 +81,6 @@ async function loadSecrets() {
     process.env.WORDPRESS_API_URL = await getSecret('WORDPRESS_API_URL');
     process.env.OPENAI_API_KEY = await getSecret('OPENAI_API_KEY');
     process.env.GOOGLE_VISION_CREDENTIALS = await getSecret('GOOGLE_VISION_CREDENTIALS');
-    process.env.GOOGLE_DOCS_CREDENTIALS = await getSecret('GOOGLE_DOCS_CREDENTIALS');
     process.env.GEMINI_API_KEY = await getSecret('GEMINI_API_KEY');
     
     // Load SERPER API key
