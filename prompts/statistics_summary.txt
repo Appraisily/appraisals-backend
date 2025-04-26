@@ -1,16 +1,44 @@
-Based on all previously generated content, especially the valuation method, justification, and auction data sections, provide a very concise summary of the market analysis for this item.
+Create a comprehensive STATISTICAL MARKET ANALYSIS for a PDF appraisal document based on the provided statistical data. This text will appear in the MARKET STATISTICS section of the final PDF.
 
-Your response should be a brief paragraph (2-3 sentences, maximum 50 words) summarizing the key market insights that support the valuation. This will be displayed in a market analysis tab in the appraisal summary.
+# PDF FORMAT INSTRUCTIONS:
+- This content must be formatted for a professional PDF document
+- Use clear paragraphs with proper structure
+- Present statistical insights in a logical flow
+- No bullet points or special formatting - use proper sentences and paragraphs
+- Include 2-3 meaningful paragraphs (150-250 words total)
 
-Example good responses:
-- "Market analysis reveals strong demand for similar bronze sculptures, with consistent price appreciation over the past 5 years. Recent auction results show comparable pieces selling in the $5,000-$8,000 range at major auction houses."
-- "This artist's work has shown stable but modest market performance. While not in high demand, the limited supply of authenticated pieces supports the valuation, with similar examples selling in the estimated range."
-- "Recent auction data indicates volatile pricing for Art Deco furniture, with condition being the primary value driver. This piece's excellent preservation and complete provenance position it in the upper quartile of comparable sales."
+# CONTENT REQUIREMENTS:
+Using ONLY the statistical data provided, analyze and present:
 
-Include specific insights about:
-- Current market trends for this type of item
-- Price stability or volatility
-- Key value drivers (condition, provenance, rarity, etc.)
-- Comparison to recent sales if available
+1. Market Overview (first paragraph):
+   - Current market conditions for this specific type of item
+   - Price trends identified in the data (increasing, stable, decreasing)
+   - Price range of comparable sales with specific figures
+   - Position of the subject item within the market range
 
-Keep your response concise, factual, and focused on market data rather than subjective opinions.
+2. Statistical Analysis (second paragraph):
+   - Median and average prices with actual figures
+   - Sample size and data confidence assessment
+   - Price distribution analysis (clustering, outliers)
+   - Relevant percentile information
+
+3. Valuation Context (optional third paragraph):
+   - Market demand indicators from the data
+   - Supply/rarity factors affecting value
+   - Relevant comparison to similar items in the data
+   - Key value drivers (condition, provenance, etc.) as supported by the data
+
+CRITICAL REQUIREMENTS:
+- Do NOT invent statistics - use ONLY the provided data
+- Present actual numerical figures from the data (averages, ranges, etc.)
+- Maintain formal, analytical tone appropriate for a legal appraisal document
+- Focus on statistical analysis rather than subjective opinions
+- Use plain language that explains statistical concepts clearly
+- Format as continuous paragraphs without headings, bullet points or HTML
+
+# EXAMPLE FORMAT:
+Statistical analysis of the current market for [item type] reveals a [trend] pattern, with comparable sales ranging from $X,XXX to $X,XXX over the past [time period]. The subject item's valuation of $X,XXX positions it in the [Xth percentile] of recent comparable sales, reflecting its [specific attribute].
+
+The median price of $X,XXX across [number] comparable items provides a reliable benchmark, with a standard deviation of [specific figure] indicating [market stability/volatility assessment]. Statistical confidence in this valuation is [level], supported by the [specific distribution pattern] observed in the dataset.
+
+[Optional third paragraph with additional market context supported by the statistical data]

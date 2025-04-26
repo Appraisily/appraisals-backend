@@ -179,28 +179,95 @@ router.post('/generate-visualizations', async (req, res) => {
         
         // Generate and store statistics summary text if it doesn't already exist
         if (!postData.acf?.statistics_summary_text) {
-          const summaryParts = [];
-          
-          if (sanitizedStats.count) {
-            summaryParts.push(`Analysis based on ${sanitizedStats.count} comparable items.`);
-          }
-          
-          if (sanitizedStats.price_min && sanitizedStats.price_max) {
-            summaryParts.push(`Market range: $${Math.round(sanitizedStats.price_min).toLocaleString()} to $${Math.round(sanitizedStats.price_max).toLocaleString()}.`);
-          }
-          
-          if (sanitizedStats.price_trend_percentage) {
-            const trend = sanitizedStats.price_trend_percentage;
-            const trendDirection = trend.includes('+') ? 'increasing' : 'decreasing';
-            summaryParts.push(`Market prices ${trendDirection} at ${trend}.`);
-          }
-          
-          if (sanitizedStats.confidence_level) {
-            summaryParts.push(`${sanitizedStats.confidence_level} confidence in valuation.`);
-          }
-          
-          if (summaryParts.length > 0) {
-            acfFields.statistics_summary_text = summaryParts.join(' ');
+          try {
+            console.log('[Viz Route] Generating comprehensive statistics summary for PDF');
+            
+            // Get the raw statistics data from WordPress
+            let rawStatisticsData = postData.acf?.statistics || '{}';
+            
+            // If the statistics data is a string, ensure it's valid JSON but don't modify the structure
+            let statisticsObject;
+            if (typeof rawStatisticsData === 'string') {
+              try {
+                statisticsObject = JSON.parse(rawStatisticsData);
+                console.log('[Viz Route] Successfully parsed existing statistics JSON data');
+              } catch (parseError) {
+                console.error('[Viz Route] Error parsing statistics JSON data:', parseError);
+                statisticsObject = {};
+              }
+            } else if (typeof rawStatisticsData === 'object' && rawStatisticsData !== null) {
+              statisticsObject = rawStatisticsData;
+            } else {
+              statisticsObject = {};
+            }
+            
+            // Get the statistical summary prompt 
+            const promptsDir = path.join(__dirname, '..', 'prompts');
+            const promptFilePath = path.join(promptsDir, 'statistics_summary.txt');
+            let summaryPrompt = '';
+            try {
+              summaryPrompt = await fs.readFile(promptFilePath, 'utf8');
+            } catch (err) {
+              console.warn('[Viz Route] Could not read statistics_summary prompt, using default');
+              summaryPrompt = 'Provide a comprehensive statistical market analysis based on the data.';
+            }
+            
+            // Generate the comprehensive summary using OpenAI
+            // Pass the raw statistics data directly to the prompt
+            const rawStatisticsJson = JSON.stringify(statisticsObject, null, 2);
+            
+            // Create the prompt with the raw data
+            const fullPrompt = `${summaryPrompt}\n\n## RAW STATISTICAL DATA ##\n${rawStatisticsJson}\n\nGenerate a comprehensive statistical market analysis for PDF based on this data.`;
+            
+            // Import the OpenAI service
+            const openai = require('../services/openai');
+            
+            try {
+              // Generate content with OpenAI using the statistics data
+              const summaryContent = await openai.generateContent(
+                fullPrompt,
+                postData.title?.rendered || 'Appraisal Item',
+                {},  // No images needed for statistics
+                'gpt-4o',  // Use the latest model
+                "You are an expert statistics analyst for art and collectibles appraisals. Generate formal PDF-ready content.",
+                800,  // Max tokens - enough for 2-3 paragraphs
+                0.7   // Temperature
+              );
+              
+              // Store the AI-generated comprehensive summary
+              acfFields.statistics_summary_text = summaryContent;
+              console.log('[Viz Route] Generated comprehensive statistics summary using AI');
+            } catch (aiError) {
+              console.error('[Viz Route] AI generation failed, falling back to basic summary:', aiError);
+              // Fall back to simple summary if AI generation fails
+              const summaryParts = [];
+              
+              if (statisticsObject.count) {
+                summaryParts.push(`Analysis based on ${statisticsObject.count} comparable items.`);
+              }
+              
+              if (statisticsObject.price_min && statisticsObject.price_max) {
+                summaryParts.push(`Market range: $${Math.round(statisticsObject.price_min).toLocaleString()} to $${Math.round(statisticsObject.price_max).toLocaleString()}.`);
+              }
+              
+              if (statisticsObject.price_trend_percentage) {
+                const trend = statisticsObject.price_trend_percentage;
+                const trendDirection = trend.includes('+') ? 'increasing' : 'decreasing';
+                summaryParts.push(`Market prices ${trendDirection} at ${trend}.`);
+              }
+              
+              if (statisticsObject.confidence_level) {
+                summaryParts.push(`${statisticsObject.confidence_level} confidence in valuation.`);
+              }
+              
+              if (summaryParts.length > 0) {
+                acfFields.statistics_summary_text = summaryParts.join(' ');
+              }
+            }
+          } catch (statsSummaryError) {
+            console.error('[Viz Route] Error generating statistics summary:', statsSummaryError);
+            // Create a minimal fallback
+            acfFields.statistics_summary_text = `Statistical analysis supports the valuation of $${sanitizedStats.value ? Math.round(sanitizedStats.value).toLocaleString() : ''}.`;
           }
         }
         

@@ -1,11 +1,14 @@
 Analyze ONLY the provided auction results data to create a detailed justification for the appraised value. You MUST ONLY use the auction results provided in the data and NEVER fabricate or invent additional sales.
 
+# PDF CONTENT FORMAT:
+This text will be directly included in a PDF appraisal document. Format your response for optimal readability in a printed document. Use clear paragraphs with proper spacing.
+
 For each auction result in the provided data, include:
 
 1. Complete sale details (using ONLY information present in the data):
    - Auction house name
    - Sale date
-   - Final price achieved
+   - Final price achieved (format all prices consistently, e.g., $1,250)
    - Item description
    - Condition notes (if provided)
    - Provenance/significance (if provided)
@@ -17,19 +20,26 @@ For each auction result in the provided data, include:
 
 3. Explain how each result supports or influences the current valuation.
 
+4. Present numerical analysis:
+   - Price ranges of comparable items
+   - Averages or medians if multiple comparable items exist
+   - Percentage differences between comparables and the subject item
+   - Market trends indicated by the data
+
 CRITICAL REQUIREMENTS:
 - Use ONLY the auction results provided in the data
 - DO NOT invent or fabricate any sales data
 - If a detail is not provided in the data, simply omit it rather than making assumptions
 - Maintain strict factual accuracy based on the provided data
-- IMPORTANT: Output PLAIN TEXT ONLY. Do NOT include any HTML tags, formatting, or special characters
-- Output should be completely clean plain text without any markup whatsoever
-- Use simple paragraph breaks instead of HTML formatting
+- Output clean PDF-appropriate text with proper paragraph breaks
+- Present numerical data clearly and consistently for easy reading
 
-Format the response as a professional, well-structured analysis that can be directly included in an appraisal report. Use formal language and maintain a factual, evidence-based tone throughout.
+Format the response as a professional, well-structured analysis suitable for a formal PDF appraisal document. Use concise language and maintain a factual, evidence-based tone throughout.
 
 # Example Output Format:
 
-Recent auction results from [DATES FROM DATA] strongly support the valuation of [ITEM] at [VALUE]. At [AUCTION HOUSE FROM DATA] in [ACTUAL DATE FROM DATA], a comparable [ITEM DESCRIPTION FROM DATA] achieved [ACTUAL PRICE FROM DATA]. [Continue with actual comparisons using only provided data...]
+Recent auction results from [DATES FROM DATA] strongly support the valuation of [ITEM] at [VALUE]. At [AUCTION HOUSE FROM DATA] in [ACTUAL DATE FROM DATA], a comparable [ITEM DESCRIPTION FROM DATA] achieved [ACTUAL PRICE FROM DATA]. This example is particularly relevant due to [specific similarity from data].
 
-[Analyze each auction result from the provided data, maintaining strict adherence to the actual information provided]
+The market for these items shows [trend analysis based on provided data]. The average price of the most comparable pieces is [calculated average from actual data], with a range from [lowest comparable] to [highest comparable]. This positions our subject item in the [position within range] due to its [specific attributes].
+
+[Continue with analysis of other auction results, maintaining strict adherence to the actual information provided]
