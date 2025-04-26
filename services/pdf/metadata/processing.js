@@ -158,9 +158,40 @@ async function processMetadata(postData) {
   metadata.table = acfData.table || '';
   metadata.ad_copy = stripHtml(acfData.ad_copy || acfData.selling_copy || '');
 
+  // --- 6. Ensure all required fields are present with fallbacks ---
+  // Artwork details that might be used in placeholders
+  metadata.object_type = stripHtml(acfData.object_type || acfData.type || acfData.artwork_type || 'Artwork');
+  metadata.medium = stripHtml(acfData.medium || acfData.artwork_medium || 'Mixed Media');
+  metadata.dimensions = stripHtml(acfData.dimensions || acfData.size || acfData.measurements || '');
+  metadata.date_created = stripHtml(acfData.date_created || acfData.artwork_date || acfData.created || '');
+  metadata.artwork_title = stripHtml(acfData.artwork_title || acfData.title || '');
+  
+  // Check if there is a structured appraisal_summary field
+  if (acfData.appraisal_summary) {
+    // Use it directly
+    metadata.appraisal_summary = stripHtml(acfData.appraisal_summary);
+  } else {
+    // Try to build one from individual fields if available
+    try {
+      const summaryParts = [];
+      if (metadata.creator) summaryParts.push(`Artists_Name: ${metadata.creator}`);
+      if (metadata.estimated_age) summaryParts.push(`Period_Age: ${metadata.estimated_age}`);
+      if (metadata.artwork_title) summaryParts.push(`Title_of_Artwork: ${metadata.artwork_title}`);
+      if (metadata.medium) summaryParts.push(`Medium: ${metadata.medium}`);
+      if (metadata.dimensions) summaryParts.push(`Dimensions: ${metadata.dimensions}`);
+      if (metadata.object_type) summaryParts.push(`Object_Type: ${metadata.object_type}`);
+      
+      if (summaryParts.length > 0) {
+        metadata.appraisal_summary = summaryParts.join("\n");
+      }
+    } catch (error) {
+      console.warn('[PDF Meta] Error building appraisal summary:', error);
+    }
+  }
+
   console.log('[PDF Meta] Populated text fields from ACF.');
 
-  // --- 6. Format appraisal_value --- 
+  // --- 7. Format appraisal_value --- 
   console.log('[PDF Meta] Formatting appraisal value...');
   if (metadata.value !== null && metadata.value !== undefined && metadata.value !== '') {
     const numericValue = parseFloat(String(metadata.value).replace(/[^0-9.-]+/g,"")); // Clean string before parsing
@@ -174,7 +205,7 @@ async function processMetadata(postData) {
 
   console.log('[PDF Meta] Metadata processing complete.');
 
-  // --- 7. Validate final metadata object --- 
+  // --- 8. Validate final metadata object --- 
   const validation = validateMetadata(metadata);
   if (!validation.isValid) {
     console.warn('[PDF Meta] Validation Failed! Missing required fields:', validation.missingFields);

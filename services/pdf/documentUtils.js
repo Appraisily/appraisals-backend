@@ -97,12 +97,22 @@ async function replacePlaceholdersInDocument(docs, documentId, data) {
                 
                 if (textElement.textRun.content.includes(placeholder)) {
                   console.log(`Found placeholder: ${placeholder}`);
-                  const cleanValue = value !== undefined && value !== null 
-                    ? String(value)
-                        .replace(/\n/g, '\n\n')  // Convert single newlines to double
-                        .replace(/\s+/g, ' ')    // Normalize whitespace
-                        .trim()
-                    : '';
+                  
+                  // Format value with special handling for specific fields
+                  let cleanValue;
+                  
+                  // Special handling for summary fields that may contain structured data
+                  if (key.endsWith('_summary') && value && value.includes(':')) {
+                    cleanValue = formatSummaryField(value);
+                  } else {
+                    cleanValue = value !== undefined && value !== null 
+                      ? String(value)
+                          .replace(/\n/g, '\n\n')  // Convert single newlines to double
+                          .replace(/\s+/g, ' ')    // Normalize whitespace
+                          .trim()
+                      : '';
+                  }
+                  
                   console.log(`Replacing with cleaned value (first 100 chars): ${cleanValue.substring(0, 100)}`);
                   requests.push({
                     replaceAllText: {
@@ -143,6 +153,62 @@ async function replacePlaceholdersInDocument(docs, documentId, data) {
   } catch (error) {
     console.error('Error replacing placeholders:', error);
     throw error;
+  }
+}
+
+/**
+ * Format a summary field that contains key:value pairs or structured data
+ * @param {string} text - Summary text with potential key-value pairs
+ * @returns {string} - Formatted HTML
+ */
+function formatSummaryField(text) {
+  // If it doesn't contain key-value pairs, return as is
+  if (!text.includes(':')) {
+    return text;
+  }
+  
+  try {
+    // Check if it starts with a dash suggesting it's already formatted as a list
+    if (text.trim().startsWith('-')) {
+      // Split by dashes, clean up each item and create a bullet list
+      const items = text.split('-').filter(item => item.trim().length > 0);
+      
+      if (items.length === 0) return text;
+      
+      return items.map(item => `• ${item.trim()}`).join('\n\n');
+    }
+    
+    // Check if it contains key-value pairs
+    // Common formats:
+    // 1. Key: Value
+    // 2. - Key: Value
+    // 3. Key_Name: Value
+    
+    // Split by line breaks or dashes
+    const lines = text.split(/[\n\r-]/).map(line => line.trim()).filter(line => line);
+    
+    const formattedItems = lines.map(line => {
+      // See if it's a key-value pair (contains a colon)
+      const colonIndex = line.indexOf(':');
+      if (colonIndex > 0) {
+        const key = line.substring(0, colonIndex).trim()
+          .replace(/_/g, ' ') // Replace underscores with spaces
+          .replace(/([A-Z])/g, ' $1') // Add spaces before uppercase letters
+          .trim();
+        
+        const value = line.substring(colonIndex + 1).trim();
+        
+        // Format as bold key with normal value
+        return `<strong>${key}:</strong> ${value}`;
+      }
+      return line; // No colon, return as is
+    });
+    
+    // Join with line breaks between items
+    return formattedItems.join('\n\n');
+  } catch (error) {
+    console.warn('Error formatting summary field:', error);
+    return text; // Return original on error
   }
 }
 
