@@ -245,11 +245,36 @@ async function handleContainerPlaceholders(docs, documentId, data) {
     
     // Find and replace the statistics section placeholder
     try {
-      if (data.statistics) {
+      // First check for raw_statistics, which is unparsed data
+      let statisticsData = null;
+      
+      if (data.raw_statistics) {
+        console.log('Using raw_statistics for statistics section...');
+        
+        // Try to convert to object if it's a string, but don't throw error if it fails
+        if (typeof data.raw_statistics === 'string') {
+          try {
+            statisticsData = JSON.parse(data.raw_statistics);
+            console.log('Successfully parsed raw_statistics for display');
+          } catch (parseError) {
+            console.warn('Could not parse raw_statistics, using fallback:', parseError.message);
+            statisticsData = {}; // Use empty object as fallback
+          }
+        } else if (typeof data.raw_statistics === 'object' && data.raw_statistics !== null) {
+          statisticsData = data.raw_statistics;
+        }
+      } 
+      // Fall back to pre-parsed statistics if no raw_statistics available
+      else if (data.statistics) {
+        console.log('No raw_statistics found, using pre-parsed statistics...');
+        statisticsData = data.statistics;
+      }
+      
+      if (statisticsData) {
         console.log('Replacing statistics_section placeholder...');
         // Pass statistics, justification, and the full metadata to the formatter
         const statisticsSectionContent = buildStatisticsSection(
-          data.statistics,
+          statisticsData,
           data.justification || {},
           data // Pass the full metadata object
         );

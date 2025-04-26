@@ -85,37 +85,47 @@ async function processMetadata(postData) {
   metadata.SellingGuideText = stripHtml(staticContent.SellingGuideText || '');
 
   // --- 3. Process statistics data --- 
-  console.log('[PDF Meta] Parsing statistics data...');
-  let parsedStats = {}; // Default to empty object
+  console.log('[PDF Meta] Handling statistics data...');
   if (acfData.statistics) {
+    // Store the raw statistics data directly without parsing
+    metadata.raw_statistics = acfData.statistics;
+    console.log('[PDF Meta] Raw statistics data stored directly.');
+    
+    // For backward compatibility, still create an empty parsedStats object
+    let parsedStats = {};
+    
+    // Only try to parse if we need derived fields and only for logging
     try {
-      let statsData = acfData.statistics;
-      if (typeof statsData === 'string') {
-          try {
-            parsedStats = cleanAndParseJSON(statsData); // Use robust parser
-            console.log('[PDF Meta] Statistics string parsed successfully.');
-          } catch (parseError) {
-            console.error('[PDF Meta] Failed to parse statistics JSON string:', parseError.message);
-            // Keep parsedStats as {}
-          }
-      } else if (typeof statsData === 'object' && statsData !== null) {
-          parsedStats = statsData; // Assume it's already an object
-          console.log('[PDF Meta] Using pre-parsed statistics object.');
-      } else {
-          console.warn('[PDF Meta] Statistics data has unexpected type, skipping parse.', typeof statsData);
+      if (typeof acfData.statistics === 'string') {
+        // Just attempt a very basic parse for logging purposes
+        try {
+          parsedStats = JSON.parse(acfData.statistics);
+          console.log('[PDF Meta] Statistics data format appears valid.');
+        } catch (basicError) {
+          console.warn('[PDF Meta] Statistics data is not valid JSON, but will use as-is:', basicError.message);
+        }
+      } else if (typeof acfData.statistics === 'object' && acfData.statistics !== null) {
+        parsedStats = acfData.statistics;
+        console.log('[PDF Meta] Using statistics object directly.');
       }
     } catch (error) {
-      console.error('[PDF Meta] Error processing statistics data wrapper:', error);
-      // Keep parsedStats as {}
+      console.warn('[PDF Meta] Error checking statistics format:', error.message);
+      // This doesn't affect functionality - we're using raw_statistics anyway
+    }
+    
+    // --- 4. Populate top_auction_results from stats --- 
+    console.log('[PDF Meta] Formatting top auction results...');
+    if (parsedStats.comparable_sales) {
+      metadata.top_auction_results = formatTopAuctionResults(parsedStats.comparable_sales);
+    } else {
+      metadata.top_auction_results = "No comparable auction results available.";
+      console.log('[PDF Meta] No comparable sales data found for top_auction_results.');
     }
   } else {
-      console.log('[PDF Meta] No statistics data found in ACF.');
+    console.log('[PDF Meta] No statistics data found in ACF.');
+    metadata.raw_statistics = "{}";
+    metadata.top_auction_results = "No comparable auction results available.";
   }
-
-  // --- 4. Populate top_auction_results from stats --- 
-  console.log('[PDF Meta] Formatting top auction results...');
-  metadata.top_auction_results = formatTopAuctionResults(parsedStats?.comparable_sales);
-  // console.log(`[PDF Meta] Populated 'top_auction_results':`, metadata.top_auction_results.substring(0, 100) + '...'); // Verbose
 
   // --- 5. Populate Text Fields Directly from ACF Data ---
   console.log('[PDF Meta] Populating text fields from ACF data...');
