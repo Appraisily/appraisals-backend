@@ -16,9 +16,13 @@ document.addEventListener("DOMContentLoaded", function() {
 
     eaContainers.forEach(container => {
         // Use a data attribute on the container to find the postId if needed
-        // For now, assuming {{POST_ID}} is globally replaced or handled if multiple instances exist.
-        // If using data attribute: const postId = container.getAttribute('data-post-id') || 'default';
-        const postId = '{{POST_ID}}'; // Keep using placeholder for now, assuming it gets replaced server-side
+        const postId = container.getAttribute('data-post-id'); // Read from data-* attribute
+        
+        if (!postId) {
+            console.error('[DEBUG EA] Container is missing the data-post-id attribute. Cannot initialize.', container);
+            return; // Skip this container if ID is missing
+        }
+        
         console.log(`[DEBUG EA Card ${postId}] Processing container.`);
 
         // Check if already initialized

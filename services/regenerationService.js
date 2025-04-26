@@ -153,18 +153,11 @@ async function regenerateStatisticsAndVisualizations(postId, newValue, options =
         populateHtmlTemplate(skeletonHtmlCard, rawDataForAI)
     ]);
 
-    // --- NEW Step: Post-process HTML to replace any {{POST_ID}} placeholders ---
-    // This is crucial if the AI doesn't handle placeholders in attributes correctly
-    // or if the JS relies on these IDs being populated correctly.
-    console.log('[Regeneration Service] Post-processing HTML for Post ID placeholder...');
-    const populatedAnalyticsHtml = populatedAnalyticsHtmlRaw.replace(/{{POST_ID}}/g, postId);
-    const populatedCardHtml = populatedCardHtmlRaw.replace(/{{POST_ID}}/g, postId);
-
     // --- Step 5: Embed CSS/JS ---
     console.log('[Regeneration Service] Embedding CSS and JavaScript');
-    // Use the post-processed HTML variables now
-    const completeAnalyticsHtml = templatesModule.embedStylesAndScripts('enhanced-analytics', populatedAnalyticsHtml);
-    const completeCardHtml = templatesModule.embedStylesAndScripts('appraisal-card', populatedCardHtml);
+    // Use the raw HTML variables directly - AI handles {{POST_ID}} replacement now
+    const completeAnalyticsHtml = templatesModule.embedStylesAndScripts('enhanced-analytics', populatedAnalyticsHtmlRaw);
+    const completeCardHtml = templatesModule.embedStylesAndScripts('appraisal-card', populatedCardHtmlRaw);
 
     // --- Step 6: Save to WordPress ---
     console.log('[Regeneration Service] Saving populated HTML and statistics to WordPress');

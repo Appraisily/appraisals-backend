@@ -2,7 +2,6 @@ const { validateMetadata, REQUIRED_METADATA_FIELDS } = require('./validation');
 const staticMetadata = require('../../constants/staticMetadata');
 const he = require('he');
 const { cleanAndParseJSON } = require('../../utils/jsonCleaner');
-const geminiService = require('../../geminiService');
 const { formatTopAuctionResults } = require('../formatters');
 
 /**
@@ -37,7 +36,6 @@ function stripHtml(html) {
 
 /**
  * Processes ACF data and external sources to create the final metadata object for PDF generation.
- * Includes AI generation for specific text fields.
  * @param {object} postData The full post object from WordPress, containing ACF fields.
  * @returns {Promise<{metadata: object, validation: {isValid: boolean, missingFields: string[], emptyFields: string[]}}>}
  */
@@ -52,12 +50,14 @@ async function processMetadata(postData) {
   // --- 1. Process specific ACF fields (excluding AI/Static/Stats derived) ---
   console.log('[PDF Meta] Processing direct ACF fields...');
   REQUIRED_METADATA_FIELDS.forEach(key => {
-    // Skip fields populated later
+    // Skip fields populated later with special handling
     if ([
         'valuation_method', 'authorship', 'condition_report', 'provenance_summary',
         'market_summary', 'conclusion', 'statistics_summary_text', 'top_auction_results',
         'Introduction', 'ImageAnalysisText', 'SignatureText', 'AppraiserText',
-        'LiabilityText', 'SellingGuideText'
+        'LiabilityText', 'SellingGuideText', 'condition', 'conclusion1', 'conclusion2',
+        'age_text', 'age1', 'signature1', 'signature2', 'style', 'estimated_age',
+        'creator', 'customer_name', 'customer_address', 'table', 'ad_copy', 'test', 'condition_summary'
        ].includes(key)) {
       return;
     }
@@ -66,11 +66,11 @@ async function processMetadata(postData) {
     if (key === 'justification_html') {
       metadata[key] = rawValue || ''; // Keep HTML
     } else if (key === 'value') {
-        metadata[key] = rawValue; // Store raw value for formatting
+      metadata[key] = rawValue; // Store raw value for formatting
     } else if (key === 'googlevision') {
-        metadata[key] = rawValue; // Keep raw gallery IDs
+      metadata[key] = rawValue; // Keep raw gallery IDs
     } else {
-        metadata[key] = stripHtml(rawValue || ''); // Strip HTML for most text
+      metadata[key] = stripHtml(rawValue || ''); // Strip HTML for most text
     }
     // console.log(`[PDF Meta] Processed ACF field '${key}'`); // Verbose logging
   });
@@ -117,35 +117,48 @@ async function processMetadata(postData) {
   metadata.top_auction_results = formatTopAuctionResults(parsedStats?.comparable_sales);
   // console.log(`[PDF Meta] Populated 'top_auction_results':`, metadata.top_auction_results.substring(0, 100) + '...'); // Verbose
 
-  // --- 5. Generate AI Text Fields using Gemini --- 
-  console.log('[PDF Meta] Attempting AI generation for PDF text fields...');
-  let generatedTexts = {};
-  try {
-    // Pass ACF data (contains item details AND the AI-generated scores) 
-    // and the parsed statistics
-    generatedTexts = await geminiService.generatePdfTextFields(acfData, parsedStats, acfData); 
-    console.log('[PDF Meta] Successfully received generated text fields from Gemini.');
+  // --- 5. Populate Text Fields Directly from ACF Data ---
+  console.log('[PDF Meta] Populating text fields from ACF data...');
+  
+  // Basic text fields
+  metadata.valuation_method = stripHtml(acfData.valuation_method || 'Valuation method details not provided.');
+  metadata.authorship = stripHtml(acfData.authorship || 'Authorship details not provided.');
+  metadata.condition = stripHtml(acfData.condition || acfData.condition_report || 'Condition report not provided.');
+  metadata.condition_report = metadata.condition; // Duplicate for template consistency
+  metadata.condition_summary = stripHtml(acfData.condition_summary || 'Condition summary not available.');
+  metadata.provenance_summary = stripHtml(acfData.provenance || acfData.provenance_summary || 'Provenance summary not provided.');
+  metadata.statistics_summary_text = stripHtml(acfData.statistics_summary_text || acfData.market_summary || 'Market data summary not provided.');
+  
+  // Content sections that may be split into multiple parts
+  metadata.conclusion = stripHtml(acfData.conclusion || 'Conclusion not provided.');
+  metadata.conclusion1 = stripHtml(acfData.conclusion1 || acfData.conclusion || 'Conclusion not provided.');
+  metadata.conclusion2 = stripHtml(acfData.conclusion2 || ''); // Optional second part
+  
+  // Age-related fields
+  metadata.age_text = stripHtml(acfData.age_text || acfData.age_methodology || 'Age determination methodology not provided.');
+  metadata.age1 = stripHtml(acfData.age1 || acfData.age_findings || 'Age analysis findings not provided.');
+  metadata.estimated_age = stripHtml(acfData.estimated_age || acfData.age || 'Age not specified.');
+  
+  // Signature fields
+  metadata.signature1 = stripHtml(acfData.signature1 || acfData.signature_analysis || 'Signature analysis not provided.');
+  metadata.signature2 = stripHtml(acfData.signature2 || ''); // Optional second part
+  
+  // Style and content analysis
+  metadata.style = stripHtml(acfData.style || acfData.style_analysis || 'Style analysis not provided.');
+  metadata.test = stripHtml(acfData.test || acfData.item_type_determination || 'Item type determination not provided.');
+  
+  // Creator/artist information
+  metadata.creator = stripHtml(acfData.creator || acfData.artist_creator_name || acfData.artist || 'Unknown creator');
+  
+  // Client information
+  metadata.customer_name = stripHtml(acfData.customer_name || postData.customer_name || 'Client name not provided');
+  metadata.customer_address = stripHtml(acfData.customer_address || postData.customer_address || 'Client address not provided');
+  
+  // Additional content blocks
+  metadata.table = acfData.table || ''; // Data table - keep formatting if present
+  metadata.ad_copy = stripHtml(acfData.ad_copy || acfData.selling_copy || 'No additional selling information available.');
 
-    // Populate metadata with stripped AI-generated text
-    metadata.valuation_method = stripHtml(generatedTexts.valuation_method || '');
-    metadata.authorship = stripHtml(generatedTexts.authorship || '');
-    metadata.condition_report = stripHtml(generatedTexts.condition_report || '');
-    metadata.provenance_summary = stripHtml(generatedTexts.provenance_summary || '');
-    // Use market_summary for statistics_summary_text
-    metadata.statistics_summary_text = stripHtml(generatedTexts.market_summary || 'Market data summary could not be generated.');
-    metadata.conclusion = stripHtml(generatedTexts.conclusion || '');
-    console.log('[PDF Meta] Populated metadata with AI-generated text.');
-
-  } catch (aiError) {
-    console.error('[PDF Meta] Error generating PDF text fields via Gemini:', aiError);
-    // Populate with default error messages if AI fails
-    metadata.valuation_method = '(Automated generation failed: Valuation method details unavailable)';
-    metadata.authorship = '(Automated generation failed: Authorship details unavailable)';
-    metadata.condition_report = '(Automated generation failed: Condition report unavailable)';
-    metadata.provenance_summary = '(Automated generation failed: Provenance summary unavailable)';
-    metadata.statistics_summary_text = '(Automated generation failed: Market data summary unavailable)';
-    metadata.conclusion = '(Automated generation failed: Conclusion unavailable)';
-  }
+  console.log('[PDF Meta] Populated text fields from ACF.');
 
   // --- 6. Format appraisal_value --- 
   console.log('[PDF Meta] Formatting appraisal value...');

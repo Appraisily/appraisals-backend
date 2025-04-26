@@ -79,10 +79,10 @@ async function populateHtmlTemplate(skeletonHtml, dataContext) {
 
     Guidelines:
     - Look at the data and understand where each piece should go in the template
-    - Fill in all placeholders in the template (formatted like {{PLACEHOLDER_NAME}})
+    - Fill in all placeholders in the template (formatted like {{PLACEHOLDER_NAME}}) using the corresponding values from the Raw Data JSON. **Specifically, replace any occurrence of the literal string \`{{POST_ID}}\` in the template with the actual value provided in the \`POST_ID\` field of the Raw Data JSON.**
     - If data is missing for a particular visualization, use sensible defaults or hide that section
     - For charts that need data attributes (like data-chart-data-radar), format the JSON correctly
-    - Create unique IDs for all chart elements to prevent conflicts
+    - Create unique IDs for all chart elements to prevent conflicts (you can use the provided POST_ID for uniqueness)
     - Process conditional expressions like {{SHOW_RADAR ? '' : 'style="display:none;"'}}
     - You can modify the template structure if needed to better present the available data
     - If you cannot show a graph because data is missing, you can remove it or replace it with appropriate text
