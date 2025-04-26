@@ -349,8 +349,8 @@ async function processAllMetadata(postId, postTitle, { postData, images }) {
   
   // Get the detailed title if available
   try {
-    if (postData?.acf?.detailedTitle) {
-      const detailedTitle = postData.acf.detailedTitle;
+    if (postData?.acf?.detailedtitle) {
+      const detailedTitle = postData.acf.detailedtitle;
       console.log(`[Processor] Found detailed title: "${detailedTitle}"`);
       context.detailedTitle = detailedTitle;
     } else {
@@ -452,8 +452,8 @@ async function processJustificationMetadata(postId, postTitle, value, skipMetada
     let detailedTitle = null;
     try {
       const { postData } = await wordpress.fetchPostData(postId);
-      if (postData?.acf?.detailedTitle) {
-        detailedTitle = postData.acf.detailedTitle;
+      if (postData?.acf?.detailedtitle) {
+        detailedTitle = postData.acf.detailedtitle;
         console.log(`[Processor] Using detailed title for justification: "${detailedTitle}"`);
       }
     } catch (detailedTitleError) {

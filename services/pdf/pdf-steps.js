@@ -485,11 +485,54 @@ async function insertGalleryStep(context) {
   addLog(context, 'info', 'Adding gallery images');
   
   try {
-    if (context.images.gallery && context.images.gallery.length > 0) {
-      await insertGalleryGrid(context.docs, context.documentId, context.images.gallery);
-      addLog(context, 'info', `Added ${context.images.gallery.length} gallery images`);
+    // Ensure gallery exists and is an array
+    const gallery = context.images.gallery || [];
+    
+    if (gallery.length > 0) {
+      await insertGalleryGrid(context.docs, context.documentId, 1, gallery);
+      addLog(context, 'info', `Added ${gallery.length} gallery images`);
     } else {
       addLog(context, 'warn', 'No gallery images to add');
+      
+      // Try to remove the gallery placeholder even if there are no images
+      try {
+        const document = await context.docs.documents.get({ documentId: context.documentId });
+        const content = document.data.body.content;
+        let galleryPlaceholderIndex = -1;
+
+        // Find gallery placeholder
+        for (const element of content) {
+          if (element.paragraph?.elements) {
+            for (const elem of element.paragraph.elements) {
+              if (elem.textRun?.content.includes('{{gallery}}')) {
+                galleryPlaceholderIndex = elem.startIndex + elem.textRun.content.indexOf('{{gallery}}');
+                break;
+              }
+            }
+          }
+          if (galleryPlaceholderIndex !== -1) break;
+        }
+
+        if (galleryPlaceholderIndex !== -1) {
+          // Remove the gallery placeholder
+          await context.docs.documents.batchUpdate({
+            documentId: context.documentId,
+            requestBody: {
+              requests: [{
+                deleteContentRange: {
+                  range: {
+                    startIndex: galleryPlaceholderIndex,
+                    endIndex: galleryPlaceholderIndex + '{{gallery}}'.length
+                  }
+                }
+              }]
+            }
+          });
+          addLog(context, 'info', 'Gallery placeholder removed');
+        }
+      } catch (placeholderError) {
+        addLog(context, 'warn', `Error removing gallery placeholder: ${placeholderError.message}`);
+      }
     }
   } catch (error) {
     addLog(context, 'warn', `Error adding gallery images: ${error.message}`);

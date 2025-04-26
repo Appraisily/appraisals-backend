@@ -31,114 +31,117 @@ async function calculateImageDimensions(url, maxWidth = 200, maxHeight = 150) {
 
 async function insertImageAtPlaceholder(docs, documentId, placeholder, imageUrl) {
   try {
+    console.log(`Inserting image at placeholder {{${placeholder}}}`);
+    
     if (!imageUrl) {
-      console.warn(`No image URL provided for placeholder {{${placeholder}_image}}`);
+      console.warn(`No image URL provided for placeholder ${placeholder}`);
       return;
     }
-
-    const imageData = await calculateImageDimensions(imageUrl);
-    if (!imageData) {
-      console.warn(`Failed to process image for placeholder {{${placeholder}_image}}`);
-      return;
-    }
-
+    
+    // Find the placeholder in the document
     const document = await docs.documents.get({ documentId });
     const content = document.data.body.content;
-    const placeholderFull = `{{${placeholder}_image}}`;
+    
+    // The placeholder text exactly as it appears in the document
+    const placeholderText = `{{${placeholder}}}`;
+    
+    // Find all occurrences of the placeholder
     let occurrences = [];
-
-    const findPlaceholders = (elements) => {
+    
+    const findPlaceholdersInElements = (elements) => {
       for (const element of elements) {
-        if (element.paragraph?.elements) {
-          for (const elem of element.paragraph.elements) {
-            if (elem.textRun?.content) {
-              let content = elem.textRun.content;
+        if (element.paragraph && element.paragraph.elements) {
+          for (const paragraphElement of element.paragraph.elements) {
+            if (paragraphElement.textRun && paragraphElement.textRun.content.includes(placeholderText)) {
+              const text = paragraphElement.textRun.content;
               let position = 0;
               
-              while (true) { // eslint-disable-line no-constant-condition -- Loop breaks internally
-                const index = content.indexOf(placeholderFull, position);
-                if (index === -1) break;
+              while (true) {
+                const startPos = text.indexOf(placeholderText, position);
+                if (startPos === -1) break;
                 
                 occurrences.push({
-                  startIndex: elem.startIndex + index,
-                  endIndex: elem.startIndex + index + placeholderFull.length,
-                  element: elem
+                  startIndex: paragraphElement.startIndex + startPos,
+                  endIndex: paragraphElement.startIndex + startPos + placeholderText.length
                 });
                 
-                position = index + placeholderFull.length;
+                position = startPos + placeholderText.length;
               }
             }
           }
         } else if (element.table) {
-          for (const row of element.table.tableRows) {
-            for (const cell of row.tableCells) {
+          // Also search in tables
+          for (const row of element.table.tableRows || []) {
+            for (const cell of row.tableCells || []) {
               if (cell.content) {
-                findPlaceholders(cell.content);
+                findPlaceholdersInElements(cell.content);
               }
             }
           }
         }
       }
     };
-
-    findPlaceholders(content);
-
+    
+    findPlaceholdersInElements(content);
+    
     if (occurrences.length === 0) {
-      console.warn(`No occurrences found for placeholder {{${placeholder}_image}}`);
+      console.warn(`No occurrences found for placeholder ${placeholderText}`);
       return;
     }
-
-    console.log(`Found ${occurrences.length} occurrences of {{${placeholder}_image}}`);
-
-    const requests = [];
-    // Sort occurrences by startIndex in descending order
+    
+    console.log(`Found ${occurrences.length} occurrences of placeholder ${placeholderText}`);
+    
+    // Sort occurrences in reverse order (to avoid index shifting)
     occurrences.sort((a, b) => b.startIndex - a.startIndex);
-
+    
+    // Process each occurrence
     for (const occurrence of occurrences) {
-      // First delete the placeholder text
-      requests.push(
-        {
-          deleteContentRange: {
-            range: {
-              startIndex: occurrence.startIndex,
-              endIndex: occurrence.endIndex
+      // Delete the placeholder
+      await docs.documents.batchUpdate({
+        documentId,
+        requestBody: {
+          requests: [{
+            deleteContentRange: {
+              range: {
+                startIndex: occurrence.startIndex,
+                endIndex: occurrence.endIndex
+              }
             }
-          }
-        },
-        // Then insert the image at the same position
-        {
-          insertInlineImage: {
-            location: {
-              index: occurrence.startIndex
-            },
-            uri: imageUrl, 
-            objectSize: {
-              height: { magnitude: imageData.height, unit: 'PT' },
-              width: { magnitude: imageData.width, unit: 'PT' }
-            }
-          }
+          }]
         }
-      );
+      });
+      
+      // Insert the image in place of the placeholder
+      await docs.documents.batchUpdate({
+        documentId,
+        requestBody: {
+          requests: [{
+            insertInlineImage: {
+              location: {
+                index: occurrence.startIndex
+              },
+              uri: imageUrl,
+              objectSize: {
+                height: {
+                  magnitude: 300,
+                  unit: 'PT'
+                },
+                width: {
+                  magnitude: 400,
+                  unit: 'PT'
+                }
+              }
+            }
+          }]
+        }
+      });
     }
 
-    // Execute requests in batches of 10 to avoid rate limits
-    for (let i = 0; i < requests.length; i += 10) {
-      const batchRequests = requests.slice(i, i + 10);
-      try {
-        await docs.documents.batchUpdate({
-          documentId,
-          requestBody: { requests: batchRequests }
-        });
-        console.log(`Processed batch ${Math.floor(i/10) + 1} of ${Math.ceil(requests.length/10)}`);
-      } catch (error) {
-        console.error(`Error processing batch ${Math.floor(i/10) + 1}:`, error);
-        throw error;
-      }
-    }
-
-    console.log(`Replaced ${occurrences.length} occurrence(s) of {{${placeholder}_image}} with image`);
+    console.log(`Image inserted successfully at ${occurrences.length} placeholders for ${placeholder}`);
+    return true;
   } catch (error) {
-    console.error(`Error inserting image for placeholder {{${placeholder}_image}}:`, error);
+    console.error(`Error inserting image at placeholder ${placeholder}:`, error);
+    throw error;
   }
 }
 

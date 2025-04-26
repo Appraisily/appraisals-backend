@@ -15,87 +15,77 @@ document.addEventListener("DOMContentLoaded", function() {
     console.log(`[DEBUG EA] Found ${eaContainers.length} enhanced analytics containers.`);
 
     eaContainers.forEach(container => {
-        // Use a data attribute on the container to find the postId if needed
-        const postId = container.getAttribute('data-post-id'); // Read from data-* attribute
-        
-        if (!postId) {
-            console.error('[DEBUG EA] Container is missing the data-post-id attribute. Cannot initialize.', container);
-            return; // Skip this container if ID is missing
-        }
-        
-        console.log(`[DEBUG EA Card ${postId}] Processing container.`);
-
         // Check if already initialized
         if (container.dataset.eaInitialized === 'true') {
-            console.log(`[DEBUG EA Card ${postId}] Already initialized, skipping.`);
+            console.log(`[DEBUG EA] Already initialized, skipping.`);
             return; 
         }
         container.dataset.eaInitialized = 'true'; // Mark as initialized
 
         // Initialize charts with robust loading mechanism
-        initializeEnhancedAnalyticsChartsWithRetry(postId, container);
+        initializeEnhancedAnalyticsChartsWithRetry(container);
     });
 });
 
 // Robust chart initialization that handles race conditions
-function initializeEnhancedAnalyticsChartsWithRetry(postId, container, attemptCount = 0) {
-    console.log(`[DEBUG EA Card ${postId}] initializeEnhancedAnalyticsChartsWithRetry called (Attempt: ${attemptCount})`);
+function initializeEnhancedAnalyticsChartsWithRetry(container, attemptCount = 0) {
+    console.log(`[DEBUG EA] initializeEnhancedAnalyticsChartsWithRetry called (Attempt: ${attemptCount})`);
     const maxAttempts = 10;
     const retryDelay = 300; // milliseconds
 
     // Define Chart.js alias if not already globally defined
     if (!window.EnhancedAnalyticsChart) {
          if (typeof window.Chart !== 'undefined') {
-            console.log('[DEBUG EA Card] Chart.js found globally, setting alias.');
+            console.log('[DEBUG EA] Chart.js found globally, setting alias.');
             window.EnhancedAnalyticsChart = window.Chart;
         } else if (typeof wp !== 'undefined' && wp.charts && wp.charts.Chart) {
-            console.log('[DEBUG EA Card] WordPress Chart.js found, setting alias.');
+            console.log('[DEBUG EA] WordPress Chart.js found, setting alias.');
             window.EnhancedAnalyticsChart = wp.charts.Chart;
         }
     }
     
     // If Chart.js is available (via alias), initialize
     if (typeof window.EnhancedAnalyticsChart !== 'undefined') {
-        console.log('[DEBUG EA Card] EnhancedAnalyticsChart alias found, initializing...');
-        initEnhancedAnalyticsCharts(postId, container);
+        console.log('[DEBUG EA] EnhancedAnalyticsChart alias found, initializing...');
+        initEnhancedAnalyticsCharts(container);
         return;
     }
 
     // Chart.js not available yet, retry
     if (attemptCount < maxAttempts) {
-        console.log(`[DEBUG EA Card ${postId}] Chart library not ready, setting timeout for retry... (${attemptCount + 1}/${maxAttempts})`);
+        console.log(`[DEBUG EA] Chart library not ready, setting timeout for retry... (${attemptCount + 1}/${maxAttempts})`);
         setTimeout(function() {
-            console.log(`[DEBUG EA Card ${postId}] Executing retry attempt ${attemptCount + 1}`);
-            initializeEnhancedAnalyticsChartsWithRetry(postId, container, attemptCount + 1);
+            console.log(`[DEBUG EA] Executing retry attempt ${attemptCount + 1}`);
+            initializeEnhancedAnalyticsChartsWithRetry(container, attemptCount + 1);
         }, retryDelay);
     } else {
-        console.error(`[DEBUG EA Card ${postId}] Chart.js library not found after maximum attempts. Charts cannot be initialized.`);
+        console.error(`[DEBUG EA] Chart.js library not found after maximum attempts. Charts cannot be initialized.`);
          // Optional: Last resort loading (consider removing)
-        // console.warn('[DEBUG EA Card] Trying to load Chart.js directly via CDN...');
+        // console.warn('[DEBUG EA] Trying to load Chart.js directly via CDN...');
         // const script = document.createElement('script');
         // script.src = 'https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js';
         // script.onload = function() {
-        //     console.log('[DEBUG EA Card] Chart.js loaded directly via CDN, initializing...');
+        //     console.log('[DEBUG EA] Chart.js loaded directly via CDN, initializing...');
         //     window.EnhancedAnalyticsChart = window.Chart;
-        //     initEnhancedAnalyticsCharts(postId, container);
+        //     initEnhancedAnalyticsCharts(container);
         // };
-        // script.onerror = function() { console.error('[DEBUG EA Card] Failed to load Chart.js directly via CDN'); };
+        // script.onerror = function() { console.error('[DEBUG EA] Failed to load Chart.js directly via CDN'); };
         // document.head.appendChild(script);
     }
 }
 
 // Initialize all charts and components for Enhanced Analytics
-function initEnhancedAnalyticsCharts(postId, container) {
-    console.log(`[DEBUG EA Card ${postId}] Initializing Enhanced Analytics charts and components...`);
+function initEnhancedAnalyticsCharts(container) {
+    console.log(`[DEBUG EA] Initializing Enhanced Analytics charts and components...`);
     if (!container) {
-        console.error(`[DEBUG EA Card ${postId}] Container not found in initEnhancedAnalyticsCharts.`);
+        console.error(`[DEBUG EA] Container not found in initEnhancedAnalyticsCharts.`);
         return;
     }
 
     // Destroy existing charts before creating new ones
     function destroyEaChart(canvasId) {
          if (window.EnhancedAnalyticsChart && window.EnhancedAnalyticsChart.getChart(canvasId)) {
-             console.log(`[DEBUG EA Card ${postId}] Destroying existing chart on canvas: ${canvasId}`);
+             console.log(`[DEBUG EA] Destroying existing chart on canvas: ${canvasId}`);
              window.EnhancedAnalyticsChart.getChart(canvasId).destroy();
          }
     }
@@ -104,7 +94,7 @@ function initEnhancedAnalyticsCharts(postId, container) {
     function checkSectionVisibility(selector) {
         var section = container.querySelector(selector);
         if (section && section.hasAttribute('style') && section.getAttribute('style').includes('display:none')) {
-            console.log(`[DEBUG EA Card ${postId}] ${selector} section is hidden by template condition`);
+            console.log(`[DEBUG EA] ${selector} section is hidden by template condition`);
             return false;
         }
         return true;
@@ -118,7 +108,7 @@ function initEnhancedAnalyticsCharts(postId, container) {
 
     // Initialize Radar Chart
     if (isRadarVisible) {
-        const radarCanvasId = `ea-radar-chart-${postId}`;
+        const radarCanvasId = `ea-radar-chart`;
         const radarCanvas = document.getElementById(radarCanvasId);
         const radarWrapper = container.querySelector(".radar-wrapper");
         if (radarCanvas && radarWrapper && radarWrapper.dataset.chartDataRadar) {
@@ -141,18 +131,18 @@ function initEnhancedAnalyticsCharts(postId, container) {
                          plugins: { legend: { display: false } } // Hide default legend
                     }
                  });
-                console.log(`[DEBUG EA Card ${postId}] Radar chart initialized successfully`);
+                console.log(`[DEBUG EA] Radar chart initialized successfully`);
             } catch (error) {
-                console.error(`[DEBUG EA Card ${postId}] Error initializing radar chart:`, error);
+                console.error(`[DEBUG EA] Error initializing radar chart:`, error);
             }
         } else {
-             console.warn(`[DEBUG EA Card ${postId}] Radar chart canvas/wrapper/data not found.`);
+             console.warn(`[DEBUG EA] Radar chart canvas/wrapper/data not found.`);
         }
     }
 
     // Initialize Price History Chart
     if (isPriceHistoryVisible) {
-        const priceCanvasId = `ea-price-chart-${postId}`;
+        const priceCanvasId = `ea-price-chart`;
         const priceCanvas = document.getElementById(priceCanvasId);
         const wrapper = container.querySelector(".price-chart-wrapper");
         if (priceCanvas && wrapper && wrapper.dataset.chartDataHistory) {
@@ -193,12 +183,12 @@ function initEnhancedAnalyticsCharts(postId, container) {
                         }
                     }
                  });
-                console.log(`[DEBUG EA Card ${postId}] Price history chart initialized successfully`);
+                console.log(`[DEBUG EA] Price history chart initialized successfully`);
             } catch (error) {
-                console.error(`[DEBUG EA Card ${postId}] Error initializing price history chart:`, error);
+                console.error(`[DEBUG EA] Error initializing price history chart:`, error);
             }
         } else {
-             console.warn(`[DEBUG EA Card ${postId}] Price history chart canvas/wrapper/data not found.`);
+             console.warn(`[DEBUG EA] Price history chart canvas/wrapper/data not found.`);
         }
     }
 
@@ -206,22 +196,22 @@ function initEnhancedAnalyticsCharts(postId, container) {
     if (isStatsVisible || isItemMetricsVisible || isTableVisible) {
         // Delay initialization slightly
         setTimeout(function() {
-            console.log(`[DEBUG EA Card ${postId}] Initializing statistics components after delay...`);
+            console.log(`[DEBUG EA] Initializing statistics components after delay...`);
             try {
-                if (isItemMetricsVisible) initEaHistogramTooltips(postId, container); // Renamed & scoped
-                if (isTableVisible) setupEaSalesTable(postId, container); // Renamed & scoped
-                if (isStatsVisible) initEaConfidenceIndicator(postId, container); // Renamed & scoped
+                if (isItemMetricsVisible) initEaHistogramTooltips(container); // Renamed & scoped
+                if (isTableVisible) setupEaSalesTable(container); // Renamed & scoped
+                if (isStatsVisible) initEaConfidenceIndicator(container); // Renamed & scoped
             } catch (error) {
-                console.error(`[DEBUG EA Card ${postId}] Error initializing statistics components:`, error);
+                console.error(`[DEBUG EA] Error initializing statistics components:`, error);
             }
         }, 100); 
     } else {
-        console.log(`[DEBUG EA Card ${postId}] Statistics/Table sections hidden, skipping component initialization.`);
+        console.log(`[DEBUG EA] Statistics/Table sections hidden, skipping component initialization.`);
     }
 }
 
 // Setup histogram hover interactions (Renamed)
-function initEaHistogramTooltips(postId, container) {
+function initEaHistogramTooltips(container) {
      const bars = container.querySelectorAll('.modern-bar-wrap');
      bars.forEach(function(bar) {
         bar.addEventListener('mouseenter', function() { 
@@ -233,11 +223,11 @@ function initEaHistogramTooltips(postId, container) {
             if(tooltip) tooltip.style.opacity = '0';
          });
     });
-    console.log(`[DEBUG EA Card ${postId}] Histogram tooltip interactions setup complete`);
+    console.log(`[DEBUG EA] Histogram tooltip interactions setup complete`);
 }
 
 // Initialize confidence indicator visuals (Renamed)
-function initEaConfidenceIndicator(postId, container) {
+function initEaConfidenceIndicator(container) {
     const confidenceDisplays = container.querySelectorAll(".confidence-display");
     confidenceDisplays.forEach(function(display) { 
         const indicator = display.querySelector(".confidence-indicator");
@@ -252,7 +242,7 @@ function initEaConfidenceIndicator(postId, container) {
             if (className) indicator.className = 'confidence-indicator ' + className;
         }
     });
-    console.log(`[DEBUG EA Card ${postId}] Confidence indicators initialized.`);
+    console.log(`[DEBUG EA] Confidence indicators initialized.`);
 }
 
 // Function to format currency (local scope)
@@ -277,10 +267,10 @@ function formatDate(dateString) {
 }
 
 // Setup sales table sorting and filtering (Renamed)
-function setupEaSalesTable(postId, container) {
-    const salesTable = document.getElementById(`ea-salesTable-${postId}`); // Use renamed ID
+function setupEaSalesTable(container) {
+    const salesTable = document.getElementById(`ea-salesTable`); // Use fixed ID
     if (!salesTable) {
-        console.warn(`[DEBUG EA Card ${postId}] Sales table not found`);
+        console.warn(`[DEBUG EA] Sales table not found`);
         return;
     }
     
@@ -293,8 +283,8 @@ function setupEaSalesTable(postId, container) {
     } else { console.warn('Sales data attribute not found'); return; }
 
     const tbody = salesTable.querySelector('tbody');
-    const paginationControls = document.getElementById(`ea-pagination-${postId}`); // Use renamed ID
-    const searchInput = document.getElementById(`ea-searchResults-${postId}`); // Use renamed ID
+    const paginationControls = document.getElementById(`ea-pagination`); // Use fixed ID
+    const searchInput = document.getElementById(`ea-searchResults`); // Use fixed ID
     
     if (!tbody || !paginationControls || !searchInput) { console.warn('Table components missing'); return; }
     
@@ -422,7 +412,7 @@ function setupEaSalesTable(postId, container) {
         paginationControls.querySelector('[data-page="prev"]').addEventListener('click', () => { if (currentPage > 1) { currentPage--; sortTable(); } });
         paginationControls.querySelector('[data-page="next"]').addEventListener('click', () => { const totalPages = Math.ceil(filteredData.length / rowsPerPage); if (currentPage < totalPages) { currentPage++; sortTable(); } });
         salesTable.dataset.listenersAttached = 'true';
-        console.log(`[DEBUG EA Card ${postId}] Sales table listeners attached.`);
+        console.log(`[DEBUG EA] Sales table listeners attached.`);
     }
     
     // Initial table display

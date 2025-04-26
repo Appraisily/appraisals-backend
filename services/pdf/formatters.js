@@ -245,12 +245,12 @@ function formatCurrency(value) {
 /**
  * Format top auction results from comparable sales data
  * @param {Array} comparableSales - Array of comparable sales data
- * @returns {Array} - Formatted array of top auction results
+ * @returns {string} - Formatted HTML table of top auction results
  */
 function formatTopAuctionResults(comparableSales) {
-  // If no comparable sales data, return empty array
+  // If no comparable sales data, return empty message
   if (!comparableSales || !Array.isArray(comparableSales) || comparableSales.length === 0) {
-    return [];
+    return 'No comparable auction results available.';
   }
 
   // Sort comparable sales by price (highest first) and take top 10
@@ -263,8 +263,10 @@ function formatTopAuctionResults(comparableSales) {
     })
     .slice(0, 10);
 
-  // Format each result
-  return topSales.map(sale => {
+  // Generate HTML table rows
+  let tableRows = '';
+  
+  for (const sale of topSales) {
     // Format the price
     const formattedPrice = formatCurrency(sale.price);
     
@@ -283,15 +285,37 @@ function formatTopAuctionResults(comparableSales) {
       }
     }
     
-    return {
-      title: sale.title || 'Unknown Item',
-      price: formattedPrice,
-      house: sale.auction_house || sale.house || 'Unknown',
-      date: formattedDate,
-      diff: sale.difference || sale.diff || null,
-      is_current: !!sale.is_current
-    };
-  });
+    const title = sale.title || 'Unknown Item';
+    const house = sale.auction_house || sale.house || 'Unknown';
+    const diff = sale.difference || sale.diff || null;
+    const diffString = diff ? ` (${diff})` : '';
+    const isCurrent = !!sale.is_current;
+    
+    tableRows += `
+      <tr${isCurrent ? ' style="background-color:#F0F7FF; font-weight:bold;"' : ''}>
+        <td style="padding:6pt; border:1pt solid #DDDDDD;">${title}</td>
+        <td style="padding:6pt; border:1pt solid #DDDDDD;">${house}</td>
+        <td style="padding:6pt; border:1pt solid #DDDDDD;">${formattedDate}</td>
+        <td style="padding:6pt; border:1pt solid #DDDDDD;">${formattedPrice}${diffString}</td>
+      </tr>
+    `;
+  }
+
+  // Build complete HTML table
+  return `
+    <table style="width:100%; border-collapse:collapse; border:1pt solid #DDDDDD; margin-bottom:15pt;">
+      <tr style="background-color:#F8F8F8; font-weight:bold;">
+        <td style="padding:8pt; border:1pt solid #DDDDDD;">Item</td>
+        <td style="padding:8pt; border:1pt solid #DDDDDD;">Auction House</td>
+        <td style="padding:8pt; border:1pt solid #DDDDDD;">Date</td>
+        <td style="padding:8pt; border:1pt solid #DDDDDD;">Price</td>
+      </tr>
+      ${tableRows}
+    </table>
+    <p style="font-size:10pt; color:#718096; margin-top:8pt; margin-bottom:15pt;">
+      Note: Comparable sales data based on auction records and market data at the time of appraisal.
+    </p>
+  `;
 }
 
 module.exports = {

@@ -13,7 +13,7 @@
     <div class="chart-card">
       <div class="chart-content">
         <div class="radar-wrapper" data-chart-data-radar="{{RADAR_CHART_DATA_JSON}}">
-          <canvas id="ea-radar-chart-{{POST_ID}}" width="400" height="400"></canvas> <!-- Renamed JS Target -->
+          <canvas id="ea-radar-chart" width="400" height="400"></canvas> <!-- Fixed ID -->
         </div>
         <div class="radar-metrics-legend">
           <div class="legend-item"><span class="legend-color" style="background-color: rgba(54, 162, 235, 0.6);"></span><span class="legend-label">Item Metrics</span></div>
@@ -68,7 +68,7 @@
       </div>
       <div class="chart-content">
         <div class="price-chart-wrapper" data-chart-data-history="{{HISTORY_CHART_DATA_JSON}}">
-          <canvas id="ea-price-chart-{{POST_ID}}" height="300"></canvas> <!-- Renamed JS Target -->
+          <canvas id="ea-price-chart" height="300"></canvas> <!-- Fixed ID -->
         </div>
         <div class="price-chart-legend">
           <div class="legend-item"><span class="legend-color" style="background-color: rgb(75, 192, 192);"></span><span class="legend-label">Comparable Items</span></div>
@@ -192,18 +192,18 @@
                  <h4>Comprehensive Market Data</h4>
                  <div class="data-table-controls">
                      <div class="search-filter">
-                         <input type="text" id="ea-searchResults-{{POST_ID}}" placeholder="Search items..." class="search-input"> <!-- Renamed ID -->
+                         <input type="text" id="ea-searchResults" placeholder="Search items..." class="search-input"> <!-- Fixed ID -->
                      </div>
                  </div>
              </div>
              <div class="sales-table-container">
-                 <table class="sales-table advanced-table" id="ea-salesTable-{{POST_ID}}"> <!-- Renamed ID -->
+                 <table class="sales-table advanced-table" id="ea-salesTable"> <!-- Fixed ID -->
                  <thead><tr><th class="sortable" data-sort="title">Item <span class="sort-icon">↕</span></th><th class="sortable" data-sort="house">Auction House <span class="sort-icon">↕</span></th><th class="sortable" data-sort="date">Date <span class="sort-icon">↕</span></th><th class="sortable" data-sort="price">Price <span class="sort-icon">↕</span></th><th class="sortable" data-sort="diff">Difference <span class="sort-icon">↕</span></th></tr></thead>
                  <tbody>{{SALES_TABLE_ROWS_HTML}}</tbody>
                  </table>
              </div>
              <div class="table-footer">
-                 <div class="table-pagination" id="ea-pagination-{{POST_ID}}"> <!-- Renamed ID -->
+                 <div class="table-pagination" id="ea-pagination"> <!-- Fixed ID -->
                      <button class="pagination-btn" data-page="prev">Previous</button>
                      <span class="pagination-info">Showing <span class="page-start">1</span>-<span class="page-end">5</span> of <span class="total-items">{{COUNT}}</span></span>
                      <button class="pagination-btn" data-page="next">Next</button>
