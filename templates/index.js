@@ -32,13 +32,35 @@ function embedStylesAndScripts(templateName, filledHtml) {
     const cssContent = fs.readFileSync(cssFilePath, 'utf8');
     const jsContent = fs.readFileSync(jsFilePath, 'utf8');
     
+    // Fix inline style percentage issues that cause linter errors
+    let fixedHtml = filledHtml;
+    
+    // Fix metric bar width style attributes that cause linter errors
+    const stylePercentRegex = /style=["']width:\s*(\d+)%["']/g;
+    fixedHtml = fixedHtml.replace(stylePercentRegex, (match, percentValue) => {
+      // Convert inline percentage to a style with a variable
+      return `style="width: ${percentValue}%"`;
+    });
+    
+    // Fix CSS variable percentages like style="--target-position: 35.89%"
+    const cssVarPercentRegex = /style=["']--([^:]+):\s*([0-9.]+)%["']/g;
+    fixedHtml = fixedHtml.replace(cssVarPercentRegex, (match, varName, percentValue) => {
+      return `style="--${varName}: ${percentValue}%"`;
+    });
+    
+    // Fix class="metric-bar" style="width: 75%;" <span> combinations
+    const metricBarRegex = /<div class="metric-bar-container"><div class="metric-bar" style="width: (\d+)%;"><span class="metric-value">(\d+)%<\/span><\/div><\/div>/g;
+    fixedHtml = fixedHtml.replace(metricBarRegex, (match, widthVal, textVal) => {
+      return `<div class="metric-bar-container"><div class="metric-bar" style="width: ${widthVal}%"></div></div>`;
+    });
+    
     // Combine into final HTML
     const finalHtml = `<!-- Automatically generated complete HTML for ${templateName} -->
 <style>
 ${cssContent}
 </style>
 
-${filledHtml}
+${fixedHtml}
 
 <script>
 ${jsContent}

@@ -11,6 +11,7 @@ const { updateHtmlFields } = require('../services/wordpress');
 const { generateEnhancedAnalyticsWithGemini, generateAppraisalCardWithGemini } = require('../services/gemini-visualization');
 const { prepareDataContextForEnhancedAnalytics, prepareDataContextForAppraisalCard } = require('../services/utils/templateContextUtils');
 const valuerAgentClient = require('../services/valuerAgentClient');
+const templatesModule = require('../templates/index');
 
 // Define isObject function directly
 const isObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -137,13 +138,18 @@ router.post('/generate-visualizations', async (req, res) => {
     const populatedAnalyticsHtml = await populateHtmlTemplate(skeletonHtmlAnalytics, rawDataForAI);
     const populatedCardHtml = await populateHtmlTemplate(skeletonHtmlCard, rawDataForAI);
 
-    // Step 6: Save Populated HTML and ACF fields to WordPress
+    // Step 6: Embed CSS and JavaScript into the populated HTML templates
+    console.log('[Viz Route] Embedding CSS and JavaScript into HTML templates');
+    const completeAnalyticsHtml = templatesModule.embedStylesAndScripts('enhanced-analytics', populatedAnalyticsHtml);
+    const completeCardHtml = templatesModule.embedStylesAndScripts('appraisal-card', populatedCardHtml);
+
+    // Step 7: Save Populated HTML and ACF fields to WordPress
     console.log('[Viz Route] Saving populated HTML and ACF fields to WordPress');
     try {
       // Prepare fields, ensuring strings and handling nulls/undefined
       const statisticsString = sanitizedStats ? JSON.stringify(sanitizedStats) : '{}'; // Stringify or use empty object JSON
-      const analyticsHtmlString = populatedAnalyticsHtml || ''; // Default to empty string if null/undefined
-      const cardHtmlString = populatedCardHtml || ''; // Default to empty string if null/undefined
+      const analyticsHtmlString = completeAnalyticsHtml || ''; // Default to empty string if null/undefined
+      const cardHtmlString = completeCardHtml || ''; // Default to empty string if null/undefined
 
       // Extract key metrics from sanitizedStats to update as individual ACF fields
       const acfFields = {
@@ -213,7 +219,7 @@ router.post('/generate-visualizations', async (req, res) => {
         // Optionally, record this specific failure somewhere if needed
     }
     
-    // Step 7: Update Post Meta History (Will run even if ACF update failed)
+    // Step 8: Update Post Meta History (Will run even if ACF update failed)
     console.log('[Viz Route] Updating post meta history...');
     await wordpress.updatePostMeta(postId, 'processing_history', [{
       step: 'generate_visualizations_gemini', // Updated step name
@@ -221,7 +227,7 @@ router.post('/generate-visualizations', async (req, res) => {
       status: 'completed'
     }]);
 
-    // Step 8: Return Success Response
+    // Step 9: Return Success Response
     res.status(200).json({
       success: true,
       message: 'HTML visualizations generated successfully using Gemini.',
@@ -412,7 +418,7 @@ router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
     const skeletonPathCard = path.join(__dirname, '../templates/skeletons/appraisal-card.html');
     const skeletonHtmlAnalytics = await fs.readFile(skeletonPathAnalytics, 'utf8');
     const skeletonHtmlCard = await fs.readFile(skeletonPathCard, 'utf8');
-    
+
     // Step 5: Call Gemini Service to Populate Templates
     console.log('[Viz Route] Populating templates using Gemini Service');
     
@@ -438,14 +444,19 @@ router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
     const populatedAnalyticsHtml = await populateHtmlTemplate(skeletonHtmlAnalytics, rawDataForAI);
     const populatedCardHtml = await populateHtmlTemplate(skeletonHtmlCard, rawDataForAI);
     
-    // Step 6: Save Populated HTML and Statistics to WordPress
+    // Step 6: Embed CSS and JavaScript into the populated HTML templates
+    console.log('[Viz Route] Embedding CSS and JavaScript into HTML templates');
+    const completeAnalyticsHtml = templatesModule.embedStylesAndScripts('enhanced-analytics', populatedAnalyticsHtml);
+    const completeCardHtml = templatesModule.embedStylesAndScripts('appraisal-card', populatedCardHtml);
+    
+    // Step 7: Save Populated HTML and Statistics to WordPress
     console.log('[Viz Route] Saving populated HTML and statistics to WordPress');
     
     try {
       // Update the WordPress post with the new HTML and stats
       await updateHtmlFields(postId, {
-        enhanced_analytics_html: populatedAnalyticsHtml,
-        appraisal_card_html: populatedCardHtml,
+        enhanced_analytics_html: completeAnalyticsHtml,
+        appraisal_card_html: completeCardHtml,
         statistics: JSON.stringify(sanitizedStats)
       });
       
@@ -458,8 +469,8 @@ router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
         appraisalId: appraisalId || undefined,
         debug: enableDebug ? {
           stats: sanitizedStats,
-          enhancedAnalyticsHtml: populatedAnalyticsHtml,
-          appraisalCardHtml: populatedCardHtml
+          enhancedAnalyticsHtml: completeAnalyticsHtml,
+          appraisalCardHtml: completeCardHtml
         } : undefined
       });
     } catch (updateError) {
@@ -599,13 +610,18 @@ router.post('/debug', async (req, res, next) => {
         console.log('[Visualizations Debug] Generating Appraisal Card HTML');
         const appraisalCardHtml = await populateHtmlTemplate(skeletonHtmlCard, rawDataForAI);
 
+        // Embed CSS and JavaScript into the populated HTML templates
+        console.log('[Visualizations Debug] Embedding CSS and JavaScript into HTML templates');
+        const completeAnalyticsHtml = templatesModule.embedStylesAndScripts('enhanced-analytics', enhancedAnalyticsHtml);
+        const completeCardHtml = templatesModule.embedStylesAndScripts('appraisal-card', appraisalCardHtml);
+
         let savedToWordPress = false;
         if (!skipSaving && postId) {
             try {
                  console.log(`[Visualizations Debug] Updating WordPress HTML fields for postId: ${postId}`);
                  await wordpress.updateHtmlFields(postId, { 
-                     enhanced_analytics_html: enhancedAnalyticsHtml, 
-                     appraisal_card_html: appraisalCardHtml 
+                     enhanced_analytics_html: completeAnalyticsHtml, 
+                     appraisal_card_html: completeCardHtml 
                  });
                  savedToWordPress = true;
                  console.log(`[Visualizations Debug] WordPress HTML update complete for postId: ${postId}`);
@@ -619,8 +635,8 @@ router.post('/debug', async (req, res, next) => {
             success: true,
             message: 'Debug visualizations generated successfully.',
             data: {
-                enhancedAnalyticsHtml: enhancedAnalyticsHtml.substring(0, 500) + '... (truncated)',
-                appraisalCardHtml: appraisalCardHtml.substring(0, 500) + '... (truncated)',
+                enhancedAnalyticsHtml: completeAnalyticsHtml.substring(0, 500) + '... (truncated)',
+                appraisalCardHtml: completeCardHtml.substring(0, 500) + '... (truncated)',
                 postId: postId || null,
                 statisticsUsed: JSON.stringify(stats).substring(0, 200) + '... (truncated)',
                 analyticsContextUsed: JSON.stringify(analyticsContext).substring(0, 200) + '... (truncated)',
