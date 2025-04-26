@@ -399,12 +399,22 @@ async function processAllMetadata(postId, postTitle, { postData, images }) {
       console.log(`[Processor] Processing field: ${field}`);
       const basePrompt = await getPrompt(field);
       
+      // Log context summary for debugging
+      console.log(`[Processor] Context for ${field} contains ${Object.keys(context).length} fields`);
+      if (context.detailedTitle) {
+        const titleSample = context.detailedTitle.substring(0, 150) + (context.detailedTitle.length > 150 ? '...' : '');
+        console.log(`[Processor] Context has detailedTitle (${context.detailedTitle.length} chars): ${titleSample}`);
+      }
+      
       // Build context-enhanced prompt with search results and detailed title
       // The buildContextualPrompt function now handles detailed title automatically
       const finalPrompt = buildContextualPrompt(basePrompt, context, searchResults);
       
       if (searchResults?.success) {
         console.log(`[Processor] Using search results for field: ${field}`);
+        if (searchResults.searchQuery) {
+          console.log(`[Processor] Search query for ${field}: ${searchResults.searchQuery}`);
+        }
       }
       
       const content = await generateContent(finalPrompt, postTitle, images);

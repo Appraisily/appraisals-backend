@@ -33,12 +33,14 @@ function buildContextualPrompt(prompt, context, searchResults = null) {
     // if it's not already being handled by the calling function
     if (!contextualPrompt.includes('Detailed Description:')) {
       contextualPrompt = `Detailed Description: ${context.detailedTitle}\n\n${contextualPrompt}`;
+      console.log('PromptUtils: Added detailed title to prompt');
     }
   }
 
   // Add appraisal type context if available
   if (context.appraisalType && context.appraisalType !== 'regular') {
     contextualPrompt = `This is a ${context.appraisalType.toUpperCase()} appraisal.\n\n${contextualPrompt}`;
+    console.log(`PromptUtils: Added appraisal type (${context.appraisalType.toUpperCase()}) to prompt`);
   }
 
   // Add previous generated content (filtered to exclude detailedTitle and appraisalType)
@@ -46,6 +48,7 @@ function buildContextualPrompt(prompt, context, searchResults = null) {
     .filter(([key]) => !['detailedTitle', 'appraisalType'].includes(key));
     
   if (contentEntries.length > 0) {
+    console.log(`PromptUtils: Adding ${contentEntries.length} previous content fields to prompt: ${contentEntries.map(([field]) => field).join(', ')}`);
     contextualPrompt = `Previous content generated for this report:\n\n${
       contentEntries
         .map(([field, content]) => `${field}:\n${content}\n`)
@@ -62,7 +65,16 @@ function buildContextualPrompt(prompt, context, searchResults = null) {
     if (searchResults.searchQuery) {
       console.log('PromptUtils: Search query used:', searchResults.searchQuery);
     }
+
+    // Log a sample of the search results (first 500 chars)
+    const searchSample = searchResults.formattedContext.substring(0, 500) + (searchResults.formattedContext.length > 500 ? '...' : '');
+    console.log(`PromptUtils: Search results sample: ${searchSample}`);
   }
+
+  // Log the first 500 chars of the final prompt
+  const promptSample = contextualPrompt.substring(0, 500) + (contextualPrompt.length > 500 ? '...' : '');
+  console.log(`PromptUtils: Final prompt (first 500 chars): ${promptSample}`);
+  console.log(`PromptUtils: Total prompt length: ${contextualPrompt.length} characters`);
 
   return contextualPrompt;
 }
