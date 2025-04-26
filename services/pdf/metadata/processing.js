@@ -121,42 +121,42 @@ async function processMetadata(postData) {
   console.log('[PDF Meta] Populating text fields from ACF data...');
   
   // Basic text fields
-  metadata.valuation_method = stripHtml(acfData.valuation_method || 'Valuation method details not provided.');
-  metadata.authorship = stripHtml(acfData.authorship || 'Authorship details not provided.');
-  metadata.condition = stripHtml(acfData.condition || acfData.condition_report || 'Condition report not provided.');
+  metadata.valuation_method = stripHtml(acfData.valuation_method || '');
+  metadata.authorship = stripHtml(acfData.authorship || '');
+  metadata.condition = stripHtml(acfData.condition || acfData.condition_report || '');
   metadata.condition_report = metadata.condition; // Duplicate for template consistency
-  metadata.condition_summary = stripHtml(acfData.condition_summary || 'Condition summary not available.');
-  metadata.provenance_summary = stripHtml(acfData.provenance || acfData.provenance_summary || 'Provenance summary not provided.');
-  metadata.statistics_summary_text = stripHtml(acfData.statistics_summary_text || acfData.market_summary || 'Market data summary not provided.');
+  metadata.condition_summary = stripHtml(acfData.condition_summary || '');
+  metadata.provenance_summary = stripHtml(acfData.provenance || acfData.provenance_summary || '');
+  metadata.statistics_summary_text = stripHtml(acfData.statistics_summary_text || acfData.market_summary || '');
   
   // Content sections that may be split into multiple parts
-  metadata.conclusion = stripHtml(acfData.conclusion || 'Conclusion not provided.');
-  metadata.conclusion1 = stripHtml(acfData.conclusion1 || acfData.conclusion || 'Conclusion not provided.');
-  metadata.conclusion2 = stripHtml(acfData.conclusion2 || ''); // Optional second part
+  metadata.conclusion = stripHtml(acfData.conclusion || '');
+  metadata.conclusion1 = stripHtml(acfData.conclusion1 || acfData.conclusion || '');
+  metadata.conclusion2 = stripHtml(acfData.conclusion2 || '');
   
   // Age-related fields
-  metadata.age_text = stripHtml(acfData.age_text || acfData.age_methodology || 'Age determination methodology not provided.');
-  metadata.age1 = stripHtml(acfData.age1 || acfData.age_findings || 'Age analysis findings not provided.');
-  metadata.estimated_age = stripHtml(acfData.estimated_age || acfData.age || 'Age not specified.');
+  metadata.age_text = stripHtml(acfData.age_text || acfData.age_methodology || '');
+  metadata.age1 = stripHtml(acfData.age1 || acfData.age_findings || '');
+  metadata.estimated_age = stripHtml(acfData.estimated_age || acfData.age || '');
   
   // Signature fields
-  metadata.signature1 = stripHtml(acfData.signature1 || acfData.signature_analysis || 'Signature analysis not provided.');
-  metadata.signature2 = stripHtml(acfData.signature2 || ''); // Optional second part
+  metadata.signature1 = stripHtml(acfData.signature1 || acfData.signature_analysis || '');
+  metadata.signature2 = stripHtml(acfData.signature2 || '');
   
   // Style and content analysis
-  metadata.style = stripHtml(acfData.style || acfData.style_analysis || 'Style analysis not provided.');
-  metadata.test = stripHtml(acfData.test || acfData.item_type_determination || 'Item type determination not provided.');
+  metadata.style = stripHtml(acfData.style || acfData.style_analysis || '');
+  metadata.test = stripHtml(acfData.test || acfData.item_type_determination || '');
   
   // Creator/artist information
-  metadata.creator = stripHtml(acfData.creator || acfData.artist_creator_name || acfData.artist || 'Unknown creator');
+  metadata.creator = stripHtml(acfData.creator || acfData.artist_creator_name || acfData.artist || '');
   
   // Client information
-  metadata.customer_name = stripHtml(acfData.customer_name || postData.customer_name || 'Client name not provided');
-  metadata.customer_address = stripHtml(acfData.customer_address || postData.customer_address || 'Client address not provided');
+  metadata.customer_name = stripHtml(acfData.customer_name || postData.customer_name || '');
+  metadata.customer_address = stripHtml(acfData.customer_address || postData.customer_address || '');
   
   // Additional content blocks
-  metadata.table = acfData.table || ''; // Data table - keep formatting if present
-  metadata.ad_copy = stripHtml(acfData.ad_copy || acfData.selling_copy || 'No additional selling information available.');
+  metadata.table = acfData.table || '';
+  metadata.ad_copy = stripHtml(acfData.ad_copy || acfData.selling_copy || '');
 
   console.log('[PDF Meta] Populated text fields from ACF.');
 
