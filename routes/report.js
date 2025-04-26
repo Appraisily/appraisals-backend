@@ -3,6 +3,7 @@ const router = express.Router();
 const wordpress = require('../services/wordpress/index');
 const { processMainImageWithGoogleVision, initializeVisionClient } = require('../services/vision');
 const { processAllMetadata, processJustificationMetadata } = require('../services/metadataProcessor');
+const { regenerateStatisticsAndVisualizations } = require('../services/regenerationService');
 
 // Moved from appraisal.js
 router.post('/complete-appraisal-report', async (req, res) => {
@@ -35,7 +36,7 @@ router.post('/complete-appraisal-report', async (req, res) => {
   const isJustificationOnly = justificationOnly === true;
 
   if (isJustificationOnly) {
-    console.log('[Report Route] Justification-only request received.');
+    console.log('[Report Route] Justification-only request received. Using processJustificationMetadata (consider migrating to regenerationService).');
     try {
       const { postData, title: postTitle } = await wordpress.fetchPostData(postId);
       if (!postTitle) throw new Error('Post not found or title missing');
@@ -48,25 +49,26 @@ router.post('/complete-appraisal-report', async (req, res) => {
       });
     } catch (error) {
       console.error(`[Report Route] Justification-only error for post ${postId}: ${error.message}`);
-      // Determine status code based on error type if possible (e.g., 404 for 'Post not found')
       const statusCode = error.message?.includes('Post not found') ? 404 : 500;
       return res.status(statusCode).json({ 
           success: false, 
           message: statusCode === 404 ? error.message : 'Error processing justification.', 
-          // Expose details only in non-production
           error_details: process.env.NODE_ENV !== 'production' ? error.message : undefined
       });
     }
   }
 
   // --- Full Report Generation Logic --- 
+  let postTitle = '';
+  let allProcessedResults = [];
+
   try {
     console.log(`[Report Route] Fetching data for post ${postId}`);
-    const { postData, images, title: postTitle } = await wordpress.fetchPostData(postId);
+    const { postData, images, title } = await wordpress.fetchPostData(postId);
+    postTitle = title;
 
     if (!postTitle) {
       console.warn(`[Report Route] Post ${postId} title not found`);
-      // Return 404 specifically for not found
       return res.status(404).json({
         success: false,
         message: 'Post not found or title is missing',
@@ -78,92 +80,64 @@ router.post('/complete-appraisal-report', async (req, res) => {
 
     let visionResult = { success: false, message: 'Skipped', similarImagesCount: 0 };
     try {
-      // Make sure Vision client is initialized
-      try {
-        await initializeVisionClient();
-        console.log('[Report Route] Successfully initialized Vision client');
-      } catch (visionInitError) {
-        console.error(`[Report Route] Failed to initialize Vision client: ${visionInitError.message}`);
-      }
-      
+      await initializeVisionClient();
       console.log('[Report Route] Processing main image with Vision');
       visionResult = await processMainImageWithGoogleVision(postId);
+      allProcessedResults.push({ step: 'vision', success: visionResult.success, message: visionResult.message });
     } catch (error) {
       console.error(`[Report Route] Vision error: ${error.message}`);
       visionResult = { success: false, message: error.message, similarImagesCount: 0 };
+      allProcessedResults.push({ step: 'vision', success: false, error: error.message });
     }
 
     let metadataResults = [];
     try {
       console.log('[Report Route] Processing all metadata fields');
       metadataResults = await processAllMetadata(postId, postTitle, { postData, images });
+      allProcessedResults.push({ step: 'metadata', success: true, details: metadataResults });
     } catch (error) {
       console.error(`[Report Route] Metadata processing error: ${error.message}`);
-      // Add error indication if needed, but continue to justification
-      metadataResults.push({ field: 'all_metadata', status: 'error', error: error.message });
+      allProcessedResults.push({ step: 'metadata', success: false, error: error.message });
     }
 
-    // Process justification metadata as part of the complete report
+    let regenerationResult = null;
     try {
-      console.log('[Report Route] Processing justification metadata');
-      const justificationResult = await processJustificationMetadata(
-        postId,
-        postTitle,
-        postData.acf?.value
-      );
-      if (justificationResult) {
-        metadataResults.push(justificationResult); // Add justification result to the list
+      console.log('[Report Route] Generating statistics and visualizations');
+      const currentValue = postData?.acf?.value;
+      if (currentValue === undefined) {
+        throw new Error('Cannot regenerate statistics: Missing value in post data.');
       }
-    } catch (error) {
-      console.error(`[Report Route] Justification processing error: ${error.message}`);
-      metadataResults.push({
-        field: 'justification_html',
-        status: 'error',
-        error: error.message
-      });
-    }
-    
-    // Note: HTML generation is now triggered within processJustificationMetadata if stats are generated/updated.
-    // We might not need the explicit HTML generation block here anymore unless it needs to run independently.
-    /* 
-    // (Optional: Keep explicit HTML check/generation if needed outside justification flow)
-    try {
-      console.log(`[Report Route] Checking/Generating HTML visualizations for: "${postTitle}"`);
-      const htmlFields = await wordpress.checkHtmlFields(postId);
-      if (htmlFields.exists) {
-        console.log('[Report Route] HTML visualizations already exist, skipping generation');
-        metadataResults.push({ field: 'html_visualizations', status: 'skipped' });
+      
+      regenerationResult = await regenerateStatisticsAndVisualizations(postId, currentValue);
+      
+      if (regenerationResult.success) {
+        console.log('[Report Route] Statistics and visualizations generated successfully.');
+        allProcessedResults.push({ step: 'statistics_visualizations', success: true, details: regenerationResult.data });
       } else {
-        console.log(`[Report Route] Explicitly generating HTML visualizations for: "${postTitle}"`);
-        const statisticsData = postData.acf?.statistics || {}; // Fetch potentially stale stats?
-        let parsedStatistics = typeof statisticsData === 'string' ? JSON.parse(statisticsData) : statisticsData; // Basic parse
-        const appraisalData = { title: postTitle, /* ... other fields ... *\/ }; 
-        await wordpress.updateHtmlFields(postId, appraisalData, parsedStatistics);
-        metadataResults.push({ field: 'html_visualizations', status: 'success' });
+        console.error(`[Report Route] Statistics/Visualization generation failed: ${regenerationResult.message}`);
+        allProcessedResults.push({ step: 'statistics_visualizations', success: false, error: regenerationResult.message, details: regenerationResult.error });
       }
     } catch (error) {
-       console.error(`[Report Route] HTML generation error: ${error.message}`);
-       metadataResults.push({ field: 'html_visualizations', status: 'error', error: error.message });
+      console.error(`[Report Route] Error calling regeneration service: ${error.message}`);
+      allProcessedResults.push({ step: 'statistics_visualizations', success: false, error: error.message });
     }
-    */
 
-    console.log('[Report Route] Report generation complete');
+    console.log('[Report Route] Report generation process complete');
 
+    const overallSuccess = allProcessedResults.every(r => r.success !== false);
+    
     res.status(200).json({
-      success: true,
-      message: 'Appraisal report completed successfully.',
+      success: overallSuccess,
+      message: overallSuccess ? 'Appraisal report completed.' : 'Appraisal report completed with some errors.',
       details: {
         postId,
         title: postTitle,
-        visionAnalysis: visionResult,
-        processedFields: metadataResults
+        processedSteps: allProcessedResults 
       }
     });
 
   } catch (error) {
-    // Catch errors from fetchPostData or other unhandled issues in the main flow
     console.error(`[Report Route] Overall error for post ${postId}: ${error.message}`);
-    // Check if it was a 'not found' error during initial fetch
     const statusCode = error.message?.includes('Post not found') ? 404 : 500;
     const userMessage = statusCode === 404 
         ? 'Post not found or title is missing' 
@@ -172,7 +146,6 @@ router.post('/complete-appraisal-report', async (req, res) => {
     res.status(statusCode).json({
       success: false,
       message: userMessage,
-      // Expose details only in non-production
       error_details: process.env.NODE_ENV !== 'production' ? error.message : undefined
     });
   }
