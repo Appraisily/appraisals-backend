@@ -242,9 +242,62 @@ function formatCurrency(value) {
   }).format(numValue);
 }
 
+/**
+ * Format top auction results from comparable sales data
+ * @param {Array} comparableSales - Array of comparable sales data
+ * @returns {Array} - Formatted array of top auction results
+ */
+function formatTopAuctionResults(comparableSales) {
+  // If no comparable sales data, return empty array
+  if (!comparableSales || !Array.isArray(comparableSales) || comparableSales.length === 0) {
+    return [];
+  }
+
+  // Sort comparable sales by price (highest first) and take top 10
+  const topSales = [...comparableSales]
+    .filter(sale => sale && typeof sale === 'object')
+    .sort((a, b) => {
+      const priceA = parseFloat(a.price ? a.price.toString().replace(/[^\d.-]/g, '') : 0);
+      const priceB = parseFloat(b.price ? b.price.toString().replace(/[^\d.-]/g, '') : 0);
+      return isNaN(priceB) ? -1 : isNaN(priceA) ? 1 : priceB - priceA;
+    })
+    .slice(0, 10);
+
+  // Format each result
+  return topSales.map(sale => {
+    // Format the price
+    const formattedPrice = formatCurrency(sale.price);
+    
+    // Format the date if available
+    let formattedDate = 'Unknown';
+    if (sale.date) {
+      try {
+        formattedDate = new Date(sale.date).toLocaleDateString('en-US', {
+          year: 'numeric', 
+          month: 'short', 
+          day: 'numeric'
+        });
+      } catch (e) {
+        console.warn('Error formatting date:', e);
+        formattedDate = sale.date; // Use original value if error
+      }
+    }
+    
+    return {
+      title: sale.title || 'Unknown Item',
+      price: formattedPrice,
+      house: sale.auction_house || sale.house || 'Unknown',
+      date: formattedDate,
+      diff: sale.difference || sale.diff || null,
+      is_current: !!sale.is_current
+    };
+  });
+}
+
 module.exports = {
   buildAppraisalCard,
   buildStatisticsSection,
   formatPercentage,
-  formatCurrency
+  formatCurrency,
+  formatTopAuctionResults
 };
