@@ -12,6 +12,7 @@ const { generateEnhancedAnalyticsWithGemini, generateAppraisalCardWithGemini } =
 const { prepareDataContextForEnhancedAnalytics, prepareDataContextForAppraisalCard } = require('../services/utils/templateContextUtils');
 const valuerAgentClient = require('../services/valuerAgentClient');
 const templatesModule = require('../templates/index');
+const { regenerateStatisticsAndVisualizations } = require('../services/regenerationService');
 
 // Define isObject function directly
 const isObject = (value) => typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -255,7 +256,7 @@ router.post('/generate-visualizations', async (req, res) => {
  * POST /api/visualizations/regenerate-statistics-and-visualizations
  */
 router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
-  console.log('[Viz Route] Starting statistics and visualizations regeneration');
+  console.log('[Viz Route] Received request for statistics and visualizations regeneration');
   
   const { postId, newValue, enableDebug, appraisalId, options } = req.body;
   
@@ -267,226 +268,41 @@ router.post('/regenerate-statistics-and-visualizations', async (req, res) => {
   }
   
   try {
-    // Log additional request info if provided (from appraisers-backend)
-    if (appraisalId) {
-      console.log(`[Viz Route] Processing regeneration for Appraisal ID: ${appraisalId}`);
-    }
-    if (options) {
-      console.log(`[Viz Route] Request options:`, options);
-    }
-    
-    // Step 1: Fetch the WP Post Data
-    console.log('[Viz Route] Fetching WordPress post data for ID:', postId);
-    let postData;
-    try {
-      postData = await wordpress.getPost(postId); 
-      if (!postData || !postData.acf) {
-        return res.status(404).json({
-          success: false,
-          message: 'Post not found or has no ACF fields'
-        });
-      }
-    } catch (wpError) {
-      console.error('[Viz Route] Error fetching WordPress post:', wpError);
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to fetch WordPress post data',
-        error: wpError.message
-      });
-    }
-    
-    let postTitle = postData.title?.rendered || 'Untitled Appraisal';
-    
-    // Check if we need to get the full post data to get the proper title
-    if (postTitle === 'Untitled Appraisal' || !postTitle) {
-      console.log('[Viz Route] Basic title not found, fetching complete post data to get proper title');
-      try {
-        const fullPostData = await wordpress.fetchPostData(postId);
-        if (fullPostData.title && fullPostData.title !== 'Untitled Appraisal') {
-          postTitle = fullPostData.title;
-          console.log(`[Viz Route] Retrieved proper title: "${postTitle}"`);
-        }
-      } catch (titleError) {
-        console.warn('[Viz Route] Could not retrieve better title:', titleError.message);
-      }
-    }
-    
-    console.log(`[Viz Route] Processing ${postTitle} (ID: ${postId})`);
-    
-    // Apply new value if provided
-    if (newValue !== undefined) {
-      console.log(`[Viz Route] Using new value: ${newValue}`);
-      postData.acf.value = newValue;
-    }
-    
-    // Step 2: Fetch Images
-    console.log('[Viz Route] Fetching images for post');
-    const postDataWithImages = await wordpress.fetchPostData(postId);
-    const images = postDataWithImages.images;
-    
-    // Get the more complete title if available from the fetched post data
-    if (postTitle === 'Untitled Appraisal' && postDataWithImages.title && postDataWithImages.title !== 'Untitled Appraisal') {
-      postTitle = postDataWithImages.title;
-      console.log(`[Viz Route] Using more complete title from images fetch: "${postTitle}"`);
-    }
-    
-    // Step 3: Get or Generate Statistics - UPDATED TO USE VALUER AGENT CLIENT
-    console.log('[Viz Route] Fetching statistics from valuer-agent');
-    console.log(`[Viz Route] Using title: "${postTitle}" for valuer-agent search`);
-    
-    let stats;
-    try {
-      // Use the enhanced-statistics endpoint instead of /stats/{postId}
-      const value = postData.acf?.value;
-      
-      // Clean the title by decoding HTML entities and removing HTML tags
-      let cleanTitle = postTitle;
-      
-      // Decode HTML entities - Node.js compatible version
-      const decodeEntities = (text) => {
-        return text
-          .replace(/&amp;/g, '&')
-          .replace(/&lt;/g, '<')
-          .replace(/&gt;/g, '>')
-          .replace(/&quot;/g, '"')
-          .replace(/&#039;/g, "'")
-          .replace(/&#215;/g, 'x')
-          .replace(/&rsquo;/g, "'")
-          .replace(/&ldquo;/g, '"')
-          .replace(/&rdquo;/g, '"')
-          .replace(/&ndash;/g, '-')
-          .replace(/&mdash;/g, '—')
-          .replace(/&#8217;/g, "'")
-          .replace(/&#8220;/g, '"')
-          .replace(/&#8221;/g, '"')
-          .replace(/&#(\d+);/g, (match, dec) => String.fromCharCode(dec));
-      };
-      
-      // Decode and strip HTML tags
-      cleanTitle = decodeEntities(cleanTitle).replace(/<[^>]*>?/gm, '');
-      
-      // Log the exact search parameters
-      console.log(`[Viz Route] Search parameters for valuer-agent:`, {
-        title: cleanTitle,
-        value: value
-      });
-      
-      const statsResponse = await valuerAgentClient.getEnhancedStatistics(cleanTitle, value);
-      
-      if (!statsResponse.success) {
-        throw new Error(`Valuer-agent returned error: ${statsResponse.message || 'Unknown error'}`);
-      }
-      
-      stats = statsResponse.statistics;
-      console.log('[Viz Route] Statistics fetched successfully');
-    } catch (statsError) {
-      console.error('[Viz Route] Error fetching statistics:', statsError);
-      
-      return res.status(500).json({
-        success: false,
-        message: 'Failed to fetch statistics from valuer-agent',
-        error: statsError.message
-      });
-    }
-    
-    // Step 3a: Use statistics data directly (skipping sanitization)
-    console.log('[Viz Route] Using statistics data directly without sanitization');
-    const sanitizedStats = stats; // Use the raw stats directly
-    
-    // Step 3b: Prepare appraisal data object
-    const appraisalData = {
-      postId,
-      title: postTitle,
-      featured_image: images.main?.url || '',
-      value: postData.acf?.value,
-      creator: postData.acf?.creator,
-      object_type: postData.acf?.object_type,
-      estimated_age: postData.acf?.estimated_age,
-      medium: postData.acf?.medium,
-      condition_summary: postData.acf?.condition_summary,
-      appraiser_name: postData.acf?.appraiser_name,
-      dimensions: postData.acf?.dimensions, 
-      signed: postData.acf?.signed,
-      framed: postData.acf?.framed,
-      provenance: postData.acf?.provenance,
-      coa: postData.acf?.coa,
-    };
-    
-    // Step 4: Read Skeleton HTML Files
-    console.log('[Viz Route] Reading skeleton HTML files');
-    const skeletonPathAnalytics = path.join(__dirname, '../templates/skeletons/enhanced-analytics.html');
-    const skeletonPathCard = path.join(__dirname, '../templates/skeletons/appraisal-card.html');
-    const skeletonHtmlAnalytics = await fs.readFile(skeletonPathAnalytics, 'utf8');
-    const skeletonHtmlCard = await fs.readFile(skeletonPathCard, 'utf8');
+    // Call the centralized regeneration service function
+    const result = await regenerateStatisticsAndVisualizations(postId, newValue, { appraisalId, ...options });
 
-    // Step 5: Call Gemini Service to Populate Templates
-    console.log('[Viz Route] Populating templates using Gemini Service');
-    
-    // Create a combined data object with all necessary information
-    const rawDataForAI = {
-      statistics: sanitizedStats,
-      appraisal: {
-        ...appraisalData,
-        postId,
-        title: postTitle,
-        value: postData.acf?.value,
-        ...postData.acf // Include all ACF fields directly
-      },
-      images,
-      // Optional but helpful metadata
-      metaInfo: {
-        currentDate: new Date().toISOString(),
-        generationTimestamp: Date.now()
-      }
-    };
-    
-    // Pass the complete data directly to the AI without specialized preparation
-    const populatedAnalyticsHtml = await populateHtmlTemplate(skeletonHtmlAnalytics, rawDataForAI);
-    const populatedCardHtml = await populateHtmlTemplate(skeletonHtmlCard, rawDataForAI);
-    
-    // Step 6: Embed CSS and JavaScript into the populated HTML templates
-    console.log('[Viz Route] Embedding CSS and JavaScript into HTML templates');
-    const completeAnalyticsHtml = templatesModule.embedStylesAndScripts('enhanced-analytics', populatedAnalyticsHtml);
-    const completeCardHtml = templatesModule.embedStylesAndScripts('appraisal-card', populatedCardHtml);
-    
-    // Step 7: Save Populated HTML and Statistics to WordPress
-    console.log('[Viz Route] Saving populated HTML and statistics to WordPress');
-    
-    try {
-      // Update the WordPress post with the new HTML and stats
-      await updateHtmlFields(postId, {
-        enhanced_analytics_html: completeAnalyticsHtml,
-        appraisal_card_html: completeCardHtml,
-        statistics: JSON.stringify(sanitizedStats)
-      });
-      
-      console.log('[Viz Route] WordPress post updated successfully');
-      
-      return res.json({
+    if (result.success) {
+      // Prepare response, potentially including debug info
+      const responsePayload = {
         success: true,
-        message: 'Statistics regenerated and visualizations updated successfully',
+        message: result.message,
         postId: postId,
         appraisalId: appraisalId || undefined,
-        debug: enableDebug ? {
-          stats: sanitizedStats,
-          enhancedAnalyticsHtml: completeAnalyticsHtml,
-          appraisalCardHtml: completeCardHtml
-        } : undefined
-      });
-    } catch (updateError) {
-      console.error('[Viz Route] Error updating WordPress post:', updateError);
+        debug: enableDebug ? result.data : undefined
+      };
+      return res.json(responsePayload);
+    } else {
+      // Determine appropriate status code based on error if possible
+      let statusCode = 500;
+      if (result.error?.includes('Post not found')) {
+          statusCode = 404;
+      }
+      if (result.message?.includes('Failed to fetch statistics')) {
+          statusCode = 502; // Bad Gateway might be appropriate if valuer-agent fails
+      }
       
-      return res.status(500).json({
+      return res.status(statusCode).json({
         success: false,
-        message: 'Failed to update WordPress post with new HTML',
-        error: updateError.message
+        message: result.message,
+        error: result.error // Include error details
       });
     }
   } catch (error) {
-    console.error('[Viz Route] Unexpected error in regeneration route:', error);
+    // Catch unexpected errors from the service call itself
+    console.error('[Viz Route] Unexpected error calling regeneration service:', error);
     return res.status(500).json({
       success: false,
-      message: 'An unexpected error occurred during regeneration',
+      message: 'An unexpected error occurred during the regeneration process',
       error: error.message
     });
   }
