@@ -78,14 +78,18 @@ async function regenerateStatisticsAndVisualizations(postId, newValue, options =
     let stats;
     try {
       const value = postData.acf?.value;
-      let cleanTitle = postTitle;
+      
+      // Use detailed_title if available, otherwise fall back to postTitle
+      let searchTitle = postData.acf?.detailed_title || postTitle;
+      let cleanTitle = searchTitle;
 
       // Decode and strip HTML tags from title
       cleanTitle = decodeEntities(cleanTitle).replace(/<[^>]*>?/gm, '');
 
       console.log(`[Regeneration Service] Search parameters for valuer-agent:`, {
         title: cleanTitle,
-        value: value
+        value: value,
+        usingDetailedTitle: !!postData.acf?.detailed_title
       });
 
       const statsResponse = await valuerAgentClient.getEnhancedStatistics(cleanTitle, value);

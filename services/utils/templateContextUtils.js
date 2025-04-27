@@ -108,6 +108,58 @@ function generateDetailsTableHtml(appraisal) {
 // --- Data Context Preparation Functions ---
 
 /**
+ * Formats search keywords into HTML for display
+ * @param {Array} keywords - Array of keyword objects with keyword and count properties
+ * @returns {string} - HTML string of keyword badges
+ */
+function formatKeywordsAsHtml(keywords) {
+    if (!keywords || !Array.isArray(keywords) || keywords.length === 0) {
+        return '';
+    }
+    
+    let html = '';
+    keywords.forEach(item => {
+        if (item.keyword) {
+            const hasCount = typeof item.count === 'number';
+            const count = hasCount ? item.count : 0;
+            const displayCount = hasCount && count > 0 ? `<span class="keyword-match-count">${count}</span>` : '';
+            html += `<div class="keyword-badge">${escapeHtml(item.keyword)}${displayCount}</div>`;
+        }
+    });
+    
+    return html;
+}
+
+/**
+ * Calculates total keyword matches from search_keywords data
+ * @param {object} searchKeywords - The search_keywords object from statistics
+ * @returns {number} - Total count of matches across all keyword categories
+ */
+function calculateTotalKeywordMatches(searchKeywords) {
+    if (!searchKeywords) return 0;
+    
+    let total = 0;
+    const categories = ['very_specific', 'specific', 'moderate', 'broad'];
+    
+    categories.forEach(category => {
+        if (searchKeywords[category] && Array.isArray(searchKeywords[category])) {
+            searchKeywords[category].forEach(item => {
+                if (typeof item.count === 'number') {
+                    total += item.count;
+                }
+            });
+        }
+    });
+    
+    // If there's a total_count directly provided, use that instead
+    if (typeof searchKeywords.total_count === 'number') {
+        return searchKeywords.total_count;
+    }
+    
+    return total;
+}
+
+/**
  * Prepares the data context object for the enhanced-analytics skeleton.
  * @param {Statistics} stats - The sanitized statistics object.
  * @param {object} appraisal - The appraisal data object (should include ACF fields).
@@ -147,6 +199,23 @@ function prepareDataContextForEnhancedAnalytics(stats, appraisal, postId) {
             { label: 'Comparable Items', data: stats.price_history?.map(p => p.price) || [] },
         ]
     };
+
+    // Handle search keywords if available in the new format
+    const hasSearchKeywords = !!(stats.search_keywords);
+    const searchKeywords = stats.search_keywords || {};
+    let verySpecificKeywordsHtml = '';
+    let specificKeywordsHtml = '';
+    let moderateKeywordsHtml = '';
+    let broadKeywordsHtml = '';
+    let totalKeywordMatches = 0;
+
+    if (hasSearchKeywords) {
+        verySpecificKeywordsHtml = formatKeywordsAsHtml(searchKeywords.very_specific);
+        specificKeywordsHtml = formatKeywordsAsHtml(searchKeywords.specific);
+        moderateKeywordsHtml = formatKeywordsAsHtml(searchKeywords.moderate);
+        broadKeywordsHtml = formatKeywordsAsHtml(searchKeywords.broad);
+        totalKeywordMatches = calculateTotalKeywordMatches(searchKeywords);
+    }
 
     return {
         TITLE: appraisal.title ? `Enhanced Market Analytics for ${escapeHtml(appraisal.title)}` : 'Enhanced Market Analytics',
@@ -195,6 +264,13 @@ function prepareDataContextForEnhancedAnalytics(stats, appraisal, postId) {
         SALES_TABLE_ROWS_HTML: '<!-- Placeholder: Gemini/Client JS to generate -->',
         CHART_ID_RADAR: `radar-chart-${postId}`,
         CHART_ID_PRICE: `price-chart-${postId}`,
+        // New fields for search keywords
+        HAS_SEARCH_KEYWORDS: hasSearchKeywords,
+        VERY_SPECIFIC_KEYWORDS_HTML: verySpecificKeywordsHtml,
+        SPECIFIC_KEYWORDS_HTML: specificKeywordsHtml,
+        MODERATE_KEYWORDS_HTML: moderateKeywordsHtml,
+        BROAD_KEYWORDS_HTML: broadKeywordsHtml,
+        TOTAL_KEYWORD_MATCHES: totalKeywordMatches,
     };
 }
 
@@ -267,5 +343,7 @@ module.exports = {
     prepareDataContextForAppraisalCard,
     // Export helpers only if needed elsewhere
     numberWithCommas, 
-    escapeHtml
+    escapeHtml,
+    formatKeywordsAsHtml,
+    calculateTotalKeywordMatches
 }; 

@@ -209,6 +209,32 @@
                      <button class="pagination-btn" data-page="next">Next</button>
                  </div>
              </div>
+             
+             <!-- Search Keywords Section - new addition for updated Valuer Agent format -->
+             {{HAS_SEARCH_KEYWORDS ? '<div class="search-keywords-section">
+                 <h5>Search Terms Used</h5>
+                 <div class="search-keywords-container">
+                     <div class="search-keywords-category">
+                         <span class="keyword-category">Very Specific</span>
+                         <div class="keyword-list">{{VERY_SPECIFIC_KEYWORDS_HTML}}</div>
+                     </div>
+                     <div class="search-keywords-category">
+                         <span class="keyword-category">Specific</span>
+                         <div class="keyword-list">{{SPECIFIC_KEYWORDS_HTML}}</div>
+                     </div>
+                     <div class="search-keywords-category">
+                         <span class="keyword-category">Moderate</span>
+                         <div class="keyword-list">{{MODERATE_KEYWORDS_HTML}}</div>
+                     </div>
+                     <div class="search-keywords-category">
+                         <span class="keyword-category">Broad</span>
+                         <div class="keyword-list">{{BROAD_KEYWORDS_HTML}}</div>
+                     </div>
+                 </div>
+                 <div class="search-keywords-info">
+                     <p>Total keyword matches: <strong>{{TOTAL_KEYWORD_MATCHES}}</strong></p>
+                 </div>
+             </div>' : ''}}
          </div>
     </div>
 
