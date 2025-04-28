@@ -115,11 +115,34 @@ router.post('/complete-appraisal-report', async (req, res) => {
         allProcessedResults.push({ step: 'statistics_visualizations', success: true, details: regenerationResult.data });
       } else {
         console.error(`[Report Route] Statistics/Visualization generation failed: ${regenerationResult.message}`);
-        allProcessedResults.push({ step: 'statistics_visualizations', success: false, error: regenerationResult.message, details: regenerationResult.error });
+        return res.status(500).json({
+          success: false,
+          message: 'Statistics generation failed. Cannot complete appraisal report.',
+          error_details: regenerationResult.message || regenerationResult.error || 'Unknown error',
+          details: {
+            postId,
+            title: postTitle,
+            processedSteps: [...allProcessedResults, { 
+              step: 'statistics_visualizations', 
+              success: false, 
+              error: regenerationResult.message, 
+              details: regenerationResult.error 
+            }]
+          }
+        });
       }
     } catch (error) {
       console.error(`[Report Route] Error calling regeneration service: ${error.message}`);
-      allProcessedResults.push({ step: 'statistics_visualizations', success: false, error: error.message });
+      return res.status(500).json({
+        success: false,
+        message: 'Statistics generation failed with an error. Cannot complete appraisal report.',
+        error_details: process.env.NODE_ENV !== 'production' ? error.message : undefined,
+        details: {
+          postId,
+          title: postTitle,
+          processedSteps: [...allProcessedResults, { step: 'statistics_visualizations', success: false, error: error.message }]
+        }
+      });
     }
 
     console.log('[Report Route] Report generation process complete');

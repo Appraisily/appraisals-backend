@@ -67,14 +67,20 @@ async function getEnhancedStatistics(text, value, limit = 20, minPrice, maxPrice
   
   const payload = { text, value, limit, minPrice, maxPrice };
   
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout
+  
   try {
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      signal: controller.signal
     });
+
+    clearTimeout(timeoutId); // Clear the timeout
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -93,6 +99,7 @@ async function getEnhancedStatistics(text, value, limit = 20, minPrice, maxPrice
 
     return responseData; // Contains { success: true, statistics: {...} }
   } catch (error) {
+    clearTimeout(timeoutId); // Clear timeout on error
     console.error(`Error calling valuer agent (${apiUrl}):`, error);
     // Re-throw the error or return a standardized error structure
     throw error; 
