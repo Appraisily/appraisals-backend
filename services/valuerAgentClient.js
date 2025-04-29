@@ -68,7 +68,7 @@ async function getEnhancedStatistics(text, value, limit = 20, minPrice, maxPrice
   const payload = { text, value, limit, minPrice, maxPrice };
   
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 180000); // 3 minute timeout
+  const timeoutId = setTimeout(() => controller.abort(), 900000); // 15 minute timeout
   
   try {
     const response = await fetch(apiUrl, {
