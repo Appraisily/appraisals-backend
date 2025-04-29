@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const wordpress = require('../services/wordpress/index');
 const { processMainImageWithGoogleVision, initializeVisionClient } = require('../services/vision');
-const { processAllMetadata, processJustificationMetadata } = require('../services/metadataProcessor');
+const metadataService = require('../services/metadata');
 const { regenerateStatisticsAndVisualizations } = require('../services/regenerationService');
 
 // Moved from appraisal.js
@@ -41,7 +41,7 @@ router.post('/complete-appraisal-report', async (req, res) => {
       const { postData, title: postTitle } = await wordpress.fetchPostData(postId);
       if (!postTitle) throw new Error('Post not found or title missing');
       
-      const justificationResult = await processJustificationMetadata(postId, postTitle, postData.acf?.value);
+      const justificationResult = await metadataService.processJustificationMetadata(postId, postTitle, postData.acf?.value);
       return res.status(200).json({
         success: true,
         message: 'Justification process completed successfully.',
@@ -90,49 +90,41 @@ router.post('/complete-appraisal-report', async (req, res) => {
       allProcessedResults.push({ step: 'vision', success: false, error: error.message });
     }
 
-    let metadataResults = [];
+    // --- Step 2: Fetch statistics from valuer agent ---
+    let statsResult = null;
+    let statistics = null;
     try {
-      console.log('[Report Route] Processing all metadata fields');
-      metadataResults = await processAllMetadata(postId, postTitle, { postData, images });
-      allProcessedResults.push({ step: 'metadata', success: true, details: metadataResults });
-    } catch (error) {
-      console.error(`[Report Route] Metadata processing error: ${error.message}`);
-      allProcessedResults.push({ step: 'metadata', success: false, error: error.message });
-    }
-
-    let regenerationResult = null;
-    try {
-      console.log('[Report Route] Generating statistics and visualizations');
+      console.log('[Report Route] Generating statistics and visualizations to get statistics data');
       const currentValue = postData?.acf?.value;
       if (currentValue === undefined) {
-        throw new Error('Cannot regenerate statistics: Missing value in post data.');
+        throw new Error('Cannot generate statistics: Missing value in post data.');
       }
       
-      regenerationResult = await regenerateStatisticsAndVisualizations(postId, currentValue);
+      statsResult = await regenerateStatisticsAndVisualizations(postId, currentValue, { metadataProcessing: false });
       
-      if (regenerationResult.success) {
-        console.log('[Report Route] Statistics and visualizations generated successfully.');
-        allProcessedResults.push({ step: 'statistics_visualizations', success: true, details: regenerationResult.data });
+      if (statsResult.success) {
+        console.log('[Report Route] Statistics generated successfully');
+        statistics = statsResult.data.stats;
+        allProcessedResults.push({ step: 'statistics', success: true });
       } else {
-        console.error(`[Report Route] Statistics/Visualization generation failed: ${regenerationResult.message}`);
+        console.error(`[Report Route] Statistics generation failed: ${statsResult.message}`);
         return res.status(500).json({
           success: false,
           message: 'Statistics generation failed. Cannot complete appraisal report.',
-          error_details: regenerationResult.message || regenerationResult.error || 'Unknown error',
+          error_details: statsResult.message || statsResult.error || 'Unknown error',
           details: {
             postId,
             title: postTitle,
             processedSteps: [...allProcessedResults, { 
-              step: 'statistics_visualizations', 
+              step: 'statistics', 
               success: false, 
-              error: regenerationResult.message, 
-              details: regenerationResult.error 
+              error: statsResult.message
             }]
           }
         });
       }
     } catch (error) {
-      console.error(`[Report Route] Error calling regeneration service: ${error.message}`);
+      console.error(`[Report Route] Error generating statistics: ${error.message}`);
       return res.status(500).json({
         success: false,
         message: 'Statistics generation failed with an error. Cannot complete appraisal report.',
@@ -140,7 +132,107 @@ router.post('/complete-appraisal-report', async (req, res) => {
         details: {
           postId,
           title: postTitle,
-          processedSteps: [...allProcessedResults, { step: 'statistics_visualizations', success: false, error: error.message }]
+          processedSteps: [...allProcessedResults, { step: 'statistics', success: false, error: error.message }]
+        }
+      });
+    }
+
+    // --- Step 3: Process all metadata in a single batch ---
+    let metadataResults = null;
+    try {
+      console.log('[Report Route] Processing all metadata fields in a single batch');
+      metadataResults = await metadataService.processBatchMetadata(
+        postId, 
+        postTitle, 
+        postData, 
+        images, 
+        statistics
+      );
+      
+      if (metadataResults.success) {
+        console.log('[Report Route] All metadata fields successfully updated');
+        allProcessedResults.push({ 
+          step: 'metadata_processing', 
+          success: true, 
+          message: 'All metadata processed successfully' 
+        });
+        
+        // Update postData with new metadata for HTML generation
+        if (metadataResults.metadata) {
+          postData.acf = { ...postData.acf, ...metadataResults.metadata };
+        }
+      } else {
+        console.warn(`[Report Route] Metadata batch processing warning: ${metadataResults.message}`);
+        allProcessedResults.push({ 
+          step: 'metadata_processing', 
+          success: false, 
+          message: metadataResults.message 
+        });
+        // Continue with HTML generation even if metadata had issues
+      }
+    } catch (error) {
+      console.error(`[Report Route] Error processing metadata: ${error.message}`);
+      allProcessedResults.push({ 
+        step: 'metadata_processing', 
+        success: false, 
+        error: error.message 
+      });
+      // Continue with HTML generation even if metadata failed
+    }
+
+    // --- Step 4: Generate HTML visualizations ---
+    let visualizationResult = null;
+    try {
+      console.log('[Report Route] Generating HTML visualizations');
+      
+      // We need to call regenerateStatisticsAndVisualizations again but
+      // with updated postData that includes the new metadata and skip metadata processing
+      visualizationResult = await regenerateStatisticsAndVisualizations(
+        postId, 
+        postData.acf?.value, 
+        { 
+          metadataProcessing: false, // Skip metadata processing as we already did it
+          updatedPostData: postData // Pass the updated post data with new metadata
+        }
+      );
+      
+      if (visualizationResult.success) {
+        console.log('[Report Route] HTML visualizations generated successfully');
+        allProcessedResults.push({ 
+          step: 'html_visualizations', 
+          success: true, 
+          details: {
+            enhancedAnalyticsHtml: visualizationResult.data.enhancedAnalyticsHtml ? 'Generated' : 'Not generated',
+            appraisalCardHtml: visualizationResult.data.appraisalCardHtml ? 'Generated' : 'Not generated'
+          }
+        });
+      } else {
+        console.error(`[Report Route] HTML visualizations generation failed: ${visualizationResult.message}`);
+        return res.status(500).json({
+          success: false,
+          message: 'HTML visualizations generation failed. Cannot complete appraisal report.',
+          error_details: visualizationResult.message || visualizationResult.error || 'Unknown error',
+          details: {
+            postId,
+            title: postTitle,
+            processedSteps: [...allProcessedResults, { 
+              step: 'html_visualizations', 
+              success: false, 
+              error: visualizationResult.message
+            }]
+          }
+        });
+      }
+    } catch (error) {
+      console.error(`[Report Route] Error generating HTML visualizations: ${error.message}`);
+      return res.status(500).json({
+        success: false,
+        message: 'HTML visualizations generation failed with an error. Cannot complete appraisal report.',
+        error_details: process.env.NODE_ENV !== 'production' ? error.message : undefined,
+        details: {
+          postId,
+          title: postTitle,
+          processedSteps: [...allProcessedResults, { step: 'html_visualizations', success: false, error: error.message }]
         }
       });
     }

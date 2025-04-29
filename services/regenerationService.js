@@ -5,6 +5,7 @@ const valuerAgentClient = require('./valuerAgentClient');
 const templatesModule = require('../templates'); // Changed from './templates' to '../templates'
 const { populateHtmlTemplate } = require('./geminiService'); // Assuming Gemini service exists
 const { updateHtmlFields } = require('./wordpress/htmlUpdates');
+const metadataBatchProcessor = require('./metadataBatchProcessor'); // Add the new metadata batch processor
 
 // Helper function to decode HTML entities (consider moving to a utils file)
 const decodeEntities = (text) => {
@@ -100,6 +101,34 @@ async function regenerateStatisticsAndVisualizations(postId, newValue, options =
 
       stats = statsResponse.statistics;
       console.log('[Regeneration Service] Statistics fetched successfully');
+      
+      // --- New Step: Process All Metadata in a Single Batch ---
+      console.log('[Regeneration Service] Processing all metadata in a single batch');
+      try {
+        const metadataResult = await metadataBatchProcessor.processBatchMetadata(
+          postId,
+          postTitle,
+          postData,
+          images,
+          stats
+        );
+        
+        if (!metadataResult.success) {
+          console.warn(`[Regeneration Service] Metadata batch processing warning: ${metadataResult.message}`);
+          // Continue with HTML generation even if metadata processing had issues
+        } else {
+          console.log('[Regeneration Service] All metadata fields successfully updated');
+          // Update the postData with the new metadata for HTML generation
+          if (metadataResult.metadata) {
+            // Merge the new metadata with postData.acf for template generation
+            postData.acf = { ...postData.acf, ...metadataResult.metadata };
+          }
+        }
+      } catch (metadataError) {
+        console.error('[Regeneration Service] Error processing metadata batch:', metadataError);
+        // Continue with HTML generation even if metadata processing failed
+      }
+      
     } catch (statsError) {
       console.error('[Regeneration Service] Error fetching statistics:', statsError);
       return {
