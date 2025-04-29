@@ -10,6 +10,7 @@ A specialized backend service for the APPRAISERS system that handles WordPress i
 - [File Structure](#file-structure)
 - [API Endpoints](#api-endpoints)
 - [Classes and Functions](#classes-and-functions)
+- [Metadata Processing System](#metadata-processing-system)
 - [Environment Variables and Secrets](#environment-variables-and-secrets)
 - [Dependencies](#dependencies)
 - [Deployment](#deployment)
@@ -53,6 +54,9 @@ Uses AI to enhance and improve appraisal descriptions.
 ### Content Processing
 Processes images, extracts metadata, and enhances content quality.
 
+### Metadata Processing
+Extracts, analyzes, and enhances metadata for appraisals using AI-driven batch processing.
+
 ## File Structure
 
 ```
@@ -79,7 +83,12 @@ appraisals-backend/
 │   ├── constants/                  # Shared constants
 │   ├── gemini-visualization.js     # Google Gemini integration for visualizations
 │   ├── geminiService.js            # Google Gemini API service
-│   ├── metadataProcessor.js        # Processes metadata for appraisals
+│   ├── metadataProcessor.js        # Legacy metadata processor (individual fields)
+│   ├── metadataBatchProcessor.js   # Optimized metadata batch processor
+│   ├── metadata/                   # Modular metadata processing system
+│   │   ├── index.js                # Exports metadata processing functions
+│   │   ├── processor.js            # Individual field processor implementations
+│   │   └── batchProcessor.js       # Optimized batch processor implementation
 │   ├── openai.js                   # OpenAI API service
 │   ├── pdf/                        # PDF generation services
 │   │   ├── index.js                # Main PDF service entry point
@@ -99,14 +108,15 @@ appraisals-backend/
 │       ├── mediaUtils.js           # Media handling utilities
 │       └── postUtils.js            # Post management utilities
 │
+├── prompts/                        # AI prompt templates
+│   └── consolidated_metadata.txt   # Prompt for batch metadata generation
 ├── build-scripts/                  # Build automation scripts
 ├── bundles/                        # Frontend bundles/assets
 ├── static/                         # Static assets
 ├── templates/                      # HTML and report templates
 │   ├── skeletons/                  # HTML skeleton templates
 │   └── partials/                   # Reusable template components
-├── css/                            # CSS stylesheets
-└── prompts/                        # AI prompt templates
+└── css/                            # CSS stylesheets
 ```
 
 ## API Endpoints
@@ -174,7 +184,7 @@ appraisals-backend/
 ### WordPress Service (`services/wordpress/index.js`)
 - `fetchPostData(postId)` - Fetches post data from WordPress
 - `updatePost(postId, data)` - Updates a WordPress post
-- `updatePostMeta(postId, metaKey, metaValue)` - Updates post metadata
+- `updatePostMeta(postId, metaFields)` - Updates multiple post metadata fields at once
 - `uploadMedia(buffer, filename)` - Uploads media to WordPress
 
 ### Google Vision Service (`services/vision.js`)
@@ -184,39 +194,89 @@ appraisals-backend/
 - `detectLabels(imageUrl)` - Detects objects and labels in an image
 - `detectTextInImage(imageUrl)` - Extracts text from an image
 
-### Metadata Processor (`services/metadataProcessor.js`)
-- `processAllMetadata(postId, postTitle, data)` - Processes all metadata fields
-- `processJustificationMetadata(postId, postTitle, value)` - Processes justification metadata
-- `processProvenanceField(postId, provenanceText)` - Enhances provenance information
-- `processMediumField(postId, mediumText)` - Enhances medium description
-- `processConditionField(postId, conditionText)` - Enhances condition information
-
-### PDF Generation Service (`services/pdf/index.js`)
-- `initializeGoogleApis()` - Initializes Google APIs for PDF generation
-- `generatePDFReport(postId)` - Generates a PDF report
-- `generateDocFromTemplate(templateId, replacements)` - Creates a Google Doc from template
-- `convertToPDF(docId)` - Converts a Google Doc to PDF
-- `downloadFile(fileId)` - Downloads a file from Google Drive
+### Regeneration Service (`services/regenerationService.js`)
+- `regenerateStatisticsAndVisualizations(postId, newValue, options)` - Regenerates statistics and visualizations
+- Core process that:
+  1. Fetches WordPress post data
+  2. Gets enhanced statistics from Valuer Agent
+  3. Processes metadata using batch processing
+  4. Populates HTML templates
+  5. Saves results back to WordPress
 
 ### OpenAI Service (`services/openai.js`)
-- `enhanceDescription(prompt, description)` - Enhances a description using OpenAI
-- `generateCompletion(prompt, maxTokens)` - Generates text completion
+- `generateContent(prompt, postTitle, images, model, systemMessage, maxTokens, temperature)` - Generates text content
+- `generateStructuredMetadata(postTitle, postData, images, statistics)` - Generates structured metadata using a single API call
+- `buildMessageContent(prompt, imageUrl)` - Helper to build message content with text and images
 
-### Gemini Service (`services/geminiService.js` and `services/gemini-visualization.js`)
-- `initializeGeminiClient()` - Initializes the Gemini client
-- `generateContent(prompt)` - Generates content using Gemini
-- `generateVisualization(statistics, type)` - Generates visualizations
-- `enhanceVisualizationWithImages(html, imageUrls)` - Enhances visualizations with images
+## Metadata Processing System
 
-### Regeneration Service (`services/regenerationService.js`)
-- `regenerateStatisticsAndVisualizations(postId, value)` - Regenerates statistics and visualizations
-- `fetchStatisticsFromValuerAgent(value)` - Fetches statistics from the Valuer Agent
-- `updateWordpressWithStatistics(postId, statistics)` - Updates WordPress with new statistics
+The metadata processing system has been optimized to use a single AI call instead of multiple calls for different fields. This reduces API costs and improves performance.
 
-### Valuer Agent Client (`services/valuerAgentClient.js`)
-- `getStatistics(value)` - Gets statistics for a specific value
-- `getMarketTrends(category)` - Gets market trends for a category
-- `getConfidenceLevel(value, data)` - Gets confidence level for a valuation
+### Metadata Batch Processor
+
+#### Root Implementation (`services/metadataBatchProcessor.js`)
+- `processBatchMetadata(postId, postTitle, postData, images, statistics)` - Main entry point for batch metadata processing
+  - Makes a single OpenAI call with all available data
+  - Processes and validates the response
+  - Efficiently updates WordPress with all metadata at once
+- `validateMetadataStructure(metadata)` - Validates that the metadata structure has all required fields
+
+#### Modular Implementation (`services/metadata/batchProcessor.js`)
+- Same functionality as the root implementation but located in a modular structure
+- Used for importing via the metadata module index
+
+#### Metadata Index (`services/metadata/index.js`)
+- Exports both legacy individual field processors and the new batch processor
+- Provides a clean transition from the old system to the new system
+
+### Legacy Individual Processors (`services/metadata/processor.js`)
+- `processAllMetadata(postId, postTitle, data)` - Legacy stub for processing all metadata
+- `processJustificationMetadata(postId, postTitle, value)` - Processes only justification data
+- `processProvenanceField(postId, provenanceText)` - Processes only provenance data
+- `processMediumField(postId, mediumText)` - Processes only medium data
+- `processConditionField(postId, conditionText)` - Processes only condition data
+
+### Metadata Fields
+
+The system processes the following metadata fields:
+
+**Required Fields:**
+- `creator` - The artist/maker of the item
+- `medium` - Materials and techniques used
+- `object_type` - Type of object (painting, sculpture, etc.)
+- `condition_summary` - Summary of the item's condition
+- `estimated_age` - Estimated age or period of creation
+
+**Numeric Fields:**
+- `condition_score` - Numerical rating of the item's condition (1-10)
+- `rarity` - Numerical rating of the item's rarity (1-10)
+- `market_demand` - Numerical rating of market demand (1-10)
+- `historical_significance` - Numerical rating of historical importance (1-10)
+- `investment_potential` - Numerical rating of investment potential (1-10)
+- `provenance_strength` - Numerical rating of provenance quality (1-10)
+
+**Additional Fields:**
+- `signed` - Whether the item is signed
+- `framed` - Whether the item is framed
+- `provenance` - History of ownership
+- `dimensions` - Physical dimensions
+- `coa` - Certificate of authenticity information
+- and others specific to the type of item
+
+### Metadata Processing Flow
+
+1. The system receives a request to process metadata for a specific post.
+2. It collects all available data:
+   - Post title and basic information
+   - Existing metadata in the post
+   - Image URLs (main, age, signature)
+   - Statistics data from the Valuer Agent
+3. The system sends a single request to OpenAI with all this data.
+4. OpenAI returns structured metadata in a standardized JSON format.
+5. The system validates the response to ensure all required fields are present.
+6. It processes the data, converting numeric fields to integers.
+7. All metadata fields are then updated in WordPress in a single API call.
+8. The processed metadata is returned to the caller for further use.
 
 ## Environment Variables and Secrets
 
