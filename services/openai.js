@@ -38,8 +38,8 @@ async function generateStructuredMetadata(postTitle, postData, images = {}, stat
   try {
     console.log('[OpenAI Service] Generating structured metadata content with OpenAI...');
     
-    // Read the consolidated metadata prompt
-    const promptPath = path.join(__dirname, '../prompts/consolidated_metadata.txt');
+    // Read the consolidated metadata prompt - UPDATED to use the new file
+    const promptPath = path.join(__dirname, '../prompts/new_consolidated_metadata.txt');
     let prompt = await fs.readFile(promptPath, 'utf8');
     
     // Prepare messages with system instruction and data
