@@ -48,9 +48,9 @@
       <div class="market-position-container">
         <h3>Market Position</h3>
         <div class="gauge-container">
-          <canvas id="ac-gauge-chart-{{POST_ID}}" height="170"></canvas> <!-- Renamed JS Target -->
+          <canvas id="ac-gauge-chart" height="170"></canvas> <!-- Removed dynamic post ID suffix -->
           <div class="gauge-indicator">
-            <span class="percentile-value">{{PERCENTILE}}</span>
+            <span class="percentile-value">{{PERCENTILE_NUMBER}}</span> <!-- Changed from PERCENTILE to PERCENTILE_NUMBER -->
             <span class="percentile-label">Percentile</span>
           </div>
         </div>
@@ -73,13 +73,13 @@
       <div class="metrics-chart-container" data-chart-data-metrics="{{METRICS_CHART_DATA_JSON}}">
         <h3>Item Value Assessment</h3>
         <div class="chart-container" style="position: relative; height: 240px; max-height: 240px;">
-          <canvas id="ac-metrics-chart-{{POST_ID}}"></canvas> <!-- Renamed JS Target -->
+          <canvas id="ac-metrics-chart"></canvas> <!-- Removed dynamic post ID suffix -->
         </div>
       </div>
       <div class="price-distribution-container" data-chart-data-market="{{MARKET_CHART_DATA_JSON}}">
         <h3>Market Price Distribution</h3>
         <div class="chart-container" style="position: relative; height: 240px; max-height: 240px;">
-          <canvas id="ac-market-chart-{{POST_ID}}"></canvas> <!-- Renamed JS Target -->
+          <canvas id="ac-market-chart"></canvas> <!-- Removed dynamic post ID suffix -->
         </div>
         <div class="distribution-legend">
           <span class="legend-item"><span class="legend-marker market-marker"></span>Market Prices</span>
