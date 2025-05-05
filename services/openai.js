@@ -86,8 +86,10 @@ async function processImages(images = {}) {
  * @returns {Promise<Object>} - Structured metadata as JSON object
  */
 async function generateStructuredMetadata(postTitle, postData, images = {}, statistics = {}) {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+  
   try {
-    console.log('[OpenAI Service] Generating structured metadata content with OpenAI...');
+    console.log(`[OpenAI Service][${requestId}] Generating structured metadata content with OpenAI...`);
     
     // Read the consolidated metadata prompt
     const promptPath = path.join(__dirname, '../prompts/new_consolidated_metadata.txt');
@@ -138,10 +140,51 @@ async function generateStructuredMetadata(postTitle, postData, images = {}, stat
     }
     
     // Log request details
-    console.log(`[OpenAI Service] Post title: "${postTitle}"`);
-    console.log(`[OpenAI Service] Including ${includedImages.length} images: ${includedImages.join(', ')}`);
-    console.log(`[OpenAI Service] Statistics data included: ${Boolean(statistics && Object.keys(statistics).length > 0)}`);
-    console.log(`[OpenAI Service] Sending request with ${messages.length} message blocks for structured metadata`);
+    console.log(`[OpenAI Service][${requestId}] Post title: "${postTitle}"`);
+    console.log(`[OpenAI Service][${requestId}] Including ${includedImages.length} images: ${includedImages.join(', ')}`);
+    console.log(`[OpenAI Service][${requestId}] Statistics data included: ${Boolean(statistics && Object.keys(statistics).length > 0)}`);
+    console.log(`[OpenAI Service][${requestId}] Sending request with ${messages.length} message blocks for structured metadata`);
+    
+    // Create a sanitized copy of the request for logging - exclude base64 image data
+    const sanitizedMessages = messages.map(msg => {
+      if (Array.isArray(msg.content)) {
+        return {
+          role: msg.role,
+          content: msg.content.map(item => {
+            if (item.type === 'image_url') {
+              return { type: 'image_url', image_url: { url: 'BASE64_IMAGE_DATA_REMOVED_FOR_LOGGING' } };
+            }
+            return item;
+          })
+        };
+      }
+      return msg;
+    });
+    
+    // Log the sanitized request payload for debugging
+    const requestPayload = {
+      model: 'gpt-4o',
+      messages: sanitizedMessages,
+      response_format: { type: "json_object" }
+    };
+    
+    // Write request to debug log file
+    try {
+      const debugLogDir = path.join(__dirname, '../logs');
+      // Create logs directory if it doesn't exist
+      try {
+        await fs.mkdir(debugLogDir, { recursive: true });
+      } catch (dirErr) {
+        console.warn(`[OpenAI Service][${requestId}] Could not create logs directory: ${dirErr.message}`);
+      }
+      
+      await fs.writeFile(
+        path.join(debugLogDir, `openai_request_${requestId}.json`), 
+        JSON.stringify(requestPayload, null, 2)
+      );
+    } catch (logErr) {
+      console.warn(`[OpenAI Service][${requestId}] Failed to write debug log: ${logErr.message}`);
+    }
     
     try {
       // Call OpenAI API using the latest SDK patterns
@@ -151,9 +194,21 @@ async function generateStructuredMetadata(postTitle, postData, images = {}, stat
         response_format: { type: "json_object" }
       });
       
+      // Write raw response to debug log file
+      try {
+        await fs.writeFile(
+          path.join(__dirname, '../logs', `openai_response_${requestId}.json`), 
+          JSON.stringify(response, null, 2)
+        );
+      } catch (logErr) {
+        console.warn(`[OpenAI Service][${requestId}] Failed to write response log: ${logErr.message}`);
+      }
+      
       // Process response
       if (!response.choices?.[0]?.message?.content) {
-        throw new Error('Invalid response from OpenAI API for structured metadata');
+        console.error(`[OpenAI Service][${requestId}] Invalid response structure:`);
+        console.error(JSON.stringify(response, null, 2));
+        throw new Error('Invalid response from OpenAI API for structured metadata: Missing choices[0].message.content');
       }
       
       const content = response.choices[0].message.content.trim();
@@ -162,21 +217,59 @@ async function generateStructuredMetadata(postTitle, postData, images = {}, stat
       let metadataObj;
       try {
         metadataObj = JSON.parse(content);
-        console.log('[OpenAI Service] Successfully parsed structured metadata JSON response');
+        console.log(`[OpenAI Service][${requestId}] Successfully parsed structured metadata JSON response`);
+        
+        // Validate required metadata structure
+        if (!metadataObj.metadata) {
+          console.error(`[OpenAI Service][${requestId}] Response missing required 'metadata' object:`);
+          console.error(JSON.stringify(metadataObj, null, 2));
+          throw new Error('OpenAI response missing required metadata structure');
+        }
       } catch (parseError) {
-        console.error('[OpenAI Service] Error parsing JSON response:', parseError);
-        throw new Error('Failed to parse JSON response from OpenAI API');
+        console.error(`[OpenAI Service][${requestId}] Error parsing JSON response:`, parseError);
+        console.error(`[OpenAI Service][${requestId}] Raw content received: ${content.substring(0, 500)}${content.length > 500 ? '...' : ''}`);
+        
+        // Try to write the invalid content to a file for debugging
+        try {
+          await fs.writeFile(
+            path.join(__dirname, '../logs', `openai_invalid_json_${requestId}.txt`), 
+            content
+          );
+          console.error(`[OpenAI Service][${requestId}] Full invalid response written to logs/openai_invalid_json_${requestId}.txt`);
+        } catch (writeErr) {
+          console.warn(`[OpenAI Service][${requestId}] Could not write invalid JSON to file: ${writeErr.message}`);
+        }
+        
+        throw new Error(`Failed to parse JSON response from OpenAI API: ${parseError.message}`);
       }
       
       // Log usage information
-      console.log(`[OpenAI Service] Tokens used - prompt: ${response.usage?.prompt_tokens || 'unknown'}, completion: ${response.usage?.completion_tokens || 'unknown'}, total: ${response.usage?.total_tokens || 'unknown'}`);
+      console.log(`[OpenAI Service][${requestId}] Tokens used - prompt: ${response.usage?.prompt_tokens || 'unknown'}, completion: ${response.usage?.completion_tokens || 'unknown'}, total: ${response.usage?.total_tokens || 'unknown'}`);
       
       return metadataObj;
     } catch (error) {
       // Handle OpenAI API errors
       if (error instanceof OpenAI.APIError) {
-        console.error(`[OpenAI Service] API error (${error.status}): ${error.message}`);
-        console.error(`[OpenAI Service] Request ID: ${error.request_id}`);
+        console.error(`[OpenAI Service][${requestId}] API error (${error.status}): ${error.message}`);
+        console.error(`[OpenAI Service][${requestId}] Request ID: ${error.request_id}`);
+        
+        // Log full error details
+        try {
+          await fs.writeFile(
+            path.join(__dirname, '../logs', `openai_api_error_${requestId}.json`), 
+            JSON.stringify({
+              status: error.status,
+              message: error.message,
+              request_id: error.request_id,
+              code: error.code,
+              type: error.type,
+              param: error.param,
+              stack: error.stack
+            }, null, 2)
+          );
+        } catch (logErr) {
+          console.warn(`[OpenAI Service][${requestId}] Failed to write error log: ${logErr.message}`);
+        }
         
         throw new Error(`OpenAI API error: ${JSON.stringify({
           error: {
@@ -188,11 +281,42 @@ async function generateStructuredMetadata(postTitle, postData, images = {}, stat
         })}`);
       }
       
-      // Re-throw other errors
+      // If we got this far, it's not an OpenAI API error but something else
+      console.error(`[OpenAI Service][${requestId}] Non-API error during OpenAI request: ${error.message}`);
+      console.error(error.stack);
+      
+      // Re-throw other errors with RequestID for tracking
+      error.message = `${error.message} (RequestID: ${requestId})`;
       throw error;
     }
   } catch (error) {
-    console.error('[OpenAI Service] Error generating structured metadata:', error);
+    console.error(`[OpenAI Service][${requestId}] Error generating structured metadata:`, error);
+    
+    // Add fallback handling - if this is in production, return minimal metadata to allow the process to continue
+    if (process.env.NODE_ENV === 'production') {
+      console.warn(`[OpenAI Service][${requestId}] Running in production, returning fallback metadata to avoid full failure`);
+      
+      return {
+        metadata: {
+          creator: postData.acf?.creator || "Unknown",
+          medium: postData.acf?.medium || "Unknown",
+          object_type: postData.acf?.object_type || "Artwork",
+          condition_summary: postData.acf?.condition_summary || "Unknown",
+          estimated_age: postData.acf?.estimated_age || "Unknown",
+          condition_score: 70,
+          rarity: 50,
+          market_demand: 50,
+          historical_significance: 50,
+          investment_potential: 50,
+          provenance_strength: 50,
+          data_quality_assessment: "Metadata generation failed. Using fallback data.",
+          _error: `${error.message}`,
+          _request_id: requestId
+        }
+      };
+    }
+    
+    // In non-production, throw the error to be handled upstream
     throw error;
   }
 }

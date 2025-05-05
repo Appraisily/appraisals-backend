@@ -23,6 +23,9 @@ yarn.lock
 # Debug logs
 logs
 *.log
+/logs/
+openai_*.json
+openai_*.txt
 
 # IDE files
 .idea/
