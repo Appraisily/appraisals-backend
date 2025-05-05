@@ -160,181 +160,393 @@ function calculateTotalKeywordMatches(searchKeywords) {
 }
 
 /**
- * Prepares the data context object for the enhanced-analytics skeleton.
- * @param {Statistics} stats - The sanitized statistics object.
- * @param {object} appraisal - The appraisal data object (should include ACF fields).
- * @param {string} postId - The WordPress post ID.
- * @returns {object} - A flat object mapping placeholders to values.
- */
-function prepareDataContextForEnhancedAnalytics(stats, appraisal, postId) {
-    stats = stats || {};
-    appraisal = appraisal || {};
-    const value = parseFloat(stats.value || appraisal.value || 0);
-    const percentileNum = parseInt(String(stats.percentile || '0').replace(/\D/g, '')) || 0;
-    const priceTrend = stats.price_trend_percentage || '+0.0%';
-    const isTrendPositive = priceTrend.includes('+');
-
-    // Prepare data needed for charts
-    const radarData = {
-        labels: ['Condition', 'Rarity', 'Market Demand', 'Hist. Significance', 'Invest. Potential', 'Provenance'],
-        datasets: [{
-            label: 'Item Metrics',
-            data: [
-                // Use scores directly from appraisal ACF if available, else default to 0
-                parseFloat(appraisal.condition_score || 0),
-                parseFloat(appraisal.rarity || 0),
-                parseFloat(appraisal.market_demand || 0),
-                // Use scores from stats (valuer-agent) if available, else default to 0
-                stats.historical_significance || 0,
-                stats.investment_potential || 0,
-                stats.provenance_strength || 0
-            ],
-            // Styling options...
-        }]
-    };
-    const historyData = {
-        // Use stats.price_history if available
-        labels: stats.price_history?.map(p => p.year) || [],
-        datasets: [
-            { label: 'Comparable Items', data: stats.price_history?.map(p => p.price) || [] },
-        ]
-    };
-
-    // Handle search keywords if available in the new format
-    const hasSearchKeywords = !!(stats.search_keywords);
-    const searchKeywords = stats.search_keywords || {};
-    let verySpecificKeywordsHtml = '';
-    let specificKeywordsHtml = '';
-    let moderateKeywordsHtml = '';
-    let broadKeywordsHtml = '';
-    let totalKeywordMatches = 0;
-
-    if (hasSearchKeywords) {
-        verySpecificKeywordsHtml = formatKeywordsAsHtml(searchKeywords.very_specific);
-        specificKeywordsHtml = formatKeywordsAsHtml(searchKeywords.specific);
-        moderateKeywordsHtml = formatKeywordsAsHtml(searchKeywords.moderate);
-        broadKeywordsHtml = formatKeywordsAsHtml(searchKeywords.broad);
-        totalKeywordMatches = calculateTotalKeywordMatches(searchKeywords);
-    }
-
-    return {
-        TITLE: appraisal.title ? `Enhanced Market Analytics for ${escapeHtml(appraisal.title)}` : 'Enhanced Market Analytics',
-        SHOW_RADAR: true, 
-        SHOW_HISTORY: true,
-        SHOW_STATS: true,
-        // Use ACF scores directly
-        CONDITION_SCORE: parseFloat(appraisal.condition_score || 0),
-        RARITY_SCORE: parseFloat(appraisal.rarity || 0),
-        MARKET_DEMAND_SCORE: parseFloat(appraisal.market_demand || 0),
-        // Use stats scores (from valuer-agent) or default
-        HISTORICAL_SIGNIFICANCE: stats.historical_significance || 0, 
-        INVESTMENT_POTENTIAL: stats.investment_potential || 0,
-        PROVENANCE_STRENGTH: stats.provenance_strength || 0,
-        // ... (rest of the fields remain mostly the same, using defaults from stats object) ...
-        AVG_PRICE_FORMATTED: `$${numberWithCommas(stats.average_price)}`,
-        MEDIAN_PRICE_FORMATTED: `$${numberWithCommas(stats.median_price)}`,
-        PRICE_TREND: priceTrend,
-        PRICE_MIN_FORMATTED: `$${numberWithCommas(stats.price_min)}`,
-        PRICE_MAX_FORMATTED: `$${numberWithCommas(stats.price_max)}`,
-        PERCENTILE: stats.percentile || 'N/A',
-        CONFIDENCE_LEVEL: stats.confidence_level || 'Low',
-        COEFFICIENT_VARIATION: stats.coefficient_of_variation || 0,
-        COUNT: stats.count || 0,
-        TOTAL_COUNT: stats.total_count || stats.count || 0,
-        STD_DEV_FORMATTED: `$${numberWithCommas(stats.standard_deviation)}`,
-        VALUE_FORMATTED: `$${numberWithCommas(value)}`,
-        TARGET_POSITION: stats.target_marker_position || 50,
-        TREND_CLASS: isTrendPositive ? 'positive' : 'negative',
-        IS_TREND_POSITIVE: isTrendPositive,
-        PERCENTILE_NUMBER: percentileNum,
-        PERCENTILE_ROTATION: percentileNum / 100 * 180,
-        APPRECIATION_STATUS: isTrendPositive ? 'appreciating' : 'depreciating',
-        MARKET_TIMING: isTrendPositive ? 'Favorable' : 'Challenging',
-        CONFIDENCE_LEVEL_NUMERIC: confidenceToNumeric(stats.confidence_level),
-        CONFIDENCE_LEVEL_CLASS: (stats.confidence_level || 'low').toLowerCase().replace(/\s+/g, '-'),
-        NEXT_YEAR: new Date().getFullYear() + 1,
-        PREDICTED_VALUE_FORMATTED: `$${numberWithCommas(Math.round(value * (1 + (parseFloat(String(priceTrend).replace(/[^0-9.-]/g, '')) / 100))))}`,
-        RADAR_CHART_DATA_JSON: escapeHtml(JSON.stringify(radarData)),
-        HISTORY_CHART_DATA_JSON: escapeHtml(JSON.stringify(historyData)),
-        HISTOGRAM_DATA_JSON: escapeHtml(JSON.stringify(stats.histogram || [])),
-        SALES_DATA_JSON: escapeHtml(JSON.stringify(stats.comparable_sales || [])),
-        CONFIDENCE_DOTS_HTML: generateConfidenceDotsHtml(stats.confidence_level),
-        HISTOGRAM_BARS_HTML: '<!-- Placeholder: Gemini/Client JS to generate -->',
-        HISTOGRAM_AXIS_HTML: '<!-- Placeholder: Gemini/Client JS to generate -->',
-        SALES_TABLE_ROWS_HTML: '<!-- Placeholder: Gemini/Client JS to generate -->',
-        CHART_ID_RADAR: `radar-chart-${postId}`,
-        CHART_ID_PRICE: `price-chart-${postId}`,
-        // New fields for search keywords
-        HAS_SEARCH_KEYWORDS: hasSearchKeywords,
-        VERY_SPECIFIC_KEYWORDS_HTML: verySpecificKeywordsHtml,
-        SPECIFIC_KEYWORDS_HTML: specificKeywordsHtml,
-        MODERATE_KEYWORDS_HTML: moderateKeywordsHtml,
-        BROAD_KEYWORDS_HTML: broadKeywordsHtml,
-        TOTAL_KEYWORD_MATCHES: totalKeywordMatches,
-    };
-}
-
-/**
- * Prepares the data context object for the appraisal-card skeleton.
- * @param {Statistics} stats - The sanitized statistics object.
- * @param {object} appraisal - The appraisal data object (requires postId, condition_score, rarity, market_demand).
- * @returns {object} - A flat object mapping placeholders to values.
+ * Prepares the data context for the appraisal card template
+ * @param {Object} stats - Statistics data
+ * @param {Object} appraisal - Appraisal data
+ * @returns {Object} - Data context for the template
  */
 function prepareDataContextForAppraisalCard(stats, appraisal) {
     stats = stats || {};
     appraisal = appraisal || {};
-    const postId = appraisal.postId;
-    if (!postId) console.warn("Post ID missing in appraisal data for context prep.");
-    const value = parseFloat(stats.value || appraisal.value || 0);
-    const priceTrend = stats.price_trend_percentage || '+0.0%';
-    const isTrendPositive = priceTrend.includes('+');
-
-    const metricsData = {
-        labels: ['Condition', 'Rarity', 'Market Demand'],
+    
+    const postId = appraisal.ID || Date.now(); // Fallback to timestamp
+    const value = parseInt(appraisal.acf?.value || 0);
+    
+    // Extract trends data
+    let priceTrend = stats.price_trend_percentage || '+0.0%';
+    const isTrendPositive = priceTrend.startsWith('+');
+    
+    // Get score values from appraisal ACF data if available
+    const marketDemand = parseFloat(appraisal.acf?.market_demand || 0);
+    const rarity = parseFloat(appraisal.acf?.rarity || 0);
+    const conditionScore = parseFloat(appraisal.acf?.condition_score || 0);
+    const historicalSignificance = parseFloat(appraisal.acf?.historical_significance || 0);
+    const provenance = parseFloat(appraisal.acf?.provenance || 0);
+    const investmentPotential = parseFloat(appraisal.acf?.investment_potential || 0);
+    
+    // Prepare chart data for metrics chart
+    const metricsChartData = {
+        labels: ['Condition', 'Rarity', 'Market Demand', 'Historical Significance', 'Provenance', 'Investment Potential'],
         datasets: [{
-            label: 'Assessment',
-            data: [
-                // Use scores directly from appraisal ACF
-                parseFloat(appraisal.condition_score || 0),
-                parseFloat(appraisal.rarity || 0),
-                parseFloat(appraisal.market_demand || 0)
-            ],
+            label: 'Item Metrics',
+            data: [conditionScore, rarity, marketDemand, historicalSignificance, provenance, investmentPotential],
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 2,
+            pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+            pointBorderColor: '#fff',
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: 'rgba(54, 162, 235, 1)'
         }]
     };
-    const marketData = { /* Data for price distribution chart - Needs data from stats */ };
+    
+    // Prepare chart data for market distribution chart
+    const marketChartData = {
+        labels: stats.price_ranges || [],
+        datasets: [{
+            label: 'Market Distribution',
+            data: stats.frequency_distribution || [],
+            backgroundColor: 'rgba(255, 206, 86, 0.5)',
+            borderColor: 'rgba(255, 206, 86, 1)',
+            borderWidth: 1
+        }]
+    };
+    
+    // Function to create HTML table rows from object properties
+    function generateDetailsTableHtml(item) {
+        if (!item || !item.acf) return '';
+        
+        let html = '';
+        const skipFields = ['_', 'image', 'featured_image', 'value', 'market_demand', 'rarity', 'condition_score',
+                           'historical_significance', 'provenance', 'investment_potential'];
+        
+        Object.entries(item.acf).forEach(([key, value]) => {
+            // Skip internal fields and score metrics
+            if (key.startsWith('_') || skipFields.includes(key)) return;
+            
+            // Format the key as a readable title
+            const formattedKey = key.replace(/_/g, ' ')
+                .split(' ')
+                .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                .join(' ');
+            
+            // Format the value as HTML
+            let formattedValue = '';
+            if (value === null || value === undefined) {
+                formattedValue = 'Not provided';
+            } else if (typeof value === 'object') {
+                formattedValue = 'Complex data';
+            } else {
+                formattedValue = String(value);
+            }
+            
+            html += `<tr><td>${formattedKey}</td><td>${formattedValue}</td></tr>`;
+        });
+        
+        return html;
+    }
+    
+    // Create a text analysis from the stats
+    function generateAnalysisText(stats) {
+        const defaultText = "This item has been professionally analyzed based on market trends, historical data, and the specific characteristics of the item itself. The analysis considers factors such as condition, rarity, historical significance, provenance, and current market demand.";
+        
+        if (!stats || Object.keys(stats).length === 0) {
+            return defaultText;
+        }
+        
+        // Try to generate a more specific analysis if we have stats data
+        let analysis = "Based on our analysis, ";
+        
+        if (stats.percentile) {
+            analysis += `this item ranks in the ${stats.percentile} percentile of comparable items on the market, `;
+        }
+        
+        if (stats.price_trend_percentage) {
+            const trendDirection = stats.price_trend_percentage.includes('+') ? "positive" : "negative";
+            analysis += `showing a ${trendDirection} annual price trend of ${stats.price_trend_percentage}. `;
+        } else {
+            analysis += "with stable pricing in the current market. ";
+        }
+        
+        // Add information about key metrics if available
+        if (marketDemand > 0 || rarity > 0 || conditionScore > 0) {
+            analysis += "Key factors contributing to this valuation include ";
+            
+            const factors = [];
+            if (marketDemand > 75) factors.push("strong market demand");
+            else if (marketDemand > 50) factors.push("moderate market demand");
+            
+            if (rarity > 75) factors.push("high rarity");
+            else if (rarity > 50) factors.push("moderate rarity");
+            
+            if (conditionScore > 75) factors.push("excellent condition");
+            else if (conditionScore > 50) factors.push("good condition");
+            
+            if (factors.length > 0) {
+                analysis += factors.join(", ") + ". ";
+            } else {
+                analysis += "the item's overall characteristics and market positioning. ";
+            }
+        }
+        
+        return analysis;
+    }
 
     return {
         POST_ID: postId,
         CURRENT_DATE: new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }),
         VALUE_FORMATTED: `$${numberWithCommas(value)}`,
-        FEATURED_IMAGE_HTML: appraisal.featured_image ? `<img src="${escapeHtml(appraisal.featured_image)}" alt="${escapeHtml(appraisal.title)}" class="featured-artwork">` : '<div class="placeholder-image"><span>No Image Available</span></div>',
-        TITLE: escapeHtml(appraisal.title || 'Untitled'),
-        CREATOR: escapeHtml(appraisal.creator || 'Unknown'),
-        OBJECT_TYPE: escapeHtml(appraisal.object_type || 'N/A'),
-        AGE: escapeHtml(appraisal.estimated_age || 'N/A'),
-        MEDIUM: escapeHtml(appraisal.medium || 'N/A'),
-        CONDITION: escapeHtml(appraisal.condition_summary || 'N/A'), // Use condition_summary here?
+        ARTWORK_IMAGE_URL: appraisal.acf?.featured_image || "",
+        ARTWORK_TITLE: escapeHtml(appraisal.acf?.title || appraisal.title?.rendered || 'Untitled'),
+        ARTWORK_CREATOR: escapeHtml(appraisal.acf?.creator || 'Unknown'),
+        OBJECT_TYPE: escapeHtml(appraisal.acf?.object_type || 'N/A'),
+        PERIOD_AGE: escapeHtml(appraisal.acf?.estimated_age || 'N/A'),
+        MEDIUM: escapeHtml(appraisal.acf?.medium || 'N/A'),
+        CONDITION: escapeHtml(appraisal.acf?.condition_summary || 'N/A'),
         PERCENTILE: stats.percentile || 'N/A',
         PERCENTILE_NUMBER: parseInt(String(stats.percentile || '0').replace(/\D/g, '')) || 0,
         PRICE_TREND: priceTrend,
         TREND_CLASS: isTrendPositive ? 'positive' : 'negative',
         // Use ACF scores directly
-        MARKET_DEMAND_SCORE: parseFloat(appraisal.market_demand || 0),
-        RARITY_SCORE: parseFloat(appraisal.rarity || 0),
-        CONDITION_SCORE: parseFloat(appraisal.condition_score || 0),
+        MARKET_DEMAND_SCORE: parseFloat(appraisal.acf?.market_demand || 0),
+        RARITY_SCORE: parseFloat(appraisal.acf?.rarity || 0),
+        CONDITION_SCORE: parseFloat(appraisal.acf?.condition_score || 0),
         // Add missing metrics for the detail tab
-        HISTORICAL_SIGNIFICANCE: parseFloat(appraisal.historical_significance || appraisal.historical_value || 65),
-        PROVENANCE_STRENGTH: parseFloat(appraisal.provenance_strength || appraisal.provenance || 70),
-        INVESTMENT_POTENTIAL: parseFloat(appraisal.investment_potential || appraisal.future_value || 60),
-        APPRAISER_NAME: escapeHtml(appraisal.appraiser_name || 'Andrés Gómez'),
+        HISTORICAL_SIGNIFICANCE: parseFloat(appraisal.acf?.historical_significance || appraisal.acf?.historical_value || 65),
+        PROVENANCE_STRENGTH: parseFloat(appraisal.acf?.provenance_strength || appraisal.acf?.provenance || 70),
+        INVESTMENT_POTENTIAL: parseFloat(appraisal.acf?.investment_potential || appraisal.acf?.future_value || 60),
+        APPRAISER_NAME: escapeHtml(appraisal.acf?.appraiser_name || 'Andrés Gómez'),
         ANALYSIS_TEXT: escapeHtml(generateAnalysisText(stats)),
         DETAILS_TABLE_HTML: generateDetailsTableHtml(appraisal),
-        CHART_ID_GAUGE: `gauge-chart-${postId}`,
-        CHART_ID_METRICS: `metrics-chart-${postId}`,
-        CHART_ID_MARKET: `market-chart-${postId}`,
-        METRICS_CHART_DATA_JSON: escapeHtml(JSON.stringify(metricsData)),
-        MARKET_CHART_DATA_JSON: escapeHtml(JSON.stringify(marketData)),
-        FULL_REPORT_URL: appraisal.report_url || '#'
+        ARTWORK_DESCRIPTION: escapeHtml(appraisal.acf?.description || 'No detailed description available.'),
+        FULL_REPORT_URL: appraisal.link || '#',
+        // Chart data as JSON strings for data attributes
+        METRICS_CHART_DATA_JSON: JSON.stringify(metricsChartData),
+        MARKET_CHART_DATA_JSON: JSON.stringify(marketChartData),
+    };
+}
+
+/**
+ * Prepares the data context for the enhanced analytics template
+ * @param {Object} stats - Statistics data
+ * @param {Object} appraisal - Appraisal data
+ * @returns {Object} - Data context for the template
+ */
+function prepareDataContextForEnhancedAnalytics(stats, appraisal) {
+    stats = stats || {};
+    appraisal = appraisal || {};
+    
+    const postId = appraisal.ID || Date.now(); // Fallback to timestamp
+    const value = parseInt(appraisal.acf?.value || 0);
+    
+    // Extract trends data
+    let priceTrend = stats.price_trend_percentage || '+0.0%';
+    const isTrendPositive = priceTrend.startsWith('+');
+    
+    // Date formatting
+    const currentYear = new Date().getFullYear();
+    const nextYear = currentYear + 1;
+    
+    // Calculate predicted value
+    let predictedValue = value;
+    if (stats.price_trend_percentage) {
+        const trendPercentage = parseFloat(stats.price_trend_percentage.replace(/[^-\d.]/g, ''));
+        if (!isNaN(trendPercentage)) {
+            predictedValue = Math.round(value * (1 + trendPercentage / 100));
+        }
+    }
+    
+    // Prepare radar chart data
+    const radarChartData = {
+        labels: ['Condition', 'Rarity', 'Market Demand', 'Historical Significance', 'Provenance', 'Investment Potential'],
+        datasets: [{
+            label: 'Item Metrics',
+            data: [
+                parseFloat(appraisal.acf?.condition_score || 0),
+                parseFloat(appraisal.acf?.rarity || 0),
+                parseFloat(appraisal.acf?.market_demand || 0),
+                parseFloat(appraisal.acf?.historical_significance || appraisal.acf?.historical_value || 0),
+                parseFloat(appraisal.acf?.provenance_strength || appraisal.acf?.provenance || 0),
+                parseFloat(appraisal.acf?.investment_potential || appraisal.acf?.future_value || 0)
+            ],
+            backgroundColor: 'rgba(54, 162, 235, 0.2)',
+            borderColor: 'rgba(54, 162, 235, 1)',
+            borderWidth: 2,
+            pointBackgroundColor: 'rgba(54, 162, 235, 1)',
+            pointBorderColor: '#fff',
+            pointHoverBackgroundColor: '#fff',
+            pointHoverBorderColor: 'rgba(54, 162, 235, 1)'
+        }]
+    };
+    
+    // Prepare price history chart data
+    const priceHistoryChartData = {
+        labels: stats.history_years || Array.from({length: 5}, (_, i) => currentYear - 4 + i),
+        datasets: [{
+            label: 'Comparable Items',
+            data: stats.history_values || [value * 0.8, value * 0.85, value * 0.9, value * 0.95, value],
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.5)',
+            tension: 0.3
+        }, {
+            label: 'Your Item',
+            data: stats.item_history || [null, null, null, null, value],
+            borderColor: 'rgb(255, 99, 132)',
+            backgroundColor: 'rgba(255, 99, 132, 0.5)',
+            borderDash: [5, 5],
+            tension: 0.3
+        }]
+    };
+    
+    // Prepare histogram data
+    const histogramLabels = stats.price_ranges || ['$0-$1K', '$1K-$2K', '$2K-$5K', '$5K-$10K', '$10K-$20K'];
+    const histogramValues = stats.frequency_distribution || [10, 15, 25, 20, 10];
+    
+    // Create histogram bars HTML
+    let histogramBarsHtml = '';
+    let histogramAxisHtml = '';
+    let targetPosition = 50; // Default to middle if unknown
+    
+    histogramValues.forEach((count, index) => {
+        const percentage = Math.round((count / Math.max(...histogramValues)) * 100);
+        histogramBarsHtml += `<div class="chart-bar" style="height: ${percentage}%;" data-tooltip="${histogramLabels[index]}: ${count} items"></div>`;
+        histogramAxisHtml += `<div class="axis-label">${histogramLabels[index]}</div>`;
+        
+        // Try to estimate where the current item value falls in the histogram
+        if (stats.price_ranges && stats.target_range_index === index) {
+            targetPosition = (index / (histogramLabels.length - 1)) * 100;
+        }
+    });
+    
+    // Prepare sales table data
+    const salesData = stats.comparable_sales || [];
+    let salesTableRowsHtml = '';
+    
+    if (salesData.length > 0) {
+        salesData.forEach(sale => {
+            const priceDiff = sale.price && value ? ((sale.price - value) / value * 100).toFixed(1) + '%' : 'N/A';
+            const diffClass = priceDiff.startsWith('-') ? 'negative' : priceDiff === 'N/A' ? '' : 'positive';
+            
+            salesTableRowsHtml += `
+                <tr>
+                    <td class="title-cell">${escapeHtml(sale.title || 'Untitled')}</td>
+                    <td>${escapeHtml(sale.auction_house || 'N/A')}</td>
+                    <td>${escapeHtml(sale.date || 'N/A')}</td>
+                    <td>$${numberWithCommas(sale.price || 0)}</td>
+                    <td class="${diffClass}">${priceDiff}</td>
+                </tr>
+            `;
+        });
+    } else {
+        salesTableRowsHtml = '<tr><td colspan="5">No comparable sales data available</td></tr>';
+    }
+    
+    // Determine confidence level and class
+    const confidenceLevel = stats.confidence_level || 'Moderate';
+    let confidenceLevelClass = 'moderate';
+    
+    if (confidenceLevel.toLowerCase().includes('high')) {
+        confidenceLevelClass = 'high';
+    } else if (confidenceLevel.toLowerCase().includes('low')) {
+        confidenceLevelClass = 'low';
+    }
+    
+    // Determine market timing
+    let marketTiming = 'Stable';
+    if (priceTrend.includes('+')) {
+        const trendValue = parseFloat(priceTrend.replace(/[^-\d.]/g, ''));
+        if (trendValue > 5) {
+            marketTiming = 'Strong Upward';
+        } else if (trendValue > 0) {
+            marketTiming = 'Slight Upward';
+        }
+    } else if (priceTrend.includes('-')) {
+        const trendValue = Math.abs(parseFloat(priceTrend.replace(/[^-\d.]/g, '')));
+        if (trendValue > 5) {
+            marketTiming = 'Strong Downward';
+        } else if (trendValue > 0) {
+            marketTiming = 'Slight Downward';
+        }
+    }
+    
+    // Determine the percentile rotation for gauge (from -90 to 90 degrees based on percentile 0-100)
+    const percentileNumber = parseInt(String(stats.percentile || '0').replace(/\D/g, '')) || 0;
+    const percentileRotation = -90 + (180 * percentileNumber / 100);
+    
+    // Determine appreciation status based on percentile
+    let appreciationStatus = 'average';
+    if (percentileNumber >= 75) {
+        appreciationStatus = 'premium';
+    } else if (percentileNumber >= 50) {
+        appreciationStatus = 'high';
+    } else if (percentileNumber < 25) {
+        appreciationStatus = 'low';
+    }
+    
+    return {
+        // Basic information
+        POST_ID: postId,
+        VALUE_FORMATTED: `$${numberWithCommas(value)}`,
+        PREDICTED_VALUE_FORMATTED: `$${numberWithCommas(predictedValue)}`,
+        NEXT_YEAR: nextYear,
+        
+        // Show/hide sections
+        SHOW_RADAR: true,
+        SHOW_HISTORY: true,
+        SHOW_STATS: true,
+        
+        // Price trend information
+        PRICE_TREND: priceTrend,
+        TREND_CLASS: isTrendPositive ? 'positive' : 'negative',
+        
+        // Metrics scores
+        CONDITION_SCORE: parseFloat(appraisal.acf?.condition_score || 0),
+        RARITY_SCORE: parseFloat(appraisal.acf?.rarity || 0),
+        MARKET_DEMAND_SCORE: parseFloat(appraisal.acf?.market_demand || 0),
+        HISTORICAL_SIGNIFICANCE: parseFloat(appraisal.acf?.historical_significance || appraisal.acf?.historical_value || 65),
+        PROVENANCE_STRENGTH: parseFloat(appraisal.acf?.provenance_strength || appraisal.acf?.provenance || 70),
+        INVESTMENT_POTENTIAL: parseFloat(appraisal.acf?.investment_potential || appraisal.acf?.future_value || 60),
+        
+        // Statistics information
+        AVG_PRICE_FORMATTED: `$${numberWithCommas(stats.avg_price || value)}`,
+        MEDIAN_PRICE_FORMATTED: `$${numberWithCommas(stats.median_price || value)}`,
+        PRICE_MIN_FORMATTED: `$${numberWithCommas(stats.min_price || (value * 0.5))}`,
+        PRICE_MAX_FORMATTED: `$${numberWithCommas(stats.max_price || (value * 1.5))}`,
+        STD_DEV_FORMATTED: `$${numberWithCommas(stats.std_dev || 0)}`,
+        COEFFICIENT_VARIATION: stats.coefficient_variation || '15',
+        CONFIDENCE_LEVEL: confidenceLevel,
+        CONFIDENCE_LEVEL_CLASS: confidenceLevelClass,
+        
+        // Percentile information
+        PERCENTILE: stats.percentile || 'N/A',
+        PERCENTILE_NUMBER: percentileNumber,
+        PERCENTILE_ROTATION: percentileRotation,
+        APPRECIATION_STATUS: appreciationStatus,
+        
+        // Market information
+        TOTAL_COUNT: stats.count || 0,
+        COUNT: stats.count || 0,
+        MARKET_TIMING: marketTiming,
+        
+        // Target position in histogram
+        TARGET_POSITION: targetPosition,
+        
+        // HTML content
+        HISTOGRAM_BARS_HTML: histogramBarsHtml,
+        HISTOGRAM_AXIS_HTML: histogramAxisHtml,
+        SALES_TABLE_ROWS_HTML: salesTableRowsHtml,
+        
+        // Chart data as JSON strings
+        RADAR_CHART_DATA_JSON: JSON.stringify(radarChartData),
+        HISTORY_CHART_DATA_JSON: JSON.stringify(priceHistoryChartData),
+        HISTOGRAM_DATA_JSON: JSON.stringify({
+            labels: histogramLabels,
+            values: histogramValues
+        }),
+        SALES_DATA_JSON: JSON.stringify(salesData),
+        
+        // Search keywords information
+        HAS_SEARCH_KEYWORDS: false, // Set to true if you have search keywords data
     };
 }
 

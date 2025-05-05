@@ -220,9 +220,10 @@ function initializeAppraisalCardGaugeChart(canvas) {
 
     if (percentileEl) {
         const percentileText = percentileEl.textContent.trim();
-        const matches = percentileText.match(/\d+/); 
-        if (matches && matches[0]) { 
-            percentile = parseInt(matches[0]);
+        // Improved regex to extract numeric value from text like "64th" or "64 percentile"
+        const matches = percentileText.match(/(\d+)/); 
+        if (matches && matches[1]) { 
+            percentile = parseInt(matches[1]);
             console.log(`[DEBUG AC Card ${postId}] Parsed percentile: ${percentile}`);
         } else {
             console.warn(`[DEBUG AC Card ${postId}] Could not parse percentile number from text:`, percentileText);
