@@ -9,7 +9,7 @@ const { Readable } = require('stream');
 const openai = new OpenAI({
   apiKey: config.OPENAI_API_KEY,
   maxRetries: 3, // Configure retries for reliability
-  timeout: 60000 // 60 seconds timeout
+  timeout: 300000 // 5 minutes timeout for larger requests with o3 model
 });
 
 /**
@@ -26,7 +26,7 @@ async function downloadImageAsBase64(url) {
   try {
     console.log(`[OpenAI Service] Downloading image from ${url}`);
     const response = await fetch(url, { 
-      timeout: 10000 // 10 second timeout for image download
+      timeout: 30000 // 30 second timeout for image download
     });
     
     if (!response.ok) {
@@ -98,6 +98,8 @@ async function generateStructuredMetadata(postTitle, postData, images = {}, stat
     // Process images first - download and convert to base64
     const processedImages = await processImages(images);
     const includedImages = Object.keys(processedImages);
+    
+    console.log(`[OpenAI Service][${requestId}] Completed processing ${includedImages.length} images, preparing message blocks`);
     
     // Prepare messages array with updated format
     const messages = [
@@ -190,11 +192,13 @@ ${prompt}`
     try {
       // Call OpenAI API using the latest SDK patterns
       // Note: o3 is a newer model that doesn't require temperature or max_tokens params
+      console.log(`[OpenAI Service][${requestId}] Starting OpenAI API call with o3 model at ${new Date().toISOString()}`);
       const response = await openai.chat.completions.create({
         model: 'o3',
         messages,
         response_format: { type: "json_object" }
       });
+      console.log(`[OpenAI Service][${requestId}] OpenAI API call completed at ${new Date().toISOString()}`);
       
       // Write raw response to debug log file
       try {
