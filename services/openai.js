@@ -102,12 +102,13 @@ async function generateStructuredMetadata(postTitle, postData, images = {}, stat
     // Prepare messages array with updated format
     const messages = [
       {
-        role: "system",
-        content: "I am a professional art and antiques appraiser. I will analyze the provided information and generate detailed metadata for this appraisal item."
-      },
-      {
         role: "user",
-        content: `# Appraisal Metadata Request\n\nTitle: ${postTitle}\nValue: $${postData.acf?.value || 'Unknown'}\n\n${prompt}`
+        content: `# Appraisal Metadata Request
+
+Title: ${postTitle}
+Value: $${postData.acf?.value || 'Unknown'}
+
+${prompt}`
       }
     ];
     
@@ -163,7 +164,7 @@ async function generateStructuredMetadata(postTitle, postData, images = {}, stat
     
     // Log the sanitized request payload for debugging
     const requestPayload = {
-      model: 'gpt-4o',
+      model: 'o3', // Using o3 model which doesn't require temperature or max_tokens params
       messages: sanitizedMessages,
       response_format: { type: "json_object" }
     };
@@ -188,8 +189,9 @@ async function generateStructuredMetadata(postTitle, postData, images = {}, stat
     
     try {
       // Call OpenAI API using the latest SDK patterns
+      // Note: o3 is a newer model that doesn't require temperature or max_tokens params
       const response = await openai.chat.completions.create({
-        model: 'gpt-4o',
+        model: 'o3',
         messages,
         response_format: { type: "json_object" }
       });
@@ -324,7 +326,7 @@ async function generateStructuredMetadata(postTitle, postData, images = {}, stat
 /**
  * Generate content using OpenAI
  */
-async function generateContent(prompt, postTitle, images = {}, model = 'gpt-4o', systemMessage = null, maxTokens = 1024, temperature = 0.7) {
+async function generateContent(prompt, postTitle, images = {}, model = 'o3', systemMessage = null) {
   try {
     console.log('Generating content with OpenAI...');
     
@@ -333,19 +335,24 @@ async function generateContent(prompt, postTitle, images = {}, model = 'gpt-4o',
     const includedImages = Object.keys(processedImages);
     
     // Prepare messages for the API
-    const messages = [
-      {
+    const messages = [];
+    
+    // Add system message if provided
+    if (systemMessage) {
+      messages.push({
         role: "system",
-        content: systemMessage || "You are a professional art expert specializing in appraisals and artwork analysis."
-      },
-      {
-        role: "user",
-        content: `Title: ${postTitle}\n\n${prompt}`
-      }
-    ];
+        content: systemMessage
+      });
+    }
+    
+    // Add user message with post title and prompt
+    messages.push({
+      role: "user",
+      content: `Title: ${postTitle}\n\n${prompt}`
+    });
     
     // Log details
-    console.log(`OpenAI: Using model ${model} with temperature ${temperature}`);
+    console.log(`OpenAI: Using model ${model}`);
     console.log(`OpenAI: Post title: "${postTitle}"`);
     
     // Show a sample of the prompt (first 500 characters)
@@ -380,11 +387,10 @@ async function generateContent(prompt, postTitle, images = {}, model = 'gpt-4o',
     
     try {
       // Call OpenAI API using the latest SDK patterns
+      // Note: o3 is a newer model that doesn't require temperature or max_tokens params
       const response = await openai.chat.completions.create({
         model,
-        messages,
-        max_tokens: maxTokens,
-        temperature
+        messages
       });
       
       if (!response.choices?.[0]?.message?.content) {

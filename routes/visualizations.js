@@ -228,10 +228,8 @@ router.post('/generate-visualizations', async (req, res) => {
                 fullPrompt,
                 postData.title?.rendered || 'Appraisal Item',
                 {},  // No images needed for statistics
-                'gpt-4o',  // Use the latest model
-                "You are an expert statistics analyst for art and collectibles appraisals. Generate formal PDF-ready content.",
-                800,  // Max tokens - enough for 2-3 paragraphs
-                0.7   // Temperature
+                'o3',  // Use the o3 model
+                "You are an expert statistics analyst for art and collectibles appraisals. Generate formal PDF-ready content."
               );
               
               // Store the AI-generated comprehensive summary
