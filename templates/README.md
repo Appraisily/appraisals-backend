@@ -53,6 +53,7 @@ const completeHtml = templates.embedStylesAndScripts('enhanced-analytics', aiFil
 - The complete HTML is then uploaded to WordPress using ACF fields
 - Direct embedding is used (instead of external CSS/JS links) to keep everything in one self-contained chunk
 - This approach ensures the AI only needs to process the structural HTML, not styles or behavior
+- When prompting the AI to fill templates (e.g., `appraisal-card.html`), explicitly instruct it that all monetary values, particularly for the `{{VALUE_FORMATTED}}` placeholder, must be displayed in USD. For example, include a directive in your prompt like: "Ensure the {{VALUE_FORMATTED}} placeholder includes the currency as USD (e.g., '$1,234 USD' or '1,234 USD')." This helps prevent accidental currency misrepresentation (e.g., AUD).
 
 ## Legacy JavaScript Files
 

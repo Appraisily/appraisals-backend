@@ -126,9 +126,7 @@ IMPORTANT TASK DETAILS:
 5. The price history chart data is in data.price_history_chart_data_json, which should be added as a data attribute named 'data-chart-data-history'
 
 Here's the EXACT skeleton template to use:
-\`\`\`html
 ${skeletonTemplate}
-\`\`\`
 
 Here's the data to insert (map data properties to template variables):
 \`\`\`json
@@ -238,11 +236,10 @@ IMPORTANT GUIDELINES:
 4. Pay special attention to chart data attributes which must be correctly formatted JSON
 5. Make sure the tab structure and interactions work correctly
 6. Ensure all IDs are unique by using the provided chart IDs
+7. All monetary values, particularly for the {{VALUE_FORMATTED}} placeholder, must be displayed in USD (e.g., \'$1,234 USD\' or \'$1,234 USD\').
 
 Here's the EXACT skeleton template to use:
-\`\`\`html
 ${skeletonTemplate}
-\`\`\`
 
 Here's the data to insert (map data properties to template variables):
 \`\`\`json
