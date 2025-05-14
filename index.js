@@ -160,6 +160,8 @@ async function startServer() {
     const pdfRouter = require('./routes/pdf');
     const pdfLegacyRouter = require('./routes/pdf-legacy');
     const htmlRouter = require('./routes/html');
+    // Add new Gemini docs router
+    const geminiDocsRouter = require('./routes/gemini-docs');
 
     // Use routers - organize by domain and API structure
     // app.use('/api/report', reportRouter);
@@ -169,6 +171,8 @@ async function startServer() {
     app.use('/api/pdf', pdfRouter);
     app.use('/api/pdf-legacy', pdfLegacyRouter);
     app.use('/api/html', htmlRouter);
+    // Add new Gemini docs route
+    app.use('/api/gemini-docs', geminiDocsRouter);
     
     // Legacy compatibility routes - maintain backwards compatibility
     app.use('/', reportRouter); // Keep legacy direct routes for backward compatibility
@@ -201,6 +205,8 @@ async function startServer() {
       console.log(`Visualization debugging available at: http://localhost:${PORT}/api/visualizations/debug`);
       console.log(`Step-by-step PDF generation available at: http://localhost:${PORT}/api/pdf/generate-pdf-steps`);
       console.log(`Get PDF steps available at: http://localhost:${PORT}/api/pdf/steps`);
+      // Add log for Gemini docs endpoint
+      console.log(`Gemini document generation available at: http://localhost:${PORT}/api/gemini-docs/generate`);
     });
   } catch (error) {
     console.error('Error starting server:', error);

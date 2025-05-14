@@ -5,7 +5,8 @@
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
-    "lint": "eslint . --ext .js"
+    "lint": "eslint . --ext .js",
+    "test-gemini-doc": "node build-scripts/test-gemini-doc.js"
   },
   "author": "Tu Nombre",
   "license": "MIT",
@@ -13,6 +14,7 @@
     "@google-cloud/secret-manager": "^3.0.0",
     "@google-cloud/vision": "^4.0.0",
     "@google/generative-ai": "^0.24.0",
+    "commander": "^11.0.0",
     "cors": "^2.8.5",
     "date-fns": "^2.29.3",
     "dotenv": "^16.5.0",

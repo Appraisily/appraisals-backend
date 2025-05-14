@@ -12,6 +12,7 @@ A specialized backend service for the APPRAISERS system that handles WordPress i
 - [Classes and Functions](#classes-and-functions)
 - [Metadata Processing System](#metadata-processing-system)
 - [Environment Variables and Secrets](#environment-variables-and-secrets)
+- [Process Flows](#process-flows)
 - [Dependencies](#dependencies)
 - [Deployment](#deployment)
 - [Development Setup](#development-setup)
@@ -36,6 +37,43 @@ This service is part of the larger APPRAISERS system and primarily interacts wit
 - OpenAI API (for content enhancement)
 - Google Gemini (for visualizations and advanced AI features)
 - Valuer Agent service (for appraisal valuations)
+
+```mermaid
+graph TB
+    Client[Client Browser]
+    WordPress[WordPress CMS]
+    AppBackend[Appraisals Backend]
+    ValuerAgent[Valuer Agent Service]
+    OpenAI[OpenAI API]
+    Gemini[Google Gemini API]
+    Vision[Google Vision API]
+    Docs[Google Docs API]
+    Drive[Google Drive API]
+    SecretManager[Google Secret Manager]
+    
+    Client --> WordPress
+    Client --> AppBackend
+    
+    AppBackend --> WordPress
+    AppBackend --> OpenAI
+    AppBackend --> Gemini
+    AppBackend --> Vision
+    AppBackend --> Docs
+    AppBackend --> Drive
+    AppBackend --> SecretManager
+    AppBackend --> ValuerAgent
+    
+    WordPress --Content Storage--> Client
+    ValuerAgent --Statistics Generation--> AppBackend
+    
+    subgraph "Google Cloud Platform"
+        Vision
+        Docs
+        Drive
+        SecretManager
+        Gemini
+    end
+```
 
 ## Core Functionality
 
@@ -125,88 +163,217 @@ appraisals-backend/
 - `POST /complete-appraisal-report` - Generates a complete appraisal report
   - Parameters: `postId` (string/number), `justificationOnly` (boolean, optional)
   - Processes a WordPress post to generate a complete appraisal report with Google Vision analysis, metadata processing, and statistics generation
+  - Returns: JSON with success status and processed steps information
 
 ### Visualization Endpoints (`/api/visualizations/`)
 - `POST /api/visualizations/generate-visualizations` - Generates visualizations for an appraisal
   - Parameters: `postId` (string/number), `value` (number)
   - Generates enhanced analytics and appraisal card visualizations using Gemini
+  - Returns: JSON with success status and HTML content
 - `POST /api/visualizations/regenerate-statistics-and-visualizations` - Regenerates statistics and visualizations
   - Parameters: `postId` (string/number), `value` (number)
   - Fetches new statistics from the Valuer Agent and regenerates visualizations
+  - Returns: JSON with success status, statistics data, and HTML content
 - `GET /api/visualizations/debug` - Visualization debugging endpoint
   - Interactive debugging interface for visualization generation
 - `POST /api/visualizations/fix-statistics` - Fixes malformed statistics data
   - Parameters: `postId` (string/number)
   - Repairs malformed statistics data in the WordPress post
+  - Returns: JSON with success status and fixed statistics
 
 ### Description Endpoints (`/api/description/`)
 - `POST /api/description/enhance-description` - Enhances appraisal descriptions using AI
   - Parameters: `postId` (string/number), `description` (string)
   - Uses OpenAI to enhance the appraisal description with additional details
+  - Returns: JSON with success status and enhanced description
 
 ### PDF Endpoints (`/api/pdf/` and `/api/pdf-legacy/`)
 - `POST /api/pdf/generate-pdf-steps` - Generates PDF using step-based approach
   - Parameters: `postId` (string/number), `startStep` (string, optional)
   - Generates a PDF report using a step-by-step process with Google Docs
+  - Returns: JSON with success status, PDF URL, and process logs
 - `GET /api/pdf/steps` - Gets PDF generation steps
   - Returns the available steps in the PDF generation process
 - `POST /api/pdf-legacy/generate-pdf` - Legacy PDF generation endpoint
   - Parameters: `postId` (string/number)
   - Original PDF generation implementation (maintained for backward compatibility)
+  - Returns: JSON with success status and PDF URL
 
 ### HTML Endpoints (`/api/html/`)
 - `POST /api/html/generate` - Generates HTML for a specific visualization type
   - Parameters: `postId` (string/number), `type` (string)
   - Generates HTML content for the specified visualization type
+  - Returns: JSON with success status and HTML content
 - `POST /api/html/process-statistics` - Processes statistics data and adds generated HTML
   - Parameters: `postId` (string/number), `statistics` (object)
   - Processes statistics data and updates the WordPress post with generated HTML
+  - Returns: JSON with success status and processed data
 
 ### Utility Endpoints (`/api/utility/`)
 - `POST /api/utility/decode-html-entities` - Decodes HTML entities in text
   - Parameters: `content` (string)
   - Decodes HTML entities in the provided content
+  - Returns: JSON with decoded content
 - `GET /api/utility/health` - Health check endpoint
   - Returns the service status and version
 
 ## Classes and Functions
 
-### Main Application (`index.js`)
-- `startServer()` - Initializes and starts the Express server
-- `loadSecrets()` - Loads secrets from Google Secret Manager
-- `getSecret(secretName)` - Fetches a specific secret from Secret Manager
+### Core Application Classes
 
-### Configuration (`config.js`)
-- Configuration object with environment variables and settings
-- `getSecret(secretName)` - Fetches a secret from Secret Manager
-- `initSecrets()` - Initializes all required secrets for the application
+#### Server Initialization (`index.js`)
+- **Functions:**
+  - `startServer()` - Initializes and starts the Express server
+  - `loadSecrets()` - Loads secrets from Google Secret Manager
+  - `getSecret(secretName)` - Fetches a specific secret from Secret Manager
 
-### WordPress Service (`services/wordpress/index.js`)
-- `fetchPostData(postId)` - Fetches post data from WordPress
-- `updatePost(postId, data)` - Updates a WordPress post
-- `updatePostMeta(postId, metaFields)` - Updates multiple post metadata fields at once
-- `uploadMedia(buffer, filename)` - Uploads media to WordPress
+#### Configuration (`config.js`)
+- **Class/Object:**
+  - `config` - Configuration object with environment variables and settings
+- **Methods:**
+  - `getSecret(secretName)` - Fetches a secret from Secret Manager
+  - `initSecrets()` - Initializes all required secrets for the application
 
-### Google Vision Service (`services/vision.js`)
-- `initializeVisionClient()` - Initializes the Google Vision client
-- `processMainImageWithGoogleVision(postId)` - Processes an image with Google Vision
-- `analyzeSimilarImages(imageUrl)` - Finds similar images using Vision API
-- `detectLabels(imageUrl)` - Detects objects and labels in an image
-- `detectTextInImage(imageUrl)` - Extracts text from an image
+### WordPress Integration
 
-### Regeneration Service (`services/regenerationService.js`)
-- `regenerateStatisticsAndVisualizations(postId, newValue, options)` - Regenerates statistics and visualizations
-- Core process that:
-  1. Fetches WordPress post data
-  2. Gets enhanced statistics from Valuer Agent
-  3. Processes metadata using batch processing
-  4. Populates HTML templates
-  5. Saves results back to WordPress
+#### WordPress Service (`services/wordpress/index.js`)
+- **Functions:**
+  - `fetchPostData(postId)` - Fetches post data from WordPress
+  - `updatePost(postId, data)` - Updates a WordPress post
+  - `updatePostMeta(postId, metaFields)` - Updates multiple post metadata fields at once
+  - `uploadMedia(buffer, filename)` - Uploads media to WordPress
+  - `getAuthHeaders()` - Gets authentication headers for WordPress API
 
-### OpenAI Service (`services/openai.js`)
-- `generateContent(prompt, postTitle, images, model, systemMessage, maxTokens, temperature)` - Generates text content
-- `generateStructuredMetadata(postTitle, postData, images, statistics)` - Generates structured metadata using a single API call
-- `buildMessageContent(prompt, imageUrl)` - Helper to build message content with text and images
+#### WordPress Media Utilities (`services/wordpress/mediaUtils.js`)
+- **Functions:**
+  - `uploadMediaToWordPress(buffer, filename, mimeType)` - Uploads media to WordPress
+  - `downloadImage(url)` - Downloads an image from a URL
+  - `getMediaDetails(mediaId)` - Gets details about a media item
+
+#### WordPress Post Utilities (`services/wordpress/postUtils.js`)
+- **Functions:**
+  - `fetchPost(postId)` - Fetches a post by ID
+  - `updatePostContent(postId, content)` - Updates post content
+  - `getPostMetafields(postId)` - Gets all meta fields for a post
+  - `updatePostMetafields(postId, fields)` - Updates meta fields for a post
+
+### AI Services
+
+#### OpenAI Service (`services/openai.js`)
+- **Functions:**
+  - `generateContent(prompt, postTitle, images, model, systemMessage, maxTokens, temperature)` - Generates text content
+  - `generateStructuredMetadata(postTitle, postData, images, statistics)` - Generates structured metadata using a single API call
+  - `buildMessageContent(prompt, imageUrl)` - Helper to build message content with text and images
+  - `initOpenAIClient()` - Initializes the OpenAI client
+
+#### Gemini Service (`services/geminiService.js`)
+- **Functions:**
+  - `initializeGeminiClient()` - Initializes the Google Gemini client
+  - `generateContentWithGemini(prompt, images)` - Generates content with Gemini API
+  - `analyzeImages(imageUrls, promptText)` - Analyzes images with multimodal AI
+
+#### Gemini Visualization (`services/gemini-visualization.js`)
+- **Functions:**
+  - `generateVisualization(data, visualizationType)` - Generates a visualization using Gemini
+  - `generateAppraisalCardHtml(statistics, metadata)` - Generates appraisal card HTML
+  - `generateEnhancedAnalyticsHtml(statistics, metadata)` - Generates enhanced analytics HTML
+
+### Image Processing
+
+#### Vision Service (`services/vision.js`)
+- **Functions:**
+  - `initializeVisionClient()` - Initializes the Google Vision client
+  - `processMainImageWithGoogleVision(postId)` - Processes an image with Google Vision
+  - `analyzeSimilarImages(imageUrl)` - Finds similar images using Vision API
+  - `detectLabels(imageUrl)` - Detects objects and labels in an image
+  - `detectTextInImage(imageUrl)` - Extracts text from an image
+  - `analyzeImage(imageUrl)` - Performs comprehensive image analysis
+
+#### Image Processing Utilities (`services/utils/imageProcessing.js`)
+- **Functions:**
+  - `resizeImage(buffer, maxWidth, maxHeight)` - Resizes an image
+  - `convertToWebP(buffer)` - Converts an image to WebP format
+  - `extractEXIFData(buffer)` - Extracts EXIF data from an image
+  - `getImageDimensions(buffer)` - Gets image dimensions
+
+### Metadata Processing
+
+#### Metadata Batch Processor (`services/metadataBatchProcessor.js`)
+- **Functions:**
+  - `processBatchMetadata(postId, postTitle, postData, images, statistics)` - Processes all metadata in one API call
+  - `validateMetadataStructure(metadata)` - Validates metadata structure
+  - `updateWordPressWithMetadata(postId, metadata)` - Updates WordPress with processed metadata
+
+#### Legacy Metadata Processor (`services/metadataProcessor.js`)
+- **Functions:**
+  - `processAllMetadata(postId, postTitle, data)` - Legacy metadata processing
+  - `processJustificationMetadata(postId, postTitle, value)` - Processes justification data
+  - `processProvenanceField(postId, provenanceText)` - Processes provenance data
+  - `processMediumField(postId, mediumText)` - Processes medium data
+  - `processConditionField(postId, conditionText)` - Processes condition data
+
+### PDF Generation
+
+#### PDF Service (`services/pdf/index.js`)
+- **Functions:**
+  - `initializeGoogleApis()` - Initializes Google APIs for PDF generation
+  - `generatePdf(postId, options)` - Generates a PDF report
+  - `getPdfGenerationSteps()` - Gets the steps in the PDF generation process
+
+#### Document Generator (`services/pdf/documentGenerator.js`)
+- **Functions:**
+  - `createDocumentFromTemplate(postId, postData)` - Creates a Google Doc from a template
+  - `exportDocumentAsPdf(documentId, filename)` - Exports a Google Doc as PDF
+  - `replacePlaceholders(documentId, placeholders)` - Replaces placeholders in a document
+
+#### PDF Steps (`services/pdf/pdfSteps.js`)
+- **Object:**
+  - `pdfSteps` - Steps in the PDF generation process
+- **Steps:**
+  - `fetchPostData` - Fetches post data from WordPress
+  - `createDocument` - Creates a Google Doc from template
+  - `fillBasicInfo` - Fills basic information in the document
+  - `insertImages` - Inserts images into the document
+  - `insertMetadata` - Inserts metadata into the document
+  - `insertStatistics` - Inserts statistics into the document
+  - `exportPdf` - Exports the document as PDF
+  - `updateWordPress` - Updates WordPress with PDF URL
+
+### Statistics and Visualization
+
+#### Regeneration Service (`services/regenerationService.js`)
+- **Functions:**
+  - `regenerateStatisticsAndVisualizations(postId, newValue, options)` - Regenerates statistics and visualizations
+  - `processStatisticsData(postId, statistics)` - Processes statistics data
+  - `generateHtml(postId, type, data)` - Generates HTML for visualizations
+
+#### Valuer Agent Client (`services/valuerAgentClient.js`)
+- **Functions:**
+  - `getEnhancedStatistics(metadata, value)` - Gets enhanced statistics from Valuer Agent
+  - `fetchValuationStatistics(postId, value)` - Fetches valuation statistics
+  - `verifyStatisticsData(statistics)` - Verifies statistics data structure
+
+### Utility Functions
+
+#### Formatting Utils (`services/utils/formatting.js`)
+- **Functions:**
+  - `formatCurrency(value)` - Formats a value as currency
+  - `formatDate(date)` - Formats a date
+  - `sanitizeHtml(html)` - Sanitizes HTML content
+  - `decodeHtmlEntities(text)` - Decodes HTML entities
+
+#### Validation Utils (`services/utils/validation.js`)
+- **Functions:**
+  - `validatePostId(postId)` - Validates a post ID
+  - `validateImageUrl(url)` - Validates an image URL
+  - `validateStatistics(statistics)` - Validates statistics data
+  - `isValidJson(str)` - Checks if a string is valid JSON
+
+### Web Search Service (`services/serper.js`)
+- **Functions:**
+  - `searchWeb(query, numResults)` - Searches the web using Serper API
+  - `searchImages(query, numResults)` - Searches for images
+  - `searchNews(query, numResults)` - Searches for news articles
 
 ## Metadata Processing System
 
@@ -265,18 +432,31 @@ The system processes the following metadata fields:
 
 ### Metadata Processing Flow
 
-1. The system receives a request to process metadata for a specific post.
-2. It collects all available data:
-   - Post title and basic information
-   - Existing metadata in the post
-   - Image URLs (main, age, signature)
-   - Statistics data from the Valuer Agent
-3. The system sends a single request to OpenAI with all this data.
-4. OpenAI returns structured metadata in a standardized JSON format.
-5. The system validates the response to ensure all required fields are present.
-6. It processes the data, converting numeric fields to integers.
-7. All metadata fields are then updated in WordPress in a single API call.
-8. The processed metadata is returned to the caller for further use.
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Report
+    participant Metadata
+    participant OpenAI
+    participant WordPress
+    
+    Client->>Report: POST /complete-appraisal-report
+    Report->>WordPress: Fetch post data
+    WordPress-->>Report: Post data
+    
+    Report->>Metadata: processBatchMetadata()
+    
+    Metadata->>OpenAI: Single request with all data
+    OpenAI-->>Metadata: Structured metadata response
+    
+    Metadata->>Metadata: Validate & process response
+    
+    Metadata->>WordPress: Update all metadata (single call)
+    WordPress-->>Metadata: Update confirmation
+    
+    Metadata-->>Report: Processed metadata
+    Report-->>Client: Success response
+```
 
 ## Environment Variables and Secrets
 
@@ -302,6 +482,83 @@ The application uses Google Cloud Secret Manager for secure credential storage i
 - `GOOGLE_DRIVE_FOLDER_ID` - ID of the Google Drive folder for PDF storage
 - `VALUER_AGENT_API_URL` - URL of the Valuer Agent service
 
+## Process Flows
+
+### Complete Appraisal Report Generation
+
+```mermaid
+graph TD
+    Start([Start]) --> FetchData[Fetch WordPress Post Data]
+    FetchData --> ProcessImage[Process Main Image with Google Vision]
+    ProcessImage --> GetStatistics[Get Statistics from Valuer Agent]
+    GetStatistics --> ValidateStats{Valid Statistics?}
+    
+    ValidateStats -->|No| Error1[Return Error]
+    ValidateStats -->|Yes| ProcessMetadata[Process All Metadata with OpenAI]
+    
+    ProcessMetadata --> GenerateVisualizations[Generate HTML Visualizations]
+    GenerateVisualizations --> UpdateHTML[Update WordPress with HTML]
+    UpdateHTML --> Success([Return Success])
+    
+    subgraph "Vision Processing"
+        ProcessImage --> DetectLabels[Detect Labels]
+        ProcessImage --> DetectText[Detect Text]
+        ProcessImage --> FindSimilar[Find Similar Images]
+    end
+    
+    subgraph "Metadata Processing"
+        ProcessMetadata --> ExtractFields[Extract Required Fields]
+        ProcessMetadata --> GenerateValues[Generate Numeric Ratings]
+        ProcessMetadata --> ValidateStructure[Validate Structure]
+        ProcessMetadata --> UpdateWordPress[Update WordPress]
+    end
+```
+
+### Step-Based PDF Generation Process
+
+```mermaid
+graph TD
+    Start([Start]) --> FetchData[Fetch WordPress Post Data]
+    FetchData --> CreateDoc[Create Google Doc from Template]
+    CreateDoc --> BasicInfo[Fill Basic Information]
+    BasicInfo --> InsertImages[Insert Images into Document]
+    InsertImages --> InsertMeta[Insert Metadata into Document]
+    InsertMeta --> InsertStats[Insert Statistics into Document]
+    InsertStats --> ExportPDF[Export Document as PDF]
+    ExportPDF --> UploadDrive[Upload PDF to Google Drive]
+    UploadDrive --> UpdateWP[Update WordPress with PDF URL]
+    UpdateWP --> Success([Return Success Response])
+```
+
+### Statistics and Visualization Generation
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Backend
+    participant ValuerAgent
+    participant Gemini
+    participant WordPress
+    
+    Client->>Backend: regenerateStatisticsAndVisualizations()
+    Backend->>WordPress: Fetch post data
+    WordPress-->>Backend: Post data with metadata
+    
+    Backend->>ValuerAgent: Get enhanced statistics
+    ValuerAgent-->>Backend: Statistics data
+    
+    Backend->>Gemini: Generate enhanced analytics HTML
+    Gemini-->>Backend: Enhanced analytics HTML
+    
+    Backend->>Gemini: Generate appraisal card HTML
+    Gemini-->>Backend: Appraisal card HTML
+    
+    Backend->>WordPress: Update post with statistics & HTML
+    WordPress-->>Backend: Update confirmation
+    
+    Backend-->>Client: Success with statistics and HTML
+```
+
 ## Dependencies
 
 Main dependencies include:
@@ -322,6 +579,7 @@ Main dependencies include:
     "he": "^1.2.0",
     "image-size": "^1.0.2",
     "node-fetch": "^2.6.7",
+    "openai": "4.97.0",
     "request-ip": "^3.3.0",
     "uuid": "^9.0.0"
   }
@@ -393,6 +651,19 @@ spec:
           serviceAccountName: appraisals-backend-sa
 ```
 
+### Deployment Process
+
+The application is deployed through GitHub to Google Cloud Run. The deployment process uses the following steps:
+
+1. Code is pushed to the GitHub repository
+2. GitHub Actions workflow is triggered
+3. The application is built using the Dockerfile
+4. The container image is pushed to Google Container Registry
+5. The Cloud Run service is updated with the new image
+6. Secrets are accessed via the service account specified in service.yaml
+
+Since deployment is done through GitHub, environment variables are configured in Runtime Variables inside the Cloud Run service rather than using .env files. Secrets are stored in Google Secret Manager and accessed by the application at runtime.
+
 ## Development Setup
 
 1. Clone the repository
@@ -415,6 +686,14 @@ spec:
    ```bash
    npm start
    ```
+
+For local development, set `SKIP_SECRET_MANAGER=true` in your `.env` file to use the environment variables directly instead of trying to access Secret Manager.
+
+### Running Tests
+
+```bash
+npm run lint
+```
 
 ## Routes Documentation
 

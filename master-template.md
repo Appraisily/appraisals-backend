@@ -1,210 +1,73 @@
+# Appraisal Report
 
+**Item:** {{title}}  
+**Date:** {{date}}  
+**Appraiser:** Appraisily  
+**Reference:** {{postId}}
 
-| {{appraisal\_title}} |
-| :---: |
+## Executive Summary
 
-**Appraisal Report**  
-Made by Andrés Gómez
+**Estimated Value: ${{value}}**
 
-Table of Contents
+This appraisal report has been prepared for insurance, estate planning, or general valuation purposes. It contains a detailed assessment of the item, including its provenance, condition, and market value.
 
-[**Introduction	3**](#introduction)
+## Item Description
 
-[**Item Image Analysis	4**](#item-image-analysis)
+{{description}}
 
-[Introduction to Image Analysis	4](#introduction-to-image-analysis)
+### Details
 
-[Visual Comparisons: Similar Items Identified by Google Vision	4](#visual-comparisons:-similar-items-identified-by-google-vision)
+- **Creator:** {{creator}}
+- **Medium/Material:** {{medium}}
+- **Dimensions:** {{dimensions}}
+- **Object Type:** {{object_type}}
+- **Estimated Age:** {{estimated_age}}
+- **Signed:** {{signed}}
+- **Framed:** {{framed}}
 
-[Item Type Determination: AI Insights and Appraiser Expertise	4](#item-type-determination:-ai-insights-and-appraiser-expertise)
+## Condition Assessment
 
-[**Estimation of Item Age	4**](#estimation-of-item-age)
+**Condition Summary:** {{condition_summary}}
 
-[Methodology for Determining the Item’s Age	4](#methodology-for-determining-the-item’s-age)
+**Condition Score:** {{condition_score}}/10
 
-[Findings: Material Analysis, Stylistic Analysis, and Maker’s Mark/Label	5](#findings:-material-analysis,-stylistic-analysis,-and-maker’s-mark/label)
+## Provenance
 
-[**Condition Assessment	5**](#condition-assessment)
+{{provenance}}
 
-[**Maker/Artist Profile and Item History	5**](#maker/artist-profile-and-item-history)
+## Valuation Analysis
 
-[Signature/Mark Analysis	5](#signature/mark-analysis)
+The valuation of this item is based on the following key factors:
 
-[Item Analysis: Style, Theme, and Context	5](#item-analysis:-style,-theme,-and-context)
+### Market Analysis
 
-[**Valuation Methodology: Assessing the Item’s Worth	5**](#valuation-methodology:-assessing-the-item’s-worth)
+- **Market Demand:** {{market_demand}}/10
+- **Rarity:** {{rarity}}/10
+- **Historical Significance:** {{historical_significance}}/10
+- **Investment Potential:** {{investment_potential}}/10
+- **Provenance Strength:** {{provenance_strength}}/10
 
-[**Conclusion	5**](#conclusion)
+## Valuation Justification
 
-[**Final Appraisal Value ($)	6**](#final-appraisal-value-\($\))
+{{valuation_justification}}
 
-[**This Appraisal in a Nutshell	7**](#this-appraisal-in-a-nutshell)
+## Comparables
 
-[**Client-Provided Imagery for Appraisal Analysis	7**](#client-provided-imagery-for-appraisal-analysis)
+{{comparables}}
 
-[**Appraisal Process and Appraiser Qualification Summary	7**](#appraisal-process-and-appraiser-qualification-summary)
+## Appraisal Methodology
 
-[A statement of the appraiser’s liability and any potential conflicts of interest.	7](#a-statement-of-the-appraiser’s-liability-and-any-potential-conflicts-of-interest.)
+This appraisal was conducted using a combination of:
+- Recent auction results and dealer sales
+- Market research and trend analysis
+- Condition assessment
+- Provenance verification
+- Consultation with subject matter experts
 
-[How to sell this artwork.	8](#how-to-sell-this-artwork.)
+## Certification
 
-[**Glossary of Terms	8**](#glossary-of-terms)
+This appraisal represents my best judgment of the fair market value of the item described herein, as of the date stated. The valuation is based on my professional expertise, market knowledge, and research.
 
-# **Introduction** {#introduction}
+---
 
-{{Introduction}}
-
-**Effective Day of Valuation:**
-
-{{appraisal\_date}}
-
-# **Item Image Analysis** {#item-image-analysis}
-
-## **Introduction to Image Analysis** {#introduction-to-image-analysis}
-
-{{ImageAnalysisText}}
-
-## **Visual Comparisons: Similar Items Identified by Google Vision** {#visual-comparisons:-similar-items-identified-by-google-vision}
-
-{{gallery}}
-
-## **Item Type Determination: AI Insights and Appraiser Expertise** {#item-type-determination:-ai-insights-and-appraiser-expertise}
-
-{{test}}
-
-# **Estimation of Item Age** {#estimation-of-item-age}
-
-## **Methodology for Determining the Item’s Age** {#methodology-for-determining-the-item’s-age}
-
-{{age\_text}}
-
-## **Findings: Material Analysis, Stylistic Analysis, and Maker’s Mark/Label** {#findings:-material-analysis,-stylistic-analysis,-and-maker’s-mark/label}
-
-| {{age1}} | {{age\_image}} |
-| :---- | :---: |
-
-# 
-
-# **Condition Assessment** {#condition-assessment}
-
-{{condition}}
-
-{{condition\_summary}}
-
-# **Maker/Artist Profile and Item History** {#maker/artist-profile-and-item-history}
-
-{{authorship}} 
-
-## **Signature/Mark Analysis** {#signature/mark-analysis}
-
-{{SignatureText}}
-
-|  {{signature2}}  | {{signature\_image}}  |
-| ----- | ----- |
-
-{{signature1}}
-
-## **Item Analysis: Style, Theme, and Context** {#item-analysis:-style,-theme,-and-context}
-
-## {{style}}
-
-# **Valuation Methodology: Assessing the Item’s Worth** {#valuation-methodology:-assessing-the-item’s-worth}
-
-{{valuation\_method}}
-
-# **Conclusion** {#conclusion}
-
-{{conclusion1}}
-
-{{conclusion2}}
-
-# **Final Appraisal Value ($)** {#final-appraisal-value-($)}
-
-**{{appraisal\_value}}** 
-
-**Appraisal Report Conducted by:**
-
-| Andrés Gómez |
-| :---- |
-| BSc, MSc, **Accredited Art Appraiser** |
-| Over a Decade of Expertise in Online Art Appraisals |
-| Served Over **100,000 Clients** |
-| Proprietor of Renowned Antique Establishment |
-| Explore my extensive portfolio of past appraisals here: |
-| [https://www.appraisily.com/andres-portofolio/](https://www.appraisily.com/andres-portofolio/)  |
-
-![][image1]
-
-# **Market Research**
-
- {{statistics\_summary\_text}}
-
-{{top\_auction\_results}}
-
-# 
-
-# 
-
-# **This Appraisal in a Nutshell** {#this-appraisal-in-a-nutshell}
-
- {{object\_type}}
-
-{{creator}} 
-
- {{estimated\_age}} 
-
- {{medium}} 
-
-{{table}}
-
-# **Client-Provided Imagery for Appraisal Analysis** {#client-provided-imagery-for-appraisal-analysis}
-
-{{main\_image}}
-
-{{age\_image}}
-
-{{signature\_image}}
-
-# **Client information**
-
-{{customer\_name}}
-
-{{customer\_address}} 
-
-# 
-
-# **Appraisal Process and Appraiser Qualification Summary** {#appraisal-process-and-appraiser-qualification-summary}
-
-{{AppraiserText}}
-
-## **A statement of the appraiser’s liability and any potential conflicts of interest.** {#a-statement-of-the-appraiser’s-liability-and-any-potential-conflicts-of-interest.}
-
-{{LiabilityText}}
-
-## **How to sell this artwork.** {#how-to-sell-this-artwork.}
-
-{{SellingGuideText}}
-
-{{ad\_copy}}
-
-# **Glossary of Terms** {#glossary-of-terms}
-
-{{glossary}}
-
-# **Auction Market Insights**
-
-{{justification\_html}}
-
-Contacts
-
-**Address**
-
-W1 13DD, 80 Kensington Square, office 402 
-
-**Media**
-
-info@appraisily.com
-
-www.appraisily.com
-
-[image1]: <data:image/png;base64,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>
+*This is an appraisal report generated by Appraisily. This report is valid for insurance and general valuation purposes only.*

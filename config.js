@@ -81,6 +81,18 @@ const config = {
       console.log(`Loading Google Docs credentials from secret: ${googleDocsSecretName}...`);
       this.GOOGLE_DOCS_CREDENTIALS = await this.getSecret(googleDocsSecretName);
       console.log('Google Docs credentials loaded from Secret Manager.');
+      
+      // Get Gemini API key if not already set via env var
+      if (!this.GEMINI_API_KEY) {
+        try {
+          console.log('Loading Gemini API key from Secret Manager...');
+          this.GEMINI_API_KEY = await this.getSecret('GEMINI_API_KEY');
+          console.log('Gemini API key loaded from Secret Manager');
+        } catch (geminiError) {
+          console.warn('Warning: Failed to load Gemini API key from Secret Manager:', geminiError.message);
+          console.warn('Gemini document generation functionality may not work properly.');
+        }
+      }
 
       // Add fetching for other secrets here if needed...
       // Example: Fetch OpenAI API Key
