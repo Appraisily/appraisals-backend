@@ -116,9 +116,11 @@ appraisals-backend/
 │   ├── report.js                   # Appraisal report generation endpoints
 │   ├── utility.js                  # Utility endpoints
 │   └── visualizations.js           # Visualization generation endpoints
+│   └── gemini-docs.js              # Gemini document generation endpoints
 │
 ├── services/                       # Business logic components
 │   ├── constants/                  # Shared constants
+│   ├── gemini-docs.js              # Google Gemini for document generation
 │   ├── gemini-visualization.js     # Google Gemini integration for visualizations
 │   ├── geminiService.js            # Google Gemini API service
 │   ├── metadataProcessor.js        # Legacy metadata processor (individual fields)
@@ -149,11 +151,13 @@ appraisals-backend/
 ├── prompts/                        # AI prompt templates
 │   └── consolidated_metadata.txt   # Prompt for batch metadata generation
 ├── build-scripts/                  # Build automation scripts
+│   └── test-gemini-doc.js          # Gemini document generation test script
 ├── bundles/                        # Frontend bundles/assets
 ├── static/                         # Static assets
 ├── templates/                      # HTML and report templates
 │   ├── skeletons/                  # HTML skeleton templates
 │   └── partials/                   # Reusable template components
+├── master-template.md              # Master template for Gemini document generation
 └── css/                            # CSS stylesheets
 ```
 
@@ -198,6 +202,15 @@ appraisals-backend/
   - Parameters: `postId` (string/number)
   - Original PDF generation implementation (maintained for backward compatibility)
   - Returns: JSON with success status and PDF URL
+
+### Gemini Document Generation Endpoints (`/api/gemini-docs/`)
+- `POST /api/gemini-docs/generate` - Generates a document using Google Gemini
+  - Parameters: `postId` (string/number), `format` (string, 'docs' or 'pdf'), `test` (boolean)
+  - Generates a formatted document using Google Gemini AI with fallback to traditional methods
+  - Returns: JSON with document URL and PDF URL if requested
+- `GET /api/gemini-docs/generate/:postId` - GET version of the document generation endpoint
+  - Parameters: `:postId` (string/number), `format` (query, 'docs'/'pdf'), `test` (query, boolean)
+  - Same functionality as the POST version
 
 ### HTML Endpoints (`/api/html/`)
 - `POST /api/html/generate` - Generates HTML for a specific visualization type
@@ -277,6 +290,17 @@ appraisals-backend/
   - `generateVisualization(data, visualizationType)` - Generates a visualization using Gemini
   - `generateAppraisalCardHtml(statistics, metadata)` - Generates appraisal card HTML
   - `generateEnhancedAnalyticsHtml(statistics, metadata)` - Generates enhanced analytics HTML
+
+#### Gemini Document Generation (`services/gemini-docs.js`)
+- **Class:** GeminiDocsService
+- **Methods:**
+  - `initialize()` - Initializes the Gemini service
+  - `getTemplate()` - Gets the master template content
+  - `createPrompt(template, data)` - Creates a formatted prompt for Gemini
+  - `generateDocFromWordPressPost(postId, wordpressService, options)` - Generates document from WordPress post
+  - `createGoogleDocFromMarkdown(markdown, filename)` - Creates a Google Doc from markdown
+  - `exportAsPdf(docId, filename)` - Exports the document as PDF
+  - `updateWordPressWithLinks(postId, docUrl, pdfUrl)` - Updates WordPress with document links
 
 ### Image Processing
 
@@ -530,6 +554,28 @@ graph TD
     UpdateWP --> Success([Return Success Response])
 ```
 
+### Gemini Document Generation Process
+
+```mermaid
+graph TD
+    Start([Start]) --> FetchData[Fetch WordPress Post Data]
+    FetchData --> GetTemplate[Get Master Template]
+    GetTemplate --> CreatePrompt[Create Prompt with Template and Data]
+    CreatePrompt --> CallGemini[Call Gemini API]
+    CallGemini --> ProcessResponse[Process Gemini Response]
+    ProcessResponse --> CreateDoc[Create Google Doc]
+    
+    CreateDoc --> ExportOption{Format = PDF?}
+    ExportOption -->|Yes| ExportPDF[Export as PDF]
+    ExportOption -->|No| UpdateWP[Update WordPress]
+    ExportPDF --> UpdateWP
+    
+    UpdateWP --> Success([Return Success])
+    
+    CallGemini -- Fallback --> Fallback[Use Traditional PDF]
+    Fallback --> Success
+```
+
 ### Statistics and Visualization Generation
 
 ```mermaid
@@ -569,7 +615,9 @@ Main dependencies include:
     "@google-cloud/secret-manager": "^3.0.0",
     "@google-cloud/vision": "^4.0.0",
     "@google/generative-ai": "^0.24.0",
+    "commander": "^11.0.0",
     "cors": "^2.8.5",
+    "cross-env": "^7.0.3",
     "date-fns": "^2.29.3",
     "dotenv": "^16.5.0",
     "express": "^4.18.2",
@@ -683,6 +731,13 @@ Since deployment is done through GitHub, environment variables are configured in
    CORS_ALLOWED_ORIGINS=http://localhost:3000,http://localhost:5173
    ```
 4. Start the development server:
+
+   For local development with Secret Manager skipped:
+   ```bash
+   npm run start:local
+   ```
+
+   Or for standard startup:
    ```bash
    npm start
    ```
@@ -693,6 +748,12 @@ For local development, set `SKIP_SECRET_MANAGER=true` in your `.env` file to use
 
 ```bash
 npm run lint
+```
+
+### Testing Gemini Document Generation
+
+```bash
+npm run test-gemini-doc -- --post-id <id> --format pdf --output test.pdf
 ```
 
 ## Routes Documentation

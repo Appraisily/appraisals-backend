@@ -10,8 +10,9 @@ WORKDIR /usr/src/app
 # Copy package files first (for better layer caching)
 COPY package*.json ./
 
-# Install dependencies with production-only flag
-RUN npm ci --only=production
+# Install dependencies 
+# Using npm install instead of npm ci to ensure package-lock.json updates if needed
+RUN npm install --only=production
 
 # Copy the rest of the application
 COPY . .

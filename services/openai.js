@@ -2,15 +2,69 @@ const fetch = require('node-fetch');
 const config = require('../config');
 const fs = require('fs').promises;
 const path = require('path');
-const { OpenAI } = require('openai');
+const OpenAI = require('openai');
 const { Readable } = require('stream');
 
-// Initialize OpenAI client with the latest version
-const openai = new OpenAI({
-  apiKey: config.OPENAI_API_KEY,
-  maxRetries: 3, // Configure retries for reliability
-  timeout: 300000 // 5 minutes timeout for larger requests with o3 model
-});
+let openai;
+
+try {
+  // Try to initialize with the API key
+  const apiKey = process.env.OPENAI_API_KEY;
+  
+  if (!apiKey && process.env.SKIP_SECRET_MANAGER === 'true') {
+    console.log('OpenAI API key not found. Using mock client for local development.');
+    // Create a mock client for local development
+    openai = {
+      chat: {
+        completions: {
+          create: async () => {
+            return {
+              choices: [{
+                message: {
+                  content: "This is a mock response from OpenAI for local development.",
+                  function_call: null,
+                  tool_calls: null,
+                }
+              }]
+            };
+          }
+        }
+      }
+    };
+  } else if (!apiKey) {
+    throw new Error('The OPENAI_API_KEY environment variable is missing or empty');
+  } else {
+    // Initialize the real client
+    openai = new OpenAI({
+      apiKey: apiKey
+    });
+  }
+} catch (error) {
+  if (process.env.SKIP_SECRET_MANAGER === 'true') {
+    console.warn('Warning: OpenAI client initialization failed but continuing with mock client for local development.');
+    // Create a mock client for local development
+    openai = {
+      chat: {
+        completions: {
+          create: async () => {
+            return {
+              choices: [{
+                message: {
+                  content: "This is a mock response from OpenAI for local development.",
+                  function_call: null,
+                  tool_calls: null,
+                }
+              }]
+            };
+          }
+        }
+      }
+    };
+  } else {
+    // Re-throw the error in production
+    throw error;
+  }
+}
 
 /**
  * Download image and convert to base64
