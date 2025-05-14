@@ -178,6 +178,33 @@ async function startServer() {
     app.use('/', reportRouter); // Keep legacy direct routes for backward compatibility
     app.use('/', utilityRouter); // Keep legacy direct routes for backward compatibility
 
+    // 404 handler - for endpoints that don't exist
+    app.use((req, res, next) => {
+      // Create list of available API endpoints
+      const availableEndpoints = {
+        'GET /health': 'Health check endpoint',
+        'GET /api/visualizations/debug': 'Visualization debugging',
+        'POST /api/gemini-docs/generate': 'Generate document with Gemini - requires postId in request body, optional: format ("docs" or "pdf"), test (boolean)',
+        'GET /api/gemini-docs/generate/:postId': 'Generate document with Gemini - with URL parameters, optional query params: format, test',
+        'POST /api/pdf/generate-pdf': 'Generate PDF document - requires postId in request body',
+        'GET /api/pdf/generate-pdf/:postId': 'Generate PDF document - with URL parameter',
+        'GET /api/pdf/steps': 'Get PDF generation steps',
+        'GET /api/pdf/generate-pdf-steps': 'Step-by-step PDF generation'
+      };
+      
+      // Log the 404 error
+      console.warn(`404 Not Found: ${req.method} ${req.originalUrl}`);
+      
+      // Return helpful error with available endpoints
+      res.status(404).json({
+        success: false,
+        message: `Cannot ${req.method} ${req.originalUrl}`,
+        error: 'Endpoint not found',
+        available_endpoints: availableEndpoints,
+        suggestion: 'For Gemini document generation, use POST /api/gemini-docs/generate with postId in the request body'
+      });
+    });
+
     // Error handling middleware (must be after routers)
     app.use(async (err, req, res, next) => {
       console.error('Unhandled error:', err);
