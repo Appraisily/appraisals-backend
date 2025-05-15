@@ -97,14 +97,14 @@ All errors are logged with detailed information for troubleshooting.
 
 ### Generate Document with POST Request
 ```bash
-curl -X POST "https://appraisals-task-queue-856401495068.us-central1.run.app/api/gemini-docs/generate" \
+curl -X POST "https://appraisals-backend-856401495068.us-central1.run.app/api/gemini-docs/generate" \
   -H "Content-Type: application/json" \
   -d '{"postId": "123456", "format": "pdf"}'
 ```
 
 ### Generate Document with GET Request
 ```bash
-curl -X GET "https://appraisals-task-queue-856401495068.us-central1.run.app/api/gemini-docs/generate/123456?format=pdf"
+curl -X GET "https://appraisals-backend-856401495068.us-central1.run.app/api/gemini-docs/generate/123456?format=pdf"
 ```
 
 ## Testing

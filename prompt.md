@@ -186,5 +186,5 @@ The server runs on port 8080 by default or `PORT` environment variable if set.
 
 Allows requests from:
 - `https://appraisers-frontend-856401495068.us-central1.run.app`
-- `https://appraisers-task-queue-856401495068.us-central1.run.app`
-- `https://appraisers-backend-856401495068.us-central1.run.app`
+- `https://appraisals-backend-856401495068.us-central1.run.app`
+- `https://appraisals-backend-856401495068.us-central1.run.app`

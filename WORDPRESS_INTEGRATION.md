@@ -1,6 +1,6 @@
 # WordPress Integration Guide for Appraisals Backend
 
-This document outlines how the `appraisals-backend` service (and related services like `appraisers-task-queue` that share the `wordpress.service.js`) interacts with the WordPress instance to retrieve and manage appraisal post data.
+This document outlines how the `appraisals-backend` service interacts with the WordPress instance to retrieve and manage appraisal post data.
 
 ## 1. Credentials Management
 

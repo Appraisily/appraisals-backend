@@ -1,6 +1,6 @@
 # Markdown to PDF via Google Docs
 
-This document outlines the implementation of the Markdown to Google Docs/PDF conversion system in the appraiasals-backend project.
+This document outlines the implementation of the Markdown to Google Docs/PDF conversion system in the appraisals-backend project.
 
 ## Overview
 
@@ -78,7 +78,7 @@ The following WordPress post fields are mapped to template variables:
 
 ## Deployment
 
-This feature is included in the standard deployment of the appraisers-task-queue service. No additional configuration is needed beyond adding the Google service account key to Secret Manager.
+This feature is included in the standard deployment of the appraisals-backend service. No additional configuration is needed beyond adding the Google service account key to Secret Manager.
 
 ## Troubleshooting
 
