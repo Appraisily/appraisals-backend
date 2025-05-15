@@ -23,6 +23,7 @@ function initializeGemini() {
         return false;
     }
     try {
+        console.log('[Gemini Service] Initializing with API key (first 5 chars):', GEMINI_API_KEY.substring(0, 5) + '...');
         genAI = new GoogleGenerativeAI(GEMINI_API_KEY);
         model = genAI.getGenerativeModel({ model: MODEL_NAME });
         console.log(`[Gemini Service] Initialized with model: ${MODEL_NAME}`);
@@ -55,6 +56,10 @@ async function populateHtmlTemplate(skeletonHtml, dataContext) {
     }
 
     console.log('[Gemini Service] Populating HTML template via SDK...');
+    
+    // Log the data size to help diagnose issues
+    const dataSize = JSON.stringify(dataContext).length;
+    console.log(`[Gemini Service] Data context size: ${dataSize} bytes`);
 
     const dataContextString = JSON.stringify(dataContext, null, 2);
 
@@ -93,6 +98,24 @@ async function populateHtmlTemplate(skeletonHtml, dataContext) {
 
     try {
         console.log(`[Gemini Service] Calling model.generateContent with model: ${MODEL_NAME}`);
+        // Add networking diagnostic information
+        try {
+            console.log('[Gemini Service] Testing connectivity to Gemini API...');
+            const dns = require('dns');
+            dns.lookup('generativelanguage.googleapis.com', (err, address, family) => {
+                console.log('[Gemini Service] DNS lookup result:', err ? `Error: ${err.message}` : `Success - IP: ${address}`);
+            });
+        } catch (dnsError) {
+            console.log('[Gemini Service] DNS diagnostic error:', dnsError);
+        }
+        
+        console.log('[Gemini Service] Request starting timestamp:', new Date().toISOString());
+        console.log('[Gemini Service] Node.js version:', process.version);
+        
+        // Check if we're running in a container environment
+        const isContainer = process.env.CONTAINER === 'true' || process.env.KUBERNETES_SERVICE_HOST;
+        console.log('[Gemini Service] Running in container environment:', isContainer ? 'Yes' : 'No');
+        
         const result = await model.generateContent(
             prompt,
             generationConfig
@@ -111,6 +134,34 @@ async function populateHtmlTemplate(skeletonHtml, dataContext) {
 
     } catch (error) {
         console.error('[Gemini Service] Error during SDK template population:', error);
+        // More detailed error logging
+        console.error('[Gemini Service] Error name:', error.name);
+        console.error('[Gemini Service] Error stack:', error.stack);
+        
+        // Check if it's a network error
+        if (error.code === 'ENOTFOUND' || error.code === 'ETIMEDOUT' || error.code === 'ECONNREFUSED' || 
+            error.message.includes('fetch failed') || error.message.includes('network') || 
+            error.message.includes('socket') || error.message.includes('connection')) {
+            console.error('[Gemini Service] NETWORK ERROR DETECTED. Likely connectivity issues to Gemini API.');
+            
+            // Try to get more network diagnostic information
+            try {
+                const { execSync } = require('child_process');
+                console.log('[Gemini Service] Attempting ping to Google DNS...');
+                const pingResult = execSync('ping -c 1 8.8.8.8 || ping 8.8.8.8 -n 1').toString();
+                console.log('[Gemini Service] Ping result:', pingResult);
+            } catch (diagError) {
+                console.log('[Gemini Service] Could not run network diagnostics:', diagError.message);
+            }
+        }
+        
+        // Log HTTP details if available
+        if (error.response) {
+            console.error('[Gemini Service] API response status:', error.response.status);
+            console.error('[Gemini Service] API response headers:', error.response.headers);
+            console.error('[Gemini Service] API response data:', error.response.data);
+        }
+        
         const errorMessage = error.message || 'Unknown Gemini SDK error';
         throw new Error(`Gemini SDK error: ${errorMessage}`);
     }

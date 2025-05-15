@@ -184,9 +184,22 @@ router.post('/complete-appraisal-report', async (req, res) => {
     let visualizationResult = null;
     try {
       console.log('[Report Route] Generating HTML visualizations');
+      console.log('[Report Route] System info - Memory usage:', process.memoryUsage());
+      console.log('[Report Route] System info - Process uptime:', process.uptime(), 'seconds');
+      console.log('[Report Route] System environment check - NODE_ENV:', process.env.NODE_ENV);
+      
+      // Log connectivity information before making external API calls
+      try {
+        const { networkInterfaces } = require('os');
+        const nets = networkInterfaces();
+        console.log('[Report Route] Network interfaces:', JSON.stringify(nets));
+      } catch (netError) {
+        console.log('[Report Route] Could not determine network interfaces:', netError.message);
+      }
       
       // We need to call regenerateStatisticsAndVisualizations again but
       // with updated postData that includes the new metadata and skip metadata processing
+      console.log('[Report Route] Calling regenerateStatisticsAndVisualizations for HTML generation');
       visualizationResult = await regenerateStatisticsAndVisualizations(
         postId, 
         postData.acf?.value, 
@@ -208,27 +221,59 @@ router.post('/complete-appraisal-report', async (req, res) => {
         });
       } else {
         console.error(`[Report Route] HTML visualizations generation failed: ${visualizationResult.message}`);
-        return res.status(500).json({
-          success: false,
-          message: 'HTML visualizations generation failed. Cannot complete appraisal report.',
-          error_details: visualizationResult.message || visualizationResult.error || 'Unknown error',
+        // Detailed error logging
+        if (visualizationResult.error) {
+          console.error('[Report Route] Visualization error details:', visualizationResult.error);
+        }
+        if (visualizationResult.data) {
+          console.error('[Report Route] Partial visualization data:', JSON.stringify(visualizationResult.data));
+        }
+        
+        console.log('[Report Route] Will attempt to return a meaningful response despite visualization failure');
+        // Continue with a meaningful response despite the error
+        allProcessedResults.push({ 
+          step: 'html_visualizations', 
+          success: false, 
+          error: visualizationResult.message,
+          recoverable: true // Mark as recoverable to continue
+        });
+        
+        // Instead of returning error, we'll continue with as much as we have
+        return res.status(200).json({
+          success: false, // Mark overall success as false
+          message: 'Appraisal report completed but visualizations failed. Data was processed.',
+          error_details: visualizationResult.message || visualizationResult.error || 'Unknown error in visualization',
           details: {
             postId,
             title: postTitle,
-            processedSteps: [...allProcessedResults, { 
-              step: 'html_visualizations', 
-              success: false, 
-              error: visualizationResult.message
-            }]
+            processedSteps: allProcessedResults,
+            partialSuccess: true // Indicate we did complete some steps
           }
         });
       }
     } catch (error) {
       console.error(`[Report Route] Error generating HTML visualizations: ${error.message}`);
+      console.error('[Report Route] Error stack trace:', error.stack);
+      
+      // Log more diagnostic info
+      console.log('[Report Route] Error occurred at:', new Date().toISOString());
+      
+      // Check if it's a network error
+      const isNetworkError = error.message.includes('fetch') || 
+                            error.message.includes('network') || 
+                            error.message.includes('socket') ||
+                            error.message.includes('ENOTFOUND') ||
+                            error.message.includes('ETIMEDOUT');
+                            
+      if (isNetworkError) {
+        console.error('[Report Route] DETECTED NETWORK ERROR - likely connectivity issues');
+      }
+      
       return res.status(500).json({
         success: false,
         message: 'HTML visualizations generation failed with an error. Cannot complete appraisal report.',
         error_details: process.env.NODE_ENV !== 'production' ? error.message : undefined,
+        error_type: isNetworkError ? 'network_connectivity' : 'general_error',
         details: {
           postId,
           title: postTitle,
