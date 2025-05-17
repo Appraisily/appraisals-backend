@@ -12,7 +12,7 @@ class GeminiDocsService {
     this.client = null;
     this.model = null;
     this.initialized = false;
-    this.templatePath = path.join(__dirname, '../master-template.md');
+    this.templatePath = path.join(__dirname, '../src/templates/appraisal/master-template.md');
     this.googleDocsService = null;
   }
 

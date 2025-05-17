@@ -180,11 +180,34 @@ async function regenerateStatisticsAndVisualizations(postId, newValue, options =
       }
     };
 
-    // Assuming populateHtmlTemplate handles the AI call
-    const [populatedAnalyticsHtmlRaw, populatedCardHtmlRaw] = await Promise.all([
-        populateHtmlTemplate(skeletonHtmlAnalytics, rawDataForAI),
-        populateHtmlTemplate(skeletonHtmlCard, rawDataForAI)
-    ]);
+    // Improved error handling and debugging for template population
+    console.log('[Regeneration Service] Starting template population with Gemini');
+    let populatedAnalyticsHtmlRaw, populatedCardHtmlRaw;
+    
+    try {
+      console.log('[Regeneration Service] Attempting to populate enhanced-analytics template');
+      try {
+        populatedAnalyticsHtmlRaw = await populateHtmlTemplate(skeletonHtmlAnalytics, rawDataForAI);
+        console.log('[Regeneration Service] Enhanced analytics template populated successfully');
+      } catch (analyticsError) {
+        console.error('[Regeneration Service] Error populating enhanced-analytics template:', analyticsError);
+        console.error('[Regeneration Service] Enhanced analytics template population failed - will use fallback');
+        populatedAnalyticsHtmlRaw = `<div class="error-placeholder">Analytics visualization unavailable. Error: ${analyticsError.message}</div>`;
+      }
+      
+      console.log('[Regeneration Service] Attempting to populate appraisal-card template');
+      try {
+        populatedCardHtmlRaw = await populateHtmlTemplate(skeletonHtmlCard, rawDataForAI);
+        console.log('[Regeneration Service] Appraisal card template populated successfully');
+      } catch (cardError) {
+        console.error('[Regeneration Service] Error populating appraisal-card template:', cardError);
+        console.error('[Regeneration Service] Appraisal card template population failed - will use fallback');
+        populatedCardHtmlRaw = `<div class="error-placeholder">Appraisal card visualization unavailable. Error: ${cardError.message}</div>`;
+      }
+    } catch (templateError) {
+      console.error('[Regeneration Service] Unexpected error during template population:', templateError);
+      throw new Error(`Unexpected error during regeneration for post ${postId}: ${templateError.message}`);
+    }
 
     // --- Step 5: Embed CSS/JS ---
     console.log('[Regeneration Service] Embedding CSS and JavaScript');

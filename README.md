@@ -163,45 +163,10 @@ appraisals-backend/
 
 ## API Endpoints
 
-### Report Endpoints (`/` and `/api/report/`)
-- `POST /complete-appraisal-report` - Generates a complete appraisal report
-  - Parameters: `postId` (string/number), `justificationOnly` (boolean, optional)
-  - Processes a WordPress post to generate a complete appraisal report with Google Vision analysis, metadata processing, and statistics generation
-  - Returns: JSON with success status and processed steps information
-
-### Visualization Endpoints (`/api/visualizations/`)
-- `POST /api/visualizations/generate-visualizations` - Generates visualizations for an appraisal
-  - Parameters: `postId` (string/number), `value` (number)
-  - Generates enhanced analytics and appraisal card visualizations using Gemini
-  - Returns: JSON with success status and HTML content
-- `POST /api/visualizations/regenerate-statistics-and-visualizations` - Regenerates statistics and visualizations
-  - Parameters: `postId` (string/number), `value` (number)
-  - Fetches new statistics from the Valuer Agent and regenerates visualizations
-  - Returns: JSON with success status, statistics data, and HTML content
-- `GET /api/visualizations/debug` - Visualization debugging endpoint
-  - Interactive debugging interface for visualization generation
-- `POST /api/visualizations/fix-statistics` - Fixes malformed statistics data
-  - Parameters: `postId` (string/number)
-  - Repairs malformed statistics data in the WordPress post
-  - Returns: JSON with success status and fixed statistics
-
-### Description Endpoints (`/api/description/`)
-- `POST /api/description/enhance-description` - Enhances appraisal descriptions using AI
-  - Parameters: `postId` (string/number), `description` (string)
-  - Uses OpenAI to enhance the appraisal description with additional details
-  - Returns: JSON with success status and enhanced description
-
-### PDF Endpoints (`/api/pdf/` and `/api/pdf-legacy/`)
-- `POST /api/pdf/generate-pdf-steps` - Generates PDF using step-based approach
-  - Parameters: `postId` (string/number), `startStep` (string, optional)
-  - Generates a PDF report using a step-by-step process with Google Docs
-  - Returns: JSON with success status, PDF URL, and process logs
-- `GET /api/pdf/steps` - Gets PDF generation steps
-  - Returns the available steps in the PDF generation process
-- `POST /api/pdf-legacy/generate-pdf` - Legacy PDF generation endpoint
-  - Parameters: `postId` (string/number)
-  - Original PDF generation implementation (maintained for backward compatibility)
-  - Returns: JSON with success status and PDF URL
+### Health Check
+- `GET /health` - Health check endpoint
+  - Returns service status and timestamp indicating service availability
+  - Response: `{ status: "ok", timestamp: "ISO timestamp" }`
 
 ### Gemini Document Generation Endpoints (`/api/gemini-docs/`)
 - `POST /api/gemini-docs/generate` - Generates a document using Google Gemini
@@ -211,6 +176,36 @@ appraisals-backend/
 - `GET /api/gemini-docs/generate/:postId` - GET version of the document generation endpoint
   - Parameters: `:postId` (string/number), `format` (query, 'docs'/'pdf'), `test` (query, boolean)
   - Same functionality as the POST version
+
+### Visualization Endpoints (`/api/visualizations/`)
+- `GET /api/visualizations/debug` - Visualization debugging endpoint
+  - Interactive debugging interface for visualization generation
+
+### PDF Endpoints (`/api/pdf/`)
+- `POST /api/pdf/generate-pdf` - Generates PDF document
+  - Parameters: `postId` (string/number)
+  - Generates a PDF report using Google Docs
+  - Returns: JSON with success status and PDF URL
+- `GET /api/pdf/generate-pdf/:postId` - GET version of PDF generation
+  - Parameters: `:postId` (string/number)
+  - Same functionality as the POST version
+- `GET /api/pdf/steps` - Gets PDF generation steps
+  - Returns the available steps in the PDF generation process
+- `GET /api/pdf/generate-pdf-steps` - Step-by-step PDF generation
+  - Parameters: Query params for specific steps
+  - Returns detailed step-by-step process information
+
+### Legacy Endpoints
+The following endpoints are maintained for backward compatibility:
+- Legacy report endpoints via `/`
+- Legacy PDF generation via `/api/pdf-legacy/`
+- Legacy utility endpoints via `/`
+
+### Description Endpoints (`/api/description/`)
+- `POST /api/description/enhance-description` - Enhances appraisal descriptions using AI
+  - Parameters: `postId` (string/number), `description` (string)
+  - Uses OpenAI to enhance the appraisal description with additional details
+  - Returns: JSON with success status and enhanced description
 
 ### HTML Endpoints (`/api/html/`)
 - `POST /api/html/generate` - Generates HTML for a specific visualization type
