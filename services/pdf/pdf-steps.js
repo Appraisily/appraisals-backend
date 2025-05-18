@@ -19,6 +19,7 @@ const {
 const { insertImageAtPlaceholder } = require('./imageUtils');
 const { insertGalleryGrid } = require('./gallery');
 const { exportToPDF, uploadPDFToDrive } = require('./exportUtils');
+const { optimizeAllImages } = require('./imageOptimizer');
 
 // Step definition constants
 const PDF_STEPS = {
@@ -29,6 +30,7 @@ const PDF_STEPS = {
   MOVE_TO_FOLDER: 'STEP_MOVE_TO_FOLDER',
   REPLACE_PLACEHOLDERS: 'STEP_REPLACE_PLACEHOLDERS',
   ADJUST_TITLE: 'STEP_ADJUST_TITLE',
+  OPTIMIZE_IMAGES: 'STEP_OPTIMIZE_IMAGES',
   INSERT_MAIN_IMAGE: 'STEP_INSERT_MAIN_IMAGE',
   INSERT_GALLERY: 'STEP_INSERT_GALLERY',
   INSERT_SPECIFIC_IMAGES: 'STEP_INSERT_SPECIFIC_IMAGES',
@@ -46,6 +48,7 @@ const DEFAULT_STEP_ORDER = [
   PDF_STEPS.MOVE_TO_FOLDER,
   PDF_STEPS.REPLACE_PLACEHOLDERS,
   PDF_STEPS.ADJUST_TITLE,
+  PDF_STEPS.OPTIMIZE_IMAGES,
   PDF_STEPS.INSERT_MAIN_IMAGE,
   PDF_STEPS.INSERT_GALLERY,
   PDF_STEPS.INSERT_SPECIFIC_IMAGES,
@@ -197,6 +200,10 @@ async function executeStep(context, step) {
       
     case PDF_STEPS.ADJUST_TITLE:
       await adjustTitleStep(context);
+      break;
+      
+    case PDF_STEPS.OPTIMIZE_IMAGES:
+      await optimizeImagesStep(context);
       break;
       
     case PDF_STEPS.INSERT_MAIN_IMAGE:
@@ -445,6 +452,32 @@ async function adjustTitleStep(context) {
     addLog(context, 'warn', `Error adjusting title font size: ${titleError.message}`);
     addLog(context, 'warn', 'Continuing despite title adjustment error');
     // Don't throw error - non-critical step
+  }
+}
+
+/**
+ * Step implementation: Optimize images
+ * @param {object} context - The context object
+ */
+async function optimizeImagesStep(context) {
+  if (!context.images) {
+    throw new Error('Images not available for optimization.');
+  }
+  
+  addLog(context, 'info', 'Starting image optimization');
+  
+  try {
+    // Create a copy of the original images for reference
+    context.originalImages = { ...context.images };
+    
+    // Optimize all images
+    context.images = await optimizeAllImages(context.images);
+    
+    addLog(context, 'info', 'Images optimized successfully');
+  } catch (error) {
+    addLog(context, 'warn', `Error optimizing images: ${error.message}`);
+    addLog(context, 'warn', 'Continuing with original images');
+    // Don't throw - non-critical step
   }
 }
 

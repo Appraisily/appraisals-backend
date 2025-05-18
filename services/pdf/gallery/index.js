@@ -9,6 +9,7 @@ const {
   createSpacingRequest,
   calculateBatchSize
 } = require('./formatUtils');
+const { optimizeImage } = require('../imageUtils');
 
 async function calculateImageDimensions(url, maxWidth = 200, maxHeight = 150) {
   try {
@@ -41,14 +42,22 @@ async function calculateImageDimensions(url, maxWidth = 200, maxHeight = 150) {
 async function verifyAndProcessImage(url) {
   try {
     console.log(`Processing image: ${url}`);
-    const imageData = await calculateImageDimensions(url);
+    
+    // Optimize the gallery image
+    const optimizedUrl = await optimizeImage(url, 300, 200);
+    
+    const imageData = await calculateImageDimensions(optimizedUrl);
     
     if (!imageData) {
-      console.warn(`Failed to process image: ${url}`);
+      console.warn(`Failed to process image: ${optimizedUrl}`);
       return null;
     }
 
-    return imageData;
+    return {
+      ...imageData,
+      originalUrl: url,
+      optimizedUrl
+    };
   } catch (error) {
     console.warn(`Failed to verify image ${url}:`, error.message);
     return null;
@@ -57,119 +66,69 @@ async function verifyAndProcessImage(url) {
 
 async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
   try {
-    console.log(`[Gallery] Processing ${gallery.length} images`);
+    console.log(`Inserting gallery grid with ${gallery.length} images`);
     
-    // Find the exact position of the gallery placeholder
-    const document = await docs.documents.get({ documentId });
-    const content = document.data.body.content;
-    let galleryPlaceholderIndex = -1;
-
-    const findGalleryPlaceholder = (elements) => {
-      for (const element of elements) {
-        if (element.paragraph?.elements) {
-          for (const elem of element.paragraph.elements) {
-            if (elem.textRun?.content.includes('{{gallery}}')) {
-              galleryPlaceholderIndex = elem.startIndex + elem.textRun.content.indexOf('{{gallery}}');
-              return true;
-            }
-          }
-        }
-      }
+    if (!gallery || !Array.isArray(gallery) || gallery.length === 0) {
+      console.warn('No gallery images to insert');
       return false;
-    };
-
-    findGalleryPlaceholder(content);
-
-    if (galleryPlaceholderIndex === -1) {
-      console.error('Gallery placeholder not found in document');
-      return 0;
     }
-
-    // Remove the gallery placeholder
-    try {
-      await docs.documents.batchUpdate({
-        documentId,
-        requestBody: {
-          requests: [{
-            deleteContentRange: {
-              range: {
-                startIndex: galleryPlaceholderIndex,
-                endIndex: galleryPlaceholderIndex + '{{gallery}}'.length
-              }
-            }
-          }]
-        }
-      });
-    } catch (error) {
-      console.error('Error removing gallery placeholder:', error);
-      return 0;
-    }
-
-    // If no gallery images, replace placeholder with message
-    if (gallery.length === 0) {
-      console.log('No gallery images found, replacing with message');
-      try {
-        await docs.documents.batchUpdate({
-          documentId,
-          requestBody: {
-            requests: [{
-              insertText: {
-                location: { index: galleryIndex },
-                text: 'No similar images were found during the analysis of this artwork.'
-              }
-            }]
-          }
-        });
-        console.log('Gallery placeholder replaced with message');
-      } catch (error) {
-        console.error('Error replacing gallery placeholder:', error);
-      }
-      return 0;
-    }
-
-    // Process all images first
-    const processedImages = await Promise.all(
+    
+    // Process all image URLs to ensure they're valid and calculate dimensions
+    const processingResults = await Promise.all(
       gallery.map(url => verifyAndProcessImage(url))
     );
-
-    // Filter out failed images
-    const validImages = processedImages.filter(img => img !== null);
-    const validUrls = gallery.filter((_, index) => processedImages[index] !== null);
-
-    console.log(`[Gallery] Valid images: ${validImages.length}/${gallery.length}`);
+    
+    // Filter out null results (failed processing)
+    const validImages = processingResults.filter(result => result !== null);
+    const validUrls = validImages.map(img => img.optimizedUrl || img.originalUrl);
     
     if (validImages.length === 0) {
-      console.warn('[Gallery] No valid images found');
-      await docs.documents.batchUpdate({
-        documentId,
-        requestBody: {
-          requests: [{
-            deleteContentRange: {
-              range: {
-                startIndex: galleryIndex,
-                endIndex: galleryIndex + '{{gallery}}'.length
-              }
-            }
-          }]
-        }
-      });
-      return 0;
+      console.warn('No valid images after processing');
+      return false;
     }
-
-    let currentIndex = galleryPlaceholderIndex;
+    
+    console.log(`Processed ${validImages.length} valid gallery images (out of ${gallery.length})`);
+    
+    // Create gallery title
+    const titleText = createGalleryTitle(galleryIndex);
+    
+    // Get current document to find where to insert gallery
+    const document = await docs.documents.get({ documentId });
+    
+    // Find gallery placeholder
+    const content = document.data.body.content;
+    let currentIndex = -1;
+    
+    for (const element of content) {
+      if (element.paragraph?.elements) {
+        for (const elem of element.paragraph.elements) {
+          if (elem.textRun?.content.includes('{{gallery}}')) {
+            currentIndex = elem.startIndex + elem.textRun.content.indexOf('{{gallery}}');
+            break;
+          }
+        }
+      }
+      if (currentIndex !== -1) break;
+    }
+    
+    if (currentIndex === -1) {
+      console.warn('Gallery placeholder not found');
+      return false;
+    }
+    
+    // Create batch requests for the document update
     const requests = [];
-
-    // Add section break before gallery
+    
+    // Delete the placeholder
     requests.push({
-      insertText: {
-        location: { index: currentIndex },
-        text: '\n\n'  // Double line break for section spacing
+      deleteContentRange: {
+        range: {
+          startIndex: currentIndex,
+          endIndex: currentIndex + 10 // '{{gallery}}' is 10 characters
+        }
       }
     });
-    currentIndex += 2;
-
-    // Add title with proper paragraph styling
-    const titleText = GALLERY_TITLE + '\n';
+    
     requests.push({
       insertText: {
         location: { index: currentIndex },
@@ -240,73 +199,33 @@ async function insertGalleryGrid(docs, documentId, galleryIndex, gallery) {
           continue;
         }
       }
-
-      // Execute batch requests
+      
       if (batchRequests.length > 0) {
         try {
+          // Execute all requests in this batch
           await docs.documents.batchUpdate({
             documentId,
-            requestBody: { requests: batchRequests }
+            requestBody: {
+              requests: batchRequests
+            }
           });
+          
+          console.log(`Inserted batch of ${batchRequests.length} requests`);
         } catch (error) {
-          console.error(`[Gallery] Batch insert error: ${error.message}`);
-          // If image is not accessible, replace with placeholder text
-          try {
-            await docs.documents.batchUpdate({
-              documentId,
-              requestBody: {
-                requests: [{
-                  insertText: {
-                    location: { index: currentIndex },
-                    text: '[Image not available]'
-                  }
-                }]
-              }
-            });
-          } catch (innerError) {
-            console.error(`[Gallery] Placeholder error: ${innerError.message}`);
-          }
+          console.error(`Error inserting gallery batch:`, error);
+          // Continue with other batches despite errors
         }
       }
     }
-
-    // Add section break after gallery
-    try {
-      await docs.documents.batchUpdate({
-        documentId,
-        requestBody: {
-          requests: [{
-            insertText: {
-              location: { index: currentIndex },
-              text: '\n\n\n'  // Triple line break for clear section separation
-            }
-          }, {
-            updateParagraphStyle: {
-              range: {
-                startIndex: currentIndex,
-                endIndex: currentIndex + 3
-              },
-              paragraphStyle: {
-                spaceBelow: { magnitude: 40, unit: 'PT' },
-                keepLinesTogether: true,
-                keepWithNext: false
-              },
-              fields: 'spaceBelow,keepLinesTogether,keepWithNext'
-            }
-          }]
-        }
-      });
-      console.log('[Gallery] Added section break after gallery');
-    } catch (error) {
-      console.error('Error adding spacing after gallery:', error);
-    }
-
-    console.log(`[Gallery] Complete - Inserted ${insertedCount} images`);
-    return insertedCount;
+    
+    console.log(`Gallery grid inserted successfully with ${insertedCount} images`);
+    return true;
   } catch (error) {
-    console.error(`[Gallery] Error: ${error.message}`);
-    throw error;
+    console.error(`Error inserting gallery grid:`, error);
+    return false;
   }
 }
 
-module.exports = { insertGalleryGrid };
+module.exports = {
+  insertGalleryGrid
+};

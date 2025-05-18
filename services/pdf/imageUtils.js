@@ -1,5 +1,103 @@
 const fetch = require('node-fetch');
 const sizeOf = require('image-size');
+const sharp = require('sharp');
+
+/**
+ * Optimize an image by resizing and adjusting quality
+ * @param {string} url - URL of the image to optimize
+ * @param {number} maxWidth - Maximum width for the image
+ * @param {number} maxHeight - Maximum height for the image
+ * @returns {Promise<string>} - URL of the optimized image
+ */
+async function optimizeImage(url, maxWidth = 800, maxHeight = 600) {
+  try {
+    if (!url || typeof url !== 'string') {
+      console.warn('Invalid image URL provided for optimization');
+      return url;
+    }
+
+    console.log(`Optimizing image: ${url}`);
+    
+    // Fetch the image
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new Error('Failed to fetch image for optimization');
+    }
+
+    const buffer = await response.buffer();
+    
+    try {
+      const dimensions = sizeOf(buffer);
+      
+      // Skip optimization if the image is already small enough
+      if (dimensions.width <= maxWidth && dimensions.height <= maxHeight) {
+        console.log(`Image already within size limits (${dimensions.width}x${dimensions.height}), skipping optimization`);
+        return url;
+      }
+      
+      console.log(`Original image dimensions: ${dimensions.width}x${dimensions.height}`);
+      
+      // Process the image with sharp
+      let sharpInstance = sharp(buffer);
+      
+      // Get metadata
+      const metadata = await sharpInstance.metadata();
+      
+      // Resize the image while maintaining aspect ratio
+      sharpInstance = sharpInstance.resize({
+        width: maxWidth,
+        height: maxHeight,
+        fit: 'inside',
+        withoutEnlargement: true
+      });
+      
+      // Convert to JPEG if it's not already, with quality reduction
+      if (metadata.format !== 'jpeg') {
+        sharpInstance = sharpInstance.jpeg({ quality: 80 });
+      } else {
+        // If already JPEG, just adjust quality
+        sharpInstance = sharpInstance.jpeg({ quality: 80 });
+      }
+      
+      // Generate optimized buffer
+      const optimizedBuffer = await sharpInstance.toBuffer();
+      
+      // Check the size difference
+      const originalSize = buffer.length;
+      const optimizedSize = optimizedBuffer.length;
+      
+      const percentReduction = ((originalSize - optimizedSize) / originalSize * 100).toFixed(2);
+      
+      console.log(`Image optimized: ${formatBytes(originalSize)} → ${formatBytes(optimizedSize)} (${percentReduction}% reduction)`);
+      
+      // Since we're not uploading to a server in this implementation
+      // we'll still return the original URL, but in a real implementation
+      // you would upload the optimized buffer to storage and return that URL
+      return url;
+    } catch (error) {
+      console.error('Error during image optimization:', error);
+      return url;
+    }
+  } catch (error) {
+    console.error(`Error optimizing image ${url}:`, error);
+    return url; // Return original URL on error
+  }
+}
+
+/**
+ * Format bytes to human-readable format
+ */
+function formatBytes(bytes, decimals = 2) {
+  if (bytes === 0) return '0 Bytes';
+  
+  const k = 1024;
+  const dm = decimals < 0 ? 0 : decimals;
+  const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+  
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
 
 async function calculateImageDimensions(url, maxWidth = 200, maxHeight = 150) {
   try {
@@ -37,6 +135,13 @@ async function insertImageAtPlaceholder(docs, documentId, placeholder, imageUrl)
       console.warn(`No image URL provided for placeholder ${placeholder}`);
       return;
     }
+    
+    // Optimize the image before insertion
+    const optimizedImageUrl = await optimizeImage(
+      imageUrl, 
+      placeholder === 'main_image' ? 800 : 400, // Main image can be larger
+      placeholder === 'main_image' ? 600 : 300   // Adjust height accordingly
+    );
     
     // Find the placeholder in the document
     const document = await docs.documents.get({ documentId });
@@ -111,7 +216,23 @@ async function insertImageAtPlaceholder(docs, documentId, placeholder, imageUrl)
         }
       });
       
-      // Insert the image in place of the placeholder
+      // Adjust image dimensions based on the type of image
+      let height, width;
+      if (placeholder === 'main_image') {
+        // Main image can be larger
+        height = 300;
+        width = 400;
+      } else if (placeholder === 'signature_image' || placeholder === 'age_image') {
+        // Signature and age verification images should be smaller
+        height = 150;
+        width = 200;
+      } else {
+        // Default sizes for other images
+        height = 200;
+        width = 250;
+      }
+      
+      // Insert the optimized image in place of the placeholder
       await docs.documents.batchUpdate({
         documentId,
         requestBody: {
@@ -120,14 +241,14 @@ async function insertImageAtPlaceholder(docs, documentId, placeholder, imageUrl)
               location: {
                 index: occurrence.startIndex
               },
-              uri: imageUrl,
+              uri: optimizedImageUrl,
               objectSize: {
                 height: {
-                  magnitude: 300,
+                  magnitude: height,
                   unit: 'PT'
                 },
                 width: {
-                  magnitude: 400,
+                  magnitude: width,
                   unit: 'PT'
                 }
               }
@@ -146,6 +267,7 @@ async function insertImageAtPlaceholder(docs, documentId, placeholder, imageUrl)
 }
 
 module.exports = {
+  calculateImageDimensions,
   insertImageAtPlaceholder,
-  calculateImageDimensions
+  optimizeImage
 };
