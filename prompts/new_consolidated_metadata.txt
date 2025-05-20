@@ -53,8 +53,8 @@ You MUST return your response as a valid JSON object with the exact structure sh
     "style": "Style analysis",
     "authorship": "Authorship analysis",
     "valuation_method": "Valuation methodology",
-    "primary_conclusion": "Primary conclusion summarizing key findings",
-    "secondary_conclusion": "Secondary conclusion offering additional context",
+    "conclusion1": "Primary conclusion summarizing key findings",
+    "conclusion2": "Secondary conclusion offering additional context",
     "glossary": "Relevant glossary terms",
     "ad_copy": "Marketing copy",
     "table": "Tabular data based on comparable sales from input JSON"
@@ -805,7 +805,7 @@ The Mark to Market valuation method provides the framework for assessing this pa
 Market analysis, based on the provided statistics JSON covering [use count from JSON] comparable sales, indicates a median price of [use median_price from JSON] and an average of [use average_price from JSON] for related items, with a recent price trend of [use price_trend_percentage from JSON]. Comparable sales range from [use price_min from JSON] to [use price_max from JSON]. The subject painting's valuation considers its specific attributes against this market backdrop, factoring in the high demand for works by Dalí, tempered by the specifics of this piece (landscape vs. Surrealist, lack of signature/provenance), positioning it within the observed market data according to the Mark to Market approach. The data quality was assessed as '[use data_quality_assessment from JSON]', providing [use confidence_level from JSON] confidence in the analysis.
 
 
-### PRIMARY_CONCLUSION (Formerly CONCLUSION1)
+### CONCLUSION1
 Compose a primary conclusion paragraph summarizing the key findings of the appraisal. Synthesize the most important aspects regarding authenticity, attribution, significance, condition, and market position based on the analysis presented in other fields (drawing from description text and stats JSON). Do NOT include ad copy or specific value. Focus on a professional summary.
 
 # Steps
@@ -823,7 +823,7 @@ A single, comprehensive paragraph providing a professional summary of the apprai
 In conclusion, this appraisal identifies the artwork as a genuine oil on canvas by Salvador Dalí, representing a rare example of his landscape painting executed circa 1930s-1950s with Fauve-inflected Impressionist characteristics. The painting is structurally sound and in stable condition for its age, exhibiting minor surface grime and craquelure consistent with its period. Key value factors include the artist's significant renown, the work's rarity as a transitional piece, and its demonstration of Dalí's technical versatility. However, the current lack of a visible signature and documented provenance are points requiring consideration and further research, as recommended. Market analysis places the work within an active segment for the artist, supported by comparable sales data, although its specific attributes differentiate it from his more typical Surrealist output.
 
 
-### SECONDARY_CONCLUSION (Formerly CONCLUSION2)
+### CONCLUSION2
 Compose a comprehensive paragraph for the Conclusion section of the appraisal report, using the provided images, the input description text, and insights from the market statistics JSON. This paragraph should explain why the piece holds particular interest or value compared to others, employing a first-person narrative from the perspective of the appraiser. Do NOT include any kind of appraisal value. Instead, emphasize factors like:
 
 For Artworks:
