@@ -154,6 +154,7 @@ async function startServer() {
 
     // Load routers after secrets are available
     const reportRouter = require('./routes/report');
+    const reportBatchRouter = require('./routes/report-batch');
     const visualizationsRouter = require('./routes/visualizations');
     const descriptionRouter = require('./routes/description');
     const utilityRouter = require('./routes/utility');
@@ -164,7 +165,7 @@ async function startServer() {
     const geminiDocsRouter = require('./routes/gemini-docs');
 
     // Use routers - organize by domain and API structure
-    // app.use('/api/report', reportRouter);
+    app.use('/api/report-batch', reportBatchRouter);
     app.use('/api/visualizations', visualizationsRouter);
     app.use('/api/description', descriptionRouter);
     app.use('/api/utility', utilityRouter);
