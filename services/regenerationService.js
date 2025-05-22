@@ -36,6 +36,8 @@ const decodeEntities = (text) => {
  * @returns {Promise<{success: boolean, message: string, data: object, error?: string}>} - Result object.
  */
 async function regenerateStatisticsAndVisualizations(postId, newValue, options = {}) {
+  // Allow callers to disable expensive HTML generation if they only need stats
+  const { htmlGeneration = true } = options;
   console.log(`[Regeneration Service] Starting regeneration for Post ID: ${postId}`);
   const { appraisalId, statistics: precomputedStatistics } = options;
 
@@ -138,6 +140,20 @@ async function regenerateStatisticsAndVisualizations(postId, newValue, options =
         console.log('[Regeneration Service] metadataProcessing flag set to false – skipping metadata batch processing');
       }
       
+    }
+
+    // If caller requested only statistics, return early before heavy HTML work
+    if (!htmlGeneration) {
+      console.log('[Regeneration Service] htmlGeneration flag set to false – returning statistics only');
+      return {
+        success: true,
+        message: 'Statistics generated successfully',
+        data: {
+          postId: postId,
+          appraisalId: appraisalId || undefined,
+          stats
+        }
+      };
     }
 
     // --- Step 3: Prepare Data & Read Skeletons ---

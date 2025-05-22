@@ -112,7 +112,7 @@ router.post('/complete-appraisal-report', async (req, res) => {
         throw new Error('Cannot generate statistics: Missing value in post data.');
       }
       
-      statsResult = await regenerateStatisticsAndVisualizations(postId, currentValue, { metadataProcessing: false });
+      statsResult = await regenerateStatisticsAndVisualizations(postId, currentValue, { metadataProcessing: false, htmlGeneration: false });
       
       if (statsResult.success) {
         console.log('[Report Route] Statistics generated successfully');
