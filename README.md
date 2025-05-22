@@ -168,6 +168,13 @@ appraisals-backend/
   - Returns service status and timestamp indicating service availability
   - Response: `{ status: "ok", timestamp: "ISO timestamp" }`
 
+### Report Generation Endpoints (`/`)
+- `POST /complete-appraisal-report` - Generates a complete appraisal report
+  - Parameters: `postId` (string/number), `justificationOnly` (boolean, optional), `detailedDescription` (string, optional)
+  - Processes appraisal data through several steps: image analysis, statistics generation, metadata processing, and HTML visualization generation
+  - Returns: JSON with success status and processing details
+  - If `detailedDescription` is omitted, the backend will attempt to read the ACF field `detailed_title` (or `detailed_description`) from the WordPress post before falling back to the regular post title.
+
 ### Gemini Document Generation Endpoints (`/api/gemini-docs/`)
 - `POST /api/gemini-docs/generate` - Generates a document using Google Gemini
   - Parameters: `postId` (string/number), `format` (string, 'docs' or 'pdf'), `test` (boolean)
@@ -180,6 +187,10 @@ appraisals-backend/
 ### Visualization Endpoints (`/api/visualizations/`)
 - `GET /api/visualizations/debug` - Visualization debugging endpoint
   - Interactive debugging interface for visualization generation
+- `POST /api/visualizations/regenerate` - Regenerates statistics and visualizations
+  - Parameters: `postId` (string/number), `value` (number/string)
+  - Regenerates statistics and visualizations for an appraisal
+  - Returns: JSON with success status and generated data
 
 ### PDF Endpoints (`/api/pdf/`)
 - `POST /api/pdf/generate-pdf` - Generates PDF document
@@ -191,9 +202,10 @@ appraisals-backend/
   - Same functionality as the POST version
 - `GET /api/pdf/steps` - Gets PDF generation steps
   - Returns the available steps in the PDF generation process
-- `GET /api/pdf/generate-pdf-steps` - Step-by-step PDF generation
-  - Parameters: Query params for specific steps
-  - Returns detailed step-by-step process information
+- `POST /api/pdf/generate-pdf-steps` - Step-by-step PDF generation
+  - Parameters: `postId` (string/number), `startStep` (string, optional), `options` (object, optional)
+  - Processes PDF generation step by step with detailed logging
+  - Returns: JSON with success status, PDF URL, and step logs
 
 ### Legacy Endpoints
 The following endpoints are maintained for backward compatibility:
@@ -336,27 +348,34 @@ The following endpoints are maintained for backward compatibility:
 #### PDF Service (`services/pdf/index.js`)
 - **Functions:**
   - `initializeGoogleApis()` - Initializes Google APIs for PDF generation
-  - `generatePdf(postId, options)` - Generates a PDF report
-  - `getPdfGenerationSteps()` - Gets the steps in the PDF generation process
+  - `cloneTemplate(templateId)` - Clones a Google Docs template
+  - `getTemplateId(appraisalType)` - Gets the template ID for an appraisal type
+  - `moveFileToFolder(fileId, folderId)` - Moves a file to a Google Drive folder
+  - `replacePlaceholdersInDocument(documentId, data)` - Replaces placeholders in a document
+  - `adjustTitleFontSize(documentId, titleText)` - Adjusts the font size of the title
+  - `insertImageAtPlaceholder(documentId, placeholder, imageUrl)` - Inserts an image at a placeholder
+  - `addGalleryImages(documentId, gallery)` - Adds gallery images to a document
+  - `exportToPDF(documentId)` - Exports a document as PDF
+  - `uploadPDFToDrive(pdfBuffer, filename, folderId)` - Uploads a PDF to Google Drive
 
-#### Document Generator (`services/pdf/documentGenerator.js`)
-- **Functions:**
-  - `createDocumentFromTemplate(postId, postData)` - Creates a Google Doc from a template
-  - `exportDocumentAsPdf(documentId, filename)` - Exports a Google Doc as PDF
-  - `replacePlaceholders(documentId, placeholders)` - Replaces placeholders in a document
-
-#### PDF Steps (`services/pdf/pdfSteps.js`)
+#### PDF Steps (`services/pdf/pdf-steps.js`)
 - **Object:**
-  - `pdfSteps` - Steps in the PDF generation process
+  - `PDF_STEPS` - Steps in the PDF generation process
 - **Steps:**
-  - `fetchPostData` - Fetches post data from WordPress
-  - `createDocument` - Creates a Google Doc from template
-  - `fillBasicInfo` - Fills basic information in the document
-  - `insertImages` - Inserts images into the document
-  - `insertMetadata` - Inserts metadata into the document
-  - `insertStatistics` - Inserts statistics into the document
-  - `exportPdf` - Exports the document as PDF
-  - `updateWordPress` - Updates WordPress with PDF URL
+  - `FETCH_POST_DATA` - Fetches post data from WordPress
+  - `PROCESS_METADATA` - Processes metadata
+  - `GET_TEMPLATE` - Gets the template ID
+  - `CLONE_TEMPLATE` - Clones the template
+  - `MOVE_TO_FOLDER` - Moves the document to a folder
+  - `REPLACE_PLACEHOLDERS` - Replaces placeholders in the document
+  - `ADJUST_TITLE` - Adjusts the title font size
+  - `OPTIMIZE_IMAGES` - Optimizes images
+  - `INSERT_MAIN_IMAGE` - Inserts the main image
+  - `INSERT_GALLERY` - Inserts the gallery
+  - `INSERT_SPECIFIC_IMAGES` - Inserts specific images
+  - `EXPORT_PDF` - Exports the document as PDF
+  - `UPLOAD_PDF` - Uploads the PDF to Google Drive
+  - `UPDATE_WORDPRESS` - Updates WordPress with the PDF URL
 
 ### Statistics and Visualization
 

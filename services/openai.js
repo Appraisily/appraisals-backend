@@ -148,23 +148,22 @@ async function generateStructuredMetadata(postTitle, postData, images = {}, stat
     // Read the consolidated metadata prompt
     const promptPath = path.join(__dirname, '../prompts/new_consolidated_metadata.txt');
     let prompt = await fs.readFile(promptPath, 'utf8');
-    
-    // Process images first - download and convert to base64
-    const processedImages = await processImages(images);
-    const includedImages = Object.keys(processedImages);
-    
-    console.log(`[OpenAI Service][${requestId}] Completed processing ${includedImages.length} images, preparing message blocks`);
-    
-    // Prepare messages array with updated format
+
+    let initialContent = `# Appraisal Metadata Request\n\nTitle: ${postTitle}\nValue: $${postData.acf?.value || 'Unknown'}`;
+
+    // Append detailed description if provided
+    const detailedDesc = postData.detailedDescription || postData.content?.rendered || '';
+    if (detailedDesc) {
+      initialContent += `\n\nDetailed Description:\n${detailedDesc}`;
+    }
+
+    // Append the consolidated metadata prompt
+    initialContent += `\n\n${prompt}`;
+
     const messages = [
       {
         role: "user",
-        content: `# Appraisal Metadata Request
-
-Title: ${postTitle}
-Value: $${postData.acf?.value || 'Unknown'}
-
-${prompt}`
+        content: initialContent
       }
     ];
     
@@ -176,6 +175,12 @@ ${prompt}`
         content: `# Valuer Agent Statistics\n\n${statisticsStr}`
       });
     }
+    
+    // Process images first - download and convert to base64
+    const processedImages = await processImages(images);
+    const includedImages = Object.keys(processedImages);
+    
+    console.log(`[OpenAI Service][${requestId}] Completed processing ${includedImages.length} images, preparing message blocks`);
     
     // Add each image as a separate message
     for (const type of includedImages) {

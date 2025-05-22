@@ -9,7 +9,8 @@ const { regenerateStatisticsAndVisualizations } = require('../services/regenerat
 router.post('/complete-appraisal-report', async (req, res) => {
   console.log('[Report Route] Starting report generation');
 
-  const { postId, justificationOnly } = req.body;
+  // Extract parameters including the new optional detailedDescription
+  const { postId, justificationOnly, detailedDescription } = req.body;
 
   // --- Input Validation --- 
   if (!postId || typeof postId !== 'string' && typeof postId !== 'number') { // Check for presence and basic type
@@ -21,11 +22,13 @@ router.post('/complete-appraisal-report', async (req, res) => {
           endpoint: '/complete-appraisal-report',
           required_body_params: {
             postId: "string | number",
-            justificationOnly: "boolean (optional, defaults to false)"
+            justificationOnly: "boolean (optional, defaults to false)",
+            detailedDescription: "string (optional)"
           },
           example: {
             postId: "123",
-            justificationOnly: false
+            justificationOnly: false,
+            detailedDescription: "This is a detailed description"
           }
       },
       error_details: "postId (string or number) is required."
@@ -77,6 +80,15 @@ router.post('/complete-appraisal-report', async (req, res) => {
     }
 
     console.log(`[Report Route] Processing: "${postTitle}"`);
+
+    const acfDetailedTitle = postData?.acf?.detailed_title || postData?.acf?.detailedDescription || postData?.acf?.detailed_description;
+
+    if (detailedDescription && typeof detailedDescription === 'string') {
+      postData.detailedDescription = detailedDescription;
+    } else if (acfDetailedTitle && typeof acfDetailedTitle === 'string') {
+      // Fallback: use detailed_title from ACF if available
+      postData.detailedDescription = acfDetailedTitle;
+    }
 
     let visionResult = { success: false, message: 'Skipped', similarImagesCount: 0 };
     try {
