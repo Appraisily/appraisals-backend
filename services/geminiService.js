@@ -98,17 +98,6 @@ async function populateHtmlTemplate(skeletonHtml, dataContext) {
 
     try {
         console.log(`[Gemini Service] Calling model.generateContent with model: ${MODEL_NAME}`);
-        // Add networking diagnostic information
-        try {
-            console.log('[Gemini Service] Testing connectivity to Gemini API...');
-            const dns = require('dns');
-            dns.lookup('generativelanguage.googleapis.com', (err, address, family) => {
-                console.log('[Gemini Service] DNS lookup result:', err ? `Error: ${err.message}` : `Success - IP: ${address}`);
-            });
-        } catch (dnsError) {
-            console.log('[Gemini Service] DNS diagnostic error:', dnsError);
-        }
-        
         console.log('[Gemini Service] Request starting timestamp:', new Date().toISOString());
         console.log('[Gemini Service] Node.js version:', process.version);
         

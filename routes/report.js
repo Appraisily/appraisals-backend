@@ -213,11 +213,11 @@ router.post('/complete-appraisal-report', async (req, res) => {
       // with updated postData that includes the new metadata and skip metadata processing
       console.log('[Report Route] Calling regenerateStatisticsAndVisualizations for HTML generation');
       visualizationResult = await regenerateStatisticsAndVisualizations(
-        postId, 
-        postData.acf?.value, 
-        { 
+        postId,
+        postData.acf?.value,
+        {
           metadataProcessing: false, // Skip metadata processing as we already did it
-          updatedPostData: postData // Pass the updated post data with new metadata
+          statistics,               // Re-use the statistics we already generated to avoid duplicate API calls
         }
       );
       

@@ -37,7 +37,7 @@ const decodeEntities = (text) => {
  */
 async function regenerateStatisticsAndVisualizations(postId, newValue, options = {}) {
   console.log(`[Regeneration Service] Starting regeneration for Post ID: ${postId}`);
-  const { appraisalId } = options;
+  const { appraisalId, statistics: precomputedStatistics } = options;
 
   try {
     // --- Step 1: Fetch WP Post Data (including title and value) ---
@@ -74,10 +74,14 @@ async function regenerateStatisticsAndVisualizations(postId, newValue, options =
     }
     console.log(`[Regeneration Service] Processing ${postTitle} (ID: ${postId})`);
 
-    // --- Step 2: Get Enhanced Statistics from Valuer Agent ---
-    console.log('[Regeneration Service] Fetching statistics from valuer-agent');
+    // --- Step 2: Get Enhanced Statistics from Valuer Agent (or use precomputed) ---
     let stats;
-    try {
+
+    if (precomputedStatistics) {
+      console.log('[Regeneration Service] Using precomputed statistics supplied via options. Skipping valuer-agent call.');
+      stats = precomputedStatistics;
+    } else {
+      console.log('[Regeneration Service] Fetching statistics from valuer-agent');
       const value = postData.acf?.value;
       
       // Use detailed_title if available, otherwise fall back to postTitle
@@ -134,13 +138,6 @@ async function regenerateStatisticsAndVisualizations(postId, newValue, options =
         console.log('[Regeneration Service] metadataProcessing flag set to false – skipping metadata batch processing');
       }
       
-    } catch (statsError) {
-      console.error('[Regeneration Service] Error fetching statistics:', statsError);
-      return {
-          success: false,
-          message: 'Failed to fetch statistics from valuer-agent',
-          error: statsError.message
-      };
     }
 
     // --- Step 3: Prepare Data & Read Skeletons ---
@@ -186,29 +183,37 @@ async function regenerateStatisticsAndVisualizations(postId, newValue, options =
     };
 
     // Improved error handling and debugging for template population
-    console.log('[Regeneration Service] Starting template population with Gemini');
+    console.log('[Regeneration Service] Starting parallel template population with Gemini');
     let populatedAnalyticsHtmlRaw, populatedCardHtmlRaw;
     
     try {
-      console.log('[Regeneration Service] Attempting to populate enhanced-analytics template');
-      try {
-        populatedAnalyticsHtmlRaw = await populateHtmlTemplate(skeletonHtmlAnalytics, rawDataForAI);
+      const [analyticsResult, cardResult] = await Promise.allSettled([
+        populateHtmlTemplate(skeletonHtmlAnalytics, rawDataForAI),
+        populateHtmlTemplate(skeletonHtmlCard, rawDataForAI)
+      ]);
+
+      // Handle enhanced analytics result
+      if (analyticsResult.status === 'fulfilled') {
+        populatedAnalyticsHtmlRaw = analyticsResult.value;
         console.log('[Regeneration Service] Enhanced analytics template populated successfully');
-      } catch (analyticsError) {
+      } else {
+        const analyticsError = analyticsResult.reason;
         console.error('[Regeneration Service] Error populating enhanced-analytics template:', analyticsError);
         console.error('[Regeneration Service] Enhanced analytics template population failed - will use fallback');
         populatedAnalyticsHtmlRaw = `<div class="error-placeholder">Analytics visualization unavailable. Error: ${analyticsError.message}</div>`;
       }
       
-      console.log('[Regeneration Service] Attempting to populate appraisal-card template');
-      try {
-        populatedCardHtmlRaw = await populateHtmlTemplate(skeletonHtmlCard, rawDataForAI);
+      // Handle appraisal card result
+      if (cardResult.status === 'fulfilled') {
+        populatedCardHtmlRaw = cardResult.value;
         console.log('[Regeneration Service] Appraisal card template populated successfully');
-      } catch (cardError) {
+      } else {
+        const cardError = cardResult.reason;
         console.error('[Regeneration Service] Error populating appraisal-card template:', cardError);
         console.error('[Regeneration Service] Appraisal card template population failed - will use fallback');
         populatedCardHtmlRaw = `<div class="error-placeholder">Appraisal card visualization unavailable. Error: ${cardError.message}</div>`;
       }
+
     } catch (templateError) {
       console.error('[Regeneration Service] Unexpected error during template population:', templateError);
       throw new Error(`Unexpected error during regeneration for post ${postId}: ${templateError.message}`);
